@@ -163,6 +163,7 @@ class Cert_7_1_3_BorderRouterAsLeader(unittest.TestCase):
         msg.assertMleMessageContainsTlv(mle.ActiveTimestamp)
         """
 
+        """
         # 7 - N/A
         msg = sed1_messages.next_mle_message(mle.CommandType.CHILD_UPDATE_REQUEST)
         addr_reg_tlv = msg.assertMleMessageContainsTlv(mle.AddressRegistration)
@@ -175,7 +176,7 @@ class Cert_7_1_3_BorderRouterAsLeader(unittest.TestCase):
         addr_reg_tlv = msg.assertMleMessageContainsTlv(mle.AddressRegistration)
         self.assertTrue(all(addr in addr_reg_tlv.addresses for addr in sed1_addresses))
         msg.assertMleMessageContainsTlv(mle.Mode)
-
+        """
 
 if __name__ == '__main__':
     unittest.main()
