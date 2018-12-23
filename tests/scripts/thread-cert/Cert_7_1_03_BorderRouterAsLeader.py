@@ -137,6 +137,7 @@ class Cert_7_1_3_BorderRouterAsLeader(unittest.TestCase):
             self.assertTrue(contains_tlv(prefix.sub_tlvs, BorderRouter))
             self.assertTrue(contains_tlv(prefix.sub_tlvs, LowpanId))
 
+        """
         # 4 - N/A
         msg = med1_messages.next_mle_message(mle.CommandType.CHILD_UPDATE_REQUEST)
         addr_reg_tlv = msg.assertMleMessageContainsTlv(mle.AddressRegistration)
@@ -149,7 +150,8 @@ class Cert_7_1_3_BorderRouterAsLeader(unittest.TestCase):
         addr_reg_tlv = msg.assertMleMessageContainsTlv(mle.AddressRegistration)
         self.assertTrue(all(addr in addr_reg_tlv.addresses for addr in med1_addresses))
         msg.assertMleMessageContainsTlv(mle.Mode)
-
+        """
+        
         # 6A & 6B - Leader
         """
         if LEADER_NOTIFY_SED_BY_CHILD_UPDATE_REQUEST:
