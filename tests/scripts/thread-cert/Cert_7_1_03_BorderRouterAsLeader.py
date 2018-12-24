@@ -127,7 +127,7 @@ class Cert_7_1_3_BorderRouterAsLeader(unittest.TestCase):
 
         # 3 - Leader
         while True:
-            leader_messages.next_mle_message(mle.CommandType.DATA_RESPONSE)
+            # leader_messages.next_mle_message(mle.CommandType.DATA_RESPONSE)
             msg = leader_messages.next_mle_message(mle.CommandType.DATA_RESPONSE)
             network_data_tlv = msg.assertMleMessageContainsTlv(mle.NetworkData)
             prefixes = filter(lambda tlv : isinstance(tlv, Prefix), network_data_tlv.tlvs)
