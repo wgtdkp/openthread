@@ -102,6 +102,11 @@ class Cert_7_1_3_BorderRouterAsLeader(unittest.TestCase):
         self.assertEqual(self.nodes[MED1].get_state(), 'child')
 
         # 2 - N/A
+        # Clear collected messages
+        leader_messages = self.simulator.get_messages_sent_by(LEADER)
+        med1_messages = self.simulator.get_messages_sent_by(MED1)
+        sed1_messages = self.simulator.get_messages_sent_by(SED1)
+
         self.nodes[LEADER].add_prefix('2001:2:0:1::/64', 'paros')
         self.nodes[LEADER].add_prefix('2001:2:0:2::/64', 'paro')
         self.nodes[LEADER].register_netdata()
@@ -127,7 +132,7 @@ class Cert_7_1_3_BorderRouterAsLeader(unittest.TestCase):
 
         # 3 - Leader
         # Ignore DATA_RESPONSE messages sent when it became leader
-        leader_messages.next_mle_message(mle.CommandType.DATA_RESPONSE)
+        #leader_messages.next_mle_message(mle.CommandType.DATA_RESPONSE)
         msg = leader_messages.next_mle_message(mle.CommandType.DATA_RESPONSE)
         network_data_tlv = msg.assertMleMessageContainsTlv(mle.NetworkData)
         prefixes = filter(lambda tlv : isinstance(tlv, Prefix), network_data_tlv.tlvs)
