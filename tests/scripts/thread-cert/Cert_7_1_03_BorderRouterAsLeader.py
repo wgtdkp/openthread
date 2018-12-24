@@ -126,7 +126,6 @@ class Cert_7_1_3_BorderRouterAsLeader(unittest.TestCase):
         sed1_messages = self.simulator.get_messages_sent_by(SED1)
 
         # 3 - Leader
-        """
         while True:
             # leader_messages.next_mle_message(mle.CommandType.DATA_RESPONSE)
             msg = leader_messages.next_mle_message(mle.CommandType.DATA_RESPONSE)
@@ -140,7 +139,6 @@ class Cert_7_1_3_BorderRouterAsLeader(unittest.TestCase):
                 self.assertTrue(contains_tlv(prefix.sub_tlvs, BorderRouter))
                 self.assertTrue(contains_tlv(prefix.sub_tlvs, LowpanId))
             break
-        """
 
         # 4 - N/A
         msg = med1_messages.next_mle_message(mle.CommandType.CHILD_UPDATE_REQUEST)
