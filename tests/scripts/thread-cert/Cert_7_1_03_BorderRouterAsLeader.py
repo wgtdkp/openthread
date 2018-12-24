@@ -112,6 +112,10 @@ class Cert_7_1_3_BorderRouterAsLeader(unittest.TestCase):
         self.nodes[LEADER].register_netdata()
         self.simulator.go(5)
 
+        leader_messages = self.simulator.get_messages_sent_by(LEADER)
+        med1_messages = self.simulator.get_messages_sent_by(MED1)
+        sed1_messages = self.simulator.get_messages_sent_by(SED1)
+
         addrs = self.nodes[SED1].get_addrs()
         self.assertTrue(any('2001:2:0:1' in addr[0:10] for addr in addrs))
         self.assertFalse(any('2001:2:0:2' in addr[0:10] for addr in addrs))
@@ -125,10 +129,6 @@ class Cert_7_1_3_BorderRouterAsLeader(unittest.TestCase):
         for addr in addrs:
             if addr[0:10] == '2001:2:0:1' or addr[0:10] == '2001:2:0:2':
                 self.assertTrue(self.nodes[LEADER].ping(addr))
-
-        leader_messages = self.simulator.get_messages_sent_by(LEADER)
-        med1_messages = self.simulator.get_messages_sent_by(MED1)
-        sed1_messages = self.simulator.get_messages_sent_by(SED1)
 
         # 3 - Leader
         # Ignore DATA_RESPONSE messages sent when it became leader
