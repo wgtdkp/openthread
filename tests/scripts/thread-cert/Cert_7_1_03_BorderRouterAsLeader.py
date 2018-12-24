@@ -126,18 +126,19 @@ class Cert_7_1_3_BorderRouterAsLeader(unittest.TestCase):
         sed1_messages = self.simulator.get_messages_sent_by(SED1)
 
         # 3 - Leader
-        # Ignore the first DATA_RESPONSE message sent when it became leader
         while True:
             leader_messages.next_mle_message(mle.CommandType.DATA_RESPONSE)
             msg = leader_messages.next_mle_message(mle.CommandType.DATA_RESPONSE)
             network_data_tlv = msg.assertMleMessageContainsTlv(mle.NetworkData)
             prefixes = filter(lambda tlv : isinstance(tlv, Prefix), network_data_tlv.tlvs)
+            # Ignore DATA_RESPONSE messages sent when it became leader
             if len(prefixes) == 0:
-                break
+                continue
             self.assertTrue(len(prefixes) >= 2)
             for prefix in prefixes:
                 self.assertTrue(contains_tlv(prefix.sub_tlvs, BorderRouter))
                 self.assertTrue(contains_tlv(prefix.sub_tlvs, LowpanId))
+            break
 
         """
         # 4 - N/A
