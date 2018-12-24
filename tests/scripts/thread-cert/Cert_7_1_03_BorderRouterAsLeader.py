@@ -126,6 +126,7 @@ class Cert_7_1_3_BorderRouterAsLeader(unittest.TestCase):
         sed1_messages = self.simulator.get_messages_sent_by(SED1)
 
         # 3 - Leader
+        """
         while True:
             # leader_messages.next_mle_message(mle.CommandType.DATA_RESPONSE)
             msg = leader_messages.next_mle_message(mle.CommandType.DATA_RESPONSE)
@@ -139,8 +140,8 @@ class Cert_7_1_3_BorderRouterAsLeader(unittest.TestCase):
                 self.assertTrue(contains_tlv(prefix.sub_tlvs, BorderRouter))
                 self.assertTrue(contains_tlv(prefix.sub_tlvs, LowpanId))
             break
-
         """
+
         # 4 - N/A
         msg = med1_messages.next_mle_message(mle.CommandType.CHILD_UPDATE_REQUEST)
         addr_reg_tlv = msg.assertMleMessageContainsTlv(mle.AddressRegistration)
@@ -153,10 +154,8 @@ class Cert_7_1_3_BorderRouterAsLeader(unittest.TestCase):
         addr_reg_tlv = msg.assertMleMessageContainsTlv(mle.AddressRegistration)
         self.assertTrue(all(addr in addr_reg_tlv.addresses for addr in med1_addresses))
         msg.assertMleMessageContainsTlv(mle.Mode)
-        """
 
         # 6A & 6B - Leader
-        """
         if LEADER_NOTIFY_SED_BY_CHILD_UPDATE_REQUEST:
             msg = leader_messages.next_mle_message(mle.CommandType.CHILD_UPDATE_REQUEST)
         else:
@@ -166,9 +165,7 @@ class Cert_7_1_3_BorderRouterAsLeader(unittest.TestCase):
         msg.assertMleMessageContainsTlv(mle.LeaderData)
         msg.assertMleMessageContainsTlv(mle.NetworkData)
         msg.assertMleMessageContainsTlv(mle.ActiveTimestamp)
-        """
 
-        """
         # 7 - N/A
         msg = sed1_messages.next_mle_message(mle.CommandType.CHILD_UPDATE_REQUEST)
         addr_reg_tlv = msg.assertMleMessageContainsTlv(mle.AddressRegistration)
@@ -181,7 +178,7 @@ class Cert_7_1_3_BorderRouterAsLeader(unittest.TestCase):
         addr_reg_tlv = msg.assertMleMessageContainsTlv(mle.AddressRegistration)
         self.assertTrue(all(addr in addr_reg_tlv.addresses for addr in sed1_addresses))
         msg.assertMleMessageContainsTlv(mle.Mode)
-        """
+
 
 if __name__ == '__main__':
     unittest.main()
