@@ -197,8 +197,8 @@ class VirtualTime(BaseSimulator):
         messages = self.devices[addr]['msgs']
         self.devices[addr]['msgs'] = []
 
-        ret = message.MessagesSet(messages, self.commissioning_messages)
-        self.commissioning_messages = []
+        ret = message.MessagesSet(messages, self.commissioning_messages[nodeid])
+        self.commissioning_messages[nodeid] = []
         return ret
 
     def _is_radio(self, addr):
