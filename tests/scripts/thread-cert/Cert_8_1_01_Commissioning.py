@@ -30,8 +30,13 @@
 import time
 import unittest
 
+import command
 import config
+import dtls
+import mle
 import node
+
+from command import CheckType
 
 COMMISSIONER = 1
 JOINER = 2
@@ -74,12 +79,60 @@ class Cert_8_1_01_Commissioning(unittest.TestCase):
         self.assertEqual(self.nodes[JOINER].get_masterkey(), self.nodes[COMMISSIONER].get_masterkey())
 
         joiner_messages = self.simulator.get_messages_sent_by(JOINER)
-        print(joiner_messages.commissioning_messages)
-        assert len(joiner_messages.commissioning_messages) >= 2
+        commissioner_messages = self.simulator.get_messages_sent_by(COMMISSIONER)
+
+        # 2 - N/A
+
+        # 3 - Joiner_1
+        msg = joiner_messages.next_mle_message(mle.CommandType.DISCOVERY_REQUEST)
+        command.check_discovery_request(msg)
+        request_src_addr = msg.mac_header.src_address
+
+        # 4 - Commissioner
+        msg = commissioner_messages.next_mle_message(mle.CommandType.DISCOVERY_RESPONSE)
+        command.check_discovery_response(msg, request_src_addr, steering_data=CheckType.CONTAIN)
+        udp_port_set_by_commissioner = command.get_udp_port_in_discovery_response(msg)
+
+        # 5.2 - Joiner_1
+        msg = joiner_messages.next_dtls_message(dtls.ContentType.HANDSHAKE, dtls.HandshakeType.CLIENT_HELLO)
+        self.assertEqual(msg.get_dst_udp_port(), udp_port_set_by_commissioner)
+
+        # 5.3 - Commissioner
+        msg = commissioner_messages.next_dtls_message(dtls.ContentType.HANDSHAKE, dtls.HandshakeType.HELLO_VERIFY_REQUEST)
+        commissioner_cookie = msg.dtls.body.cookie
+
+        # 5.4 - Joiner_1
+        msg = joiner_messages.next_dtls_message(dtls.ContentType.HANDSHAKE, dtls.HandshakeType.CLIENT_HELLO)
+        self.assertEqual(commissioner_cookie, msg.dtls.body.cookie)
+        self.assertEqual(msg.get_dst_udp_port(), udp_port_set_by_commissioner)
+
+        # 5.5 - Commissioner
+        commissioner_messages.next_dtls_message(dtls.ContentType.HANDSHAKE, dtls.HandshakeType.SERVER_HELLO)
+        commissioner_messages.next_dtls_message(dtls.ContentType.HANDSHAKE, dtls.HandshakeType.SERVER_KEY_EXCHANGE)
+        commissioner_messages.next_dtls_message(dtls.ContentType.HANDSHAKE, dtls.HandshakeType.SERVER_HELLO_DONE)
+
+        # 5.6 - Joiner_1
+        msg = joiner_messages.next_dtls_message(dtls.ContentType.HANDSHAKE, dtls.HandshakeType.CLIENT_KEY_EXCHANGE)
+        self.assertEqual(msg.get_dst_udp_port(), udp_port_set_by_commissioner)
+        msg = joiner_messages.next_dtls_message(dtls.ContentType.CHANGE_CIPHER_SPEC)
+        self.assertEqual(msg.get_dst_udp_port(), udp_port_set_by_commissioner)
+        msg = joiner_messages.next_dtls_message(dtls.ContentType.HANDSHAKE, dtls.HandshakeType.FINISHED)
+        self.assertEqual(msg.get_dst_udp_port(), udp_port_set_by_commissioner)
+
+        # 5.7 - Commissioner
+        commissioner_messages.next_dtls_message(dtls.ContentType.CHANGE_CIPHER_SPEC)
+        commissioner_messages.next_dtls_message(dtls.ContentType.HANDSHAKE, dtls.HandshakeType.FINISHED)
+
+        # 5.8,9,10,11
+        # - Joiner_1
+        command.check_joiner_commissioning_messages(joiner_messages.commissioning_messages)
+        # - Commissioner
+        command.check_commissioner_commissioning_messages(commissioner_messages.commissioning_messages)
 
         self.nodes[JOINER].thread_start()
         self.simulator.go(5)
         self.assertEqual(self.nodes[JOINER].get_state(), 'router')
+
 
 if __name__ == '__main__':
     unittest.main()
