@@ -2821,6 +2821,9 @@ otError Mle::HandleAdvertisement(const Message &aMessage, const Ip6::MessageInfo
 
     if (isNeighbor)
     {
+        otLogCritMle("message data version:%d, local data version: %d",
+                     static_cast<int32_t>(leaderData.GetDataVersion()),
+                     static_cast<int32_t>(netif.GetNetworkDataLeader().GetVersion()));
         if (mRetrieveNewNetworkData ||
             (static_cast<int8_t>(leaderData.GetDataVersion() - netif.GetNetworkDataLeader().GetVersion()) > 0))
         {
@@ -2838,6 +2841,10 @@ otError Mle::HandleDataResponse(const Message &aMessage, const Ip6::MessageInfo 
     otError error;
 
     LogMleMessage("Receive Data Response", aMessageInfo.GetPeerAddr());
+
+    if (mRole == OT_DEVICE_ROLE_CHILD) {
+        otLogCritMle("CHILD received DataResponse Message");
+    }
 
     error = HandleLeaderData(aMessage, aMessageInfo);
 
