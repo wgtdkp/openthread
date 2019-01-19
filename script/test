@@ -57,6 +57,11 @@ do_cert() {
     PYTHONUNBUFFERED=1 python "$1"
 }
 
+do_toranj() {
+    [[ ! -d tmp ]] || sudo rm -rvf tmp
+    PYTHONUNBUFFERED=1 sudo -E python "$1"
+}
+
 print_usage() {
     echo "USAGE: [ENVIRONMENTS] $0 COMMANDS
 
@@ -123,6 +128,10 @@ main()
             cert)
                 shift
                 do_cert "$1"
+                ;;
+            toranj)
+                shift
+                do_toranj "$1"
                 ;;
             help)
                 print_usage
