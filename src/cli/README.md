@@ -396,7 +396,7 @@ This command will cause the device to send LEAD_KA[Reject] messages.
 Done
 ```
 
-### commissioner joiner add \<eui64\> \<psdk\>
+### commissioner joiner add \<eui64\> \<pskd\>
 
 Add a Joiner entry.
 
