@@ -116,12 +116,15 @@ class Cert_8_1_01_Commissioning(unittest.TestCase):
         self.assertEqual(msg.get_dst_udp_port(), udp_port_set_by_commissioner)
         msg = joiner_messages.next_dtls_message(dtls.ContentType.CHANGE_CIPHER_SPEC)
         self.assertEqual(msg.get_dst_udp_port(), udp_port_set_by_commissioner)
-        msg = joiner_messages.next_dtls_message(dtls.ContentType.HANDSHAKE, dtls.HandshakeType.FINISHED)
-        self.assertEqual(msg.get_dst_udp_port(), udp_port_set_by_commissioner)
+
+        # TODO: It's required to verify DTLS FINISHED message here. Currently not handled as it is encrypted.
+
 
         # 5.7 - Commissioner
         commissioner_messages.next_dtls_message(dtls.ContentType.CHANGE_CIPHER_SPEC)
-        commissioner_messages.next_dtls_message(dtls.ContentType.HANDSHAKE, dtls.HandshakeType.FINISHED)
+
+        # TODO: It's required to verify DTLS FINISHED message here. Currently not handled as it is encrypted.
+
 
         # 5.8,9,10,11
         # - Joiner_1
