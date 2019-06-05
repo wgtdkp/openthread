@@ -673,6 +673,23 @@ exit:
     return error;
 }
 
+void BorderAgent::HandleStateChanged(Notifier::Callback &aCallback, otChangedFlags aFlags)
+{
+    aCallback.GetOwner<BorderAgent>().HandleStateChanged(aFlags);
+}
+
+void BorderAgent::HandleStateChanged(otChangedFlags aFlags)
+{
+    VerifyOrExit(Get<Mle::MleRouter>().IsFullThreadDevice());
+    VerifyOrExit(aFlags & OT_CHANGED_PSKC);
+
+    // Restart border agent to reset coaps and resources.
+    Stop();
+    Start();
+exit:
+    return;
+}
+
 void BorderAgent::HandleTimeout(Timer &aTimer)
 {
     aTimer.GetOwner<BorderAgent>().HandleTimeout();

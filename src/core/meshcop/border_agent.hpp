@@ -40,6 +40,7 @@
 
 #include "coap/coap.hpp"
 #include "common/locator.hpp"
+#include "common/notifier.hpp"
 #include "net/udp6.hpp"
 
 namespace ot {
@@ -85,6 +86,9 @@ public:
     otBorderAgentState GetState(void) const { return mState; }
 
 private:
+    static void HandleStateChanged(Notifier::Callback &aCallback, otChangedFlags aFlags);
+    void        HandleStateChanged(otChangedFlags aFlags);
+
     static void HandleConnected(bool aConnected, void *aContext)
     {
         static_cast<BorderAgent *>(aContext)->HandleConnected(aConnected);
