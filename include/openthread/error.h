@@ -88,7 +88,7 @@ typedef enum otError
     OT_ERROR_BUSY = 5,
 
     /**
-     * Failed to parse message or arguments.
+     * Failed to parse message.
      */
     OT_ERROR_PARSE = 6,
 
