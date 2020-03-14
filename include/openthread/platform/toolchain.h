@@ -94,6 +94,13 @@ extern "C" {
 
 // =========== TOOLCHAIN SELECTION : START ===========
 
+#ifdef __clang__
+#define OT_TOOL_MUST_USE_RESULT __attribute__((warn_unused_result))
+#else
+#define OT_TOOL_MUST_USE_RESULT
+#endif
+
+
 #if defined(__GNUC__) || defined(__clang__) || defined(__CC_ARM) || defined(__TI_ARM__)
 
 // https://gcc.gnu.org/onlinedocs/gcc/Common-Variable-Attributes.html
