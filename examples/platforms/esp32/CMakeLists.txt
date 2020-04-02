@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2019, The OpenThread Authors.
+#  Copyright (c) 2020, The OpenThread Authors.
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -26,5 +26,56 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
-add_subdirectory(esp32)
-add_subdirectory(utils)
+set(OT_PLATFORM_LIB "openthread-esp32" PARENT_SCOPE)
+
+#if(NOT OT_CONFIG)
+#    set(OT_CONFIG "openthread-core-esp32-config.h")
+#    set(OT_CONFIG ${OT_CONFIG} PARENT_SCOPE)
+#endif()
+
+list(APPEND OT_PLATFORM_DEFINES
+    "OPENTHREAD_CORE_CONFIG_PLATFORM_CHECK_FILE=\"openthread-core-cc2538-config-check.h\""
+    "OPENTHREAD_CONFIG_NCP_UART_ENABLE=1"
+)
+set(OT_PLATFORM_DEFINES ${OT_PLATFORM_DEFINES} PARENT_SCOPE)
+
+list(APPEND OT_PLATFORM_DEFINES "OPENTHREAD_PROJECT_CORE_CONFIG_FILE=\"${OT_CONFIG}\"")
+
+add_library(openthread-esp32)
+
+target_sources(openthread-esp32
+    PRIVATE
+        alarm.c
+        diag.c
+        entropy.c
+        flash.c
+        logging.c
+        misc.c
+        radio.c
+        system.c
+        uart.c
+)
+
+set_property(TARGET openthread-esp32 PROPERTY C_STANDARD 99)
+
+target_link_libraries(openthread-esp32 PRIVATE openthread-platform-utils)
+#target_link_options(openthread-esp32 PUBLIC -T${PROJECT_SOURCE_DIR}/examples/platforms/cc2538/cc2538.ld)
+#target_link_options(openthread-esp32 PUBLIC -Wl,-Map=$<TARGET_PROPERTY:NAME>.map)
+
+target_compile_definitions(openthread-esp32
+    PUBLIC
+        ${OT_PLATFORM_DEFINES}
+    PRIVATE
+        ${OT_PRIVATE_DEFINES}
+)
+
+target_compile_options(openthread-esp32 PRIVATE
+    ${OT_CFLAGS}
+)
+
+target_include_directories(openthread-esp32 PRIVATE
+    ${OT_PUBLIC_INCLUDES}
+    ${OT_PRIVATE_INCLUDES}
+    ${PROJECT_SOURCE_DIR}/examples/platforms
+    ${PROJECT_SOURCE_DIR}/src/core
+)

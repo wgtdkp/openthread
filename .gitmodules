@@ -1,0 +1,4 @@
+[submodule "third_party/esp-idf/repo"]
+	path = third_party/esp-idf/repo
+	url = https://github.com/espressif/esp-idf.git
+	branch = release/v4.0
