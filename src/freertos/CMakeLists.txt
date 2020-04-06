@@ -28,5 +28,10 @@
 
 add_library(openthread-freertos)
 
+target_sources(openthread-freertos
+    PRIVATE dummy.cpp
+)
 
-
+target_include_directories(openthread-freertos
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+)

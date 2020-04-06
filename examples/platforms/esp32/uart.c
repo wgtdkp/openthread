@@ -10,7 +10,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 
-//#include "event_queue_api.h"
+#include "event_queue_api.h"
 
 #define OT_IO_UART_NUM UART_NUM_0
 #define OT_RX_BUF_SIZE (UART_FIFO_LEN * 2)

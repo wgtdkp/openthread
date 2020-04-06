@@ -26,7 +26,11 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
-add_library(mbedcrypto)
+if(OT_BUILTIN_MBEDTLS)
+    add_subdirectory(repo)
+endif()
+
+add_library(openthread-3rd-mbedtls INTERFACE)
 
 set(OT_MBEDTLS_DEFAULT_CONFIG_FILE "\"mbedtls-config.h\"")
 
