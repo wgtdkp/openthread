@@ -28,14 +28,13 @@
 
 set(OT_PLATFORM_LIB "openthread-esp32" PARENT_SCOPE)
 
-#if(NOT OT_CONFIG)
-#    set(OT_CONFIG "openthread-core-esp32-config.h")
-#    set(OT_CONFIG ${OT_CONFIG} PARENT_SCOPE)
-#endif()
+if(NOT OT_CONFIG)
+    set(OT_CONFIG "openthread-core-esp32-config.h")
+    set(OT_CONFIG ${OT_CONFIG} PARENT_SCOPE)
+endif()
 
 list(APPEND OT_PLATFORM_DEFINES
-    "OPENTHREAD_CORE_CONFIG_PLATFORM_CHECK_FILE=\"openthread-core-cc2538-config-check.h\""
-    "OPENTHREAD_CONFIG_NCP_UART_ENABLE=1"
+    "OPENTHREAD_CORE_CONFIG_PLATFORM_CHECK_FILE=\"openthread-core-esp32-config-check.h\""
 )
 set(OT_PLATFORM_DEFINES ${OT_PLATFORM_DEFINES} PARENT_SCOPE)
 
@@ -48,17 +47,33 @@ target_sources(openthread-esp32
         alarm.c
         diag.c
         entropy.c
+        error_handling.h
+        esp32_platform.h
+        event_queue_api.cpp
+        event_queue_api.h
+        event_queue_impl.hpp
         flash.c
+        frame_queue.cpp
+        frame_queue.hpp
         logging.c
         misc.c
+        openthread-core-esp32-config.h
+        openthread-core-esp32-config-check.h
         radio.c
         system.c
         uart.c
+        uart_multiplexer.c
+        uart_multiplexer.h
 )
 
-set_property(TARGET openthread-esp32 PROPERTY C_STANDARD 99)
+#set_property(TARGET openthread-esp32 PROPERTY C_STANDARD 99)
 
-target_link_libraries(openthread-esp32 PRIVATE openthread-platform-utils)
+target_link_libraries(openthread-esp32
+    PRIVATE
+        idf::esp32
+        idf::spi_flash
+        openthread-platform-utils
+)
 #target_link_options(openthread-esp32 PUBLIC -T${PROJECT_SOURCE_DIR}/examples/platforms/cc2538/cc2538.ld)
 #target_link_options(openthread-esp32 PUBLIC -Wl,-Map=$<TARGET_PROPERTY:NAME>.map)
 

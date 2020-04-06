@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2019, The OpenThread Authors.
+#  Copyright (c) 2020, The OpenThread Authors.
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -26,10 +26,7 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
-if(OT_BUILTIN_MBEDTLS)
-    add_subdirectory(mbedtls)
-endif()
+add_library(openthread-freertos)
 
-if (OT_PLATFORM MATCHES "esp32")
-    add_subdirectory(esp-idf EXCLUDE_FROM_ALL)
-endif()
+
+

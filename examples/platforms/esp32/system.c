@@ -9,15 +9,15 @@
 
 #include "esp32_platform.h"
 #include "event_queue_api.h"
-#include "ot_api_call.h"
+//#include "ot_api_call.h"
 #include "uart_multiplexer.h"
 
 extern bool gPlatformPseudoResetWasRequested;
 
 void otSysInit(int argc, char *argv[])
 {
-    (void)argc;
-    (void)argv;
+    OT_UNUSED_VARIABLE(argc);
+    OT_UNUSED_VARIABLE(argv);
 
     if (gPlatformPseudoResetWasRequested)
     {

@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2019, The OpenThread Authors.
+#  Copyright (c) 2020, The OpenThread Authors.
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -26,10 +26,21 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
-if(OT_BUILTIN_MBEDTLS)
-    add_subdirectory(mbedtls)
+if (NOT DEFINED ENV{IDF_PATH})
+    set(ENV{IDF_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/repo)
 endif()
 
-if (OT_PLATFORM MATCHES "esp32")
-    add_subdirectory(esp-idf EXCLUDE_FROM_ALL)
-endif()
+# Include for ESP-IDF build system functions
+include($ENV{IDF_PATH}/tools/cmake/idf.cmake)
+
+# Create idf::esp32 and static libraries
+idf_build_process(esp32
+    # try and trim the build; additional components
+    # will be included as needed based on dependency tree
+    #
+    # although esptool_py does not generate static library,
+    # processing the component is needed for flashing related
+    # targets and file generation
+    COMPONENTS esp32 spi_flash freertos lwip esptool_py
+    SDKCONFIG ${CMAKE_BINARY_DIR}/sdkconfig
+    BUILD_DIR ${CMAKE_BINARY_DIR})

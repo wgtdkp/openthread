@@ -26,5 +26,4 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
-add_subdirectory(esp32)
 add_subdirectory(utils)

@@ -29,4 +29,33 @@
 #ifndef OPENTHREAD_CORE_CC2538_CONFIG_H_
 #define OPENTHREAD_CORE_CC2538_CONFIG_H_
 
+/**
+ * @def OPENTHREAD_CONFIG_PLATFORM_INFO
+ *
+ * The platform-specific string to insert into the OpenThread version string.
+ *
+ */
+#define OPENTHREAD_CONFIG_PLATFORM_INFO "ESP32"
+
+/**
+ * @def SETTINGS_CONFIG_PAGE_NUM
+ *
+ * The number of flash pages to use for non-volatile settings storage.
+ */
+#define SETTINGS_CONFIG_PAGE_NUM 2
+
+/**
+ * @def SETTINGS_CONFIG_PAGE_SIZE
+ *
+ * The page size of flash
+ *
+ */
+#define SETTINGS_CONFIG_PAGE_SIZE 4096
+
+#define OPENTHREAD_CONFIG_LOG_LEVEL OT_LOG_LEVEL_INFO
+
+#define OPENTHREAD_CONFIG_MLE_STEERING_DATA_SET_OOB_ENABLE 1
+
+#define OPENTHREAD_CONFIG_NUM_MESSAGE_BUFFERS 50
+
 #endif //OPENTHREAD_CORE_CC2538_CONFIG_H_
