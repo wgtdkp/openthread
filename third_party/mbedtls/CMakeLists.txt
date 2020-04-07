@@ -30,73 +30,42 @@ if(OT_BUILTIN_MBEDTLS)
     add_subdirectory(repo)
 endif()
 
-add_library(openthread-3rd-mbedtls INTERFACE)
-
 set(OT_MBEDTLS_DEFAULT_CONFIG_FILE "\"mbedtls-config.h\"")
 
 set(OT_MBEDTLS_CONFIG_FILE "" CACHE STRING "The mbedTLS config file")
 
 target_compile_definitions(mbedcrypto
-    PUBLIC
-        "MBEDTLS_CONFIG_FILE=$<IF:$<BOOL:${OT_MBEDTLS_CONFIG_FILE}>,${OT_MBEDTLS_CONFIG_FILE},${OT_MBEDTLS_DEFAULT_CONFIG_FILE}>"
-    PRIVATE
-        ${OT_PRIVATE_DEFINES}
+    PUBLIC "MBEDTLS_CONFIG_FILE=$<IF:$<BOOL:${OT_MBEDTLS_CONFIG_FILE}>,${OT_MBEDTLS_CONFIG_FILE},${OT_MBEDTLS_DEFAULT_CONFIG_FILE}>"
 )
-
-target_include_directories(mbedcrypto
-    PUBLIC
-        ${PROJECT_SOURCE_DIR}/third_party/mbedtls/repo/include
-    PRIVATE
-        ${OT_PUBLIC_INCLUDES}
-        ${OT_PRIVATE_INCLUDES}
+target_compile_definitions(mbedtls
+    PUBLIC "MBEDTLS_CONFIG_FILE=$<IF:$<BOOL:${OT_MBEDTLS_CONFIG_FILE}>,${OT_MBEDTLS_CONFIG_FILE},${OT_MBEDTLS_DEFAULT_CONFIG_FILE}>"
+)
+target_compile_definitions(mbedx509
+    PUBLIC "MBEDTLS_CONFIG_FILE=$<IF:$<BOOL:${OT_MBEDTLS_CONFIG_FILE}>,${OT_MBEDTLS_CONFIG_FILE},${OT_MBEDTLS_DEFAULT_CONFIG_FILE}>"
 )
 
 if (NOT OT_MBEDTLS_CONFIG_FILE)
     target_include_directories(mbedcrypto
         PUBLIC
+            ${OT_PUBLIC_INCLUDES}
+            ${PROJECT_SOURCE_DIR}/src/core
+            ${PROJECT_SOURCE_DIR}/third_party/mbedtls
+    )
+    target_include_directories(mbedtls
+        PUBLIC
+            ${OT_PUBLIC_INCLUDES}
+            ${PROJECT_SOURCE_DIR}/src/core
+            ${PROJECT_SOURCE_DIR}/third_party/mbedtls
+    )
+    target_include_directories(mbedx509
+        PUBLIC
+            ${OT_PUBLIC_INCLUDES}
             ${PROJECT_SOURCE_DIR}/src/core
             ${PROJECT_SOURCE_DIR}/third_party/mbedtls
     )
 endif()
 
-target_sources(mbedcrypto PRIVATE
-    repo/library/aes.c
-    repo/library/asn1parse.c
-    repo/library/asn1write.c
-    repo/library/base64.c
-    repo/library/bignum.c
-    repo/library/ccm.c
-    repo/library/cipher.c
-    repo/library/cipher_wrap.c
-    repo/library/cmac.c
-    repo/library/ctr_drbg.c
-    repo/library/debug.c
-    repo/library/ecdh.c
-    repo/library/ecdsa.c
-    repo/library/ecjpake.c
-    repo/library/ecp.c
-    repo/library/ecp_curves.c
-    repo/library/entropy.c
-    repo/library/entropy_poll.c
-    repo/library/md.c
-    repo/library/md_wrap.c
-    repo/library/memory_buffer_alloc.c
-    repo/library/oid.c
-    repo/library/pem.c
-    repo/library/pk.c
-    repo/library/pk_wrap.c
-    repo/library/pkparse.c
-    repo/library/platform.c
-    repo/library/platform_util.c
-    repo/library/sha256.c
-    repo/library/ssl_cookie.c
-    repo/library/ssl_ciphersuites.c
-    repo/library/ssl_cli.c
-    repo/library/ssl_srv.c
-    repo/library/ssl_ticket.c
-    repo/library/ssl_tls.c
-    repo/library/threading.c
-    repo/library/timing.c
-    repo/library/x509.c
-    repo/library/x509_crt.c
+add_library(mbedtls-all INTERFACE)
+target_include_directories(mbedtls-all
+    INTERFACE ${PROJECT_SOURCE_DIR}/third_party/mbedtls/repo/include
 )

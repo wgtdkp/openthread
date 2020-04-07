@@ -54,7 +54,7 @@ target_link_libraries(ot-ncp-ftd
     ${OT_PLATFORM_LIB}
     openthread-ftd
     ${OT_PLATFORM_LIB}
-    mbedcrypto
+    mbedtls-all
 )
 
 target_link_libraries(ot-ncp-mtd
@@ -62,7 +62,7 @@ target_link_libraries(ot-ncp-mtd
     ${OT_PLATFORM_LIB}
     openthread-mtd
     ${OT_PLATFORM_LIB}
-    mbedcrypto
+    mbedtls-all
 )
 
 target_link_libraries(ot-rcp

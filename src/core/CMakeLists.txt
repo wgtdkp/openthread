@@ -239,14 +239,14 @@ target_sources(openthread-radio PRIVATE
     utils/parse_cmdline.cpp
 )
 
-if(OT_BUILTIN_MBEDTLS)
+#if(OT_BUILTIN_MBEDTLS)
     target_link_libraries(openthread-ftd
         PUBLIC
-            mbedcrypto
+        mbedtls-all
     )
 
     target_link_libraries(openthread-mtd
         PUBLIC
-            mbedcrypto
+        mbedtls-all
     )
-endif()
+#endif()

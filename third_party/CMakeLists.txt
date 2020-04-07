@@ -26,7 +26,9 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
-add_subdirectory(mbedtls)
+if(OT_BUILTIN_MBEDTLS)
+    add_subdirectory(mbedtls)
+endif()
 
 if (OT_PLATFORM MATCHES "esp32")
     add_subdirectory(esp-idf EXCLUDE_FROM_ALL)

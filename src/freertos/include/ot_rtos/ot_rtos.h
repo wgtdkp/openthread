@@ -32,10 +32,8 @@
  *  This file defines the OpenThread FreeRTOS Instance API.
  */
 
-#ifndef OT_RTOS_SYSTEM_H_
-#define OT_RTOS_SYSTEM_H_
-
-#include <ot_rtos/netif.h>
+#ifndef OT_RTOS_OT_RTOS_H_
+#define OT_RTOS_OT_RTOS_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,7 +52,7 @@ typedef struct otRtosInstance otRtosInstance;
  * This function returns the lwip netif bound to the ot-rtos instance.
  *
  */
-otRtosNetIf *otRtosGetNetIf(otRtosInstance *aOtRtosInstance);
+struct netif *otRtosGetNetIf(otRtosInstance *aOtRtosInstance);
 
 /**
  * This function initializes the static single instance of the OpenThread FreeRTOS library.
@@ -115,4 +113,4 @@ void otRtosNotify(otRtosInstance *aOtRtosInstance);
 } // extern "C"
 #endif
 
-#endif // OT_RTOS_SYSTEM_H_
+#endif // OT_RTOS_OT_RTOS_H_

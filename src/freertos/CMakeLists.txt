@@ -29,9 +29,34 @@
 add_library(openthread-freertos)
 
 target_sources(openthread-freertos
-    PRIVATE dummy.cpp
+    PRIVATE ot_rtos_impl.cpp
 )
 
 target_include_directories(openthread-freertos
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
+
+## This is a test app.
+#add_executable(openthread-freertos-esp32)
+#
+#target_sources(openthread-freertos-esp32
+#    PRIVATE esp32_app_main.c
+#)
+#
+#target_link_libraries(openthread-freertos-esp32
+#    PRIVATE
+#        idf::esp32
+#        idf::freertos
+#        idf::spi_flash
+#        openthread-ftd
+#        openthread-esp32
+#        openthread-freertos
+#)
+#
+#if (NOT DEFINED ENV{IDF_PATH})
+#    set(ENV{IDF_PATH} ${PROJECT_SOURCE_DIR}/third_party/esp-idf/repo)
+#endif()
+#include($ENV{IDF_PATH}/tools/cmake/idf.cmake)
+#
+#idf_build_executable(openthread-freertos-esp32)
+#
