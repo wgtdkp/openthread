@@ -49,7 +49,7 @@ target_link_libraries(ot-cli-ftd
     ${OT_PLATFORM_LIB}
     openthread-ftd
     ${OT_PLATFORM_LIB}
-    mbedcrypto
+    mbedtls-all
 )
 
 target_link_libraries(ot-cli-mtd
@@ -57,7 +57,7 @@ target_link_libraries(ot-cli-mtd
     ${OT_PLATFORM_LIB}
     openthread-mtd
     ${OT_PLATFORM_LIB}
-    mbedcrypto
+    mbedtls-all
 )
 
 install(TARGETS ot-cli-ftd ot-cli-mtd

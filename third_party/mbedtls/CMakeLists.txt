@@ -26,20 +26,20 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
-add_library(mbedcrypto)
+add_library(mbedtls-all)
 
 set(OT_MBEDTLS_DEFAULT_CONFIG_FILE "\"mbedtls-config.h\"")
 
 set(OT_MBEDTLS_CONFIG_FILE "" CACHE STRING "The mbedTLS config file")
 
-target_compile_definitions(mbedcrypto
+target_compile_definitions(mbedtls-all
     PUBLIC
         "MBEDTLS_CONFIG_FILE=$<IF:$<BOOL:${OT_MBEDTLS_CONFIG_FILE}>,${OT_MBEDTLS_CONFIG_FILE},${OT_MBEDTLS_DEFAULT_CONFIG_FILE}>"
     PRIVATE
         ${OT_PRIVATE_DEFINES}
 )
 
-target_include_directories(mbedcrypto
+target_include_directories(mbedtls-all
     PUBLIC
         ${PROJECT_SOURCE_DIR}/third_party/mbedtls/repo/include
     PRIVATE
@@ -48,14 +48,14 @@ target_include_directories(mbedcrypto
 )
 
 if (NOT OT_MBEDTLS_CONFIG_FILE)
-    target_include_directories(mbedcrypto
+    target_include_directories(mbedtls-all
         PUBLIC
             ${PROJECT_SOURCE_DIR}/src/core
             ${PROJECT_SOURCE_DIR}/third_party/mbedtls
     )
 endif()
 
-target_sources(mbedcrypto PRIVATE
+target_sources(mbedtls-all PRIVATE
     repo/library/aes.c
     repo/library/asn1parse.c
     repo/library/asn1write.c
