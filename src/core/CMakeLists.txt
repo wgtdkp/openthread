@@ -244,11 +244,11 @@ target_sources(openthread-radio PRIVATE
 )
 
 target_link_libraries(openthread-ftd
-    PUBLIC
+    PRIVATE
         mbedtls-all
 )
 
 target_link_libraries(openthread-mtd
-    PUBLIC
+    PRIVATE
         mbedtls-all
 )
