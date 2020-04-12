@@ -59,11 +59,16 @@
 #include <linux/ioctl.h>
 #include <linux/spi/spidev.h>
 
+using ot::Spinel::SpinelInterface;
+
 namespace ot {
 namespace Posix {
 
-SpiInterface::SpiInterface(SpinelInterface::Callbacks &aCallback, SpinelInterface::RxFrameBuffer &aFrameBuffer)
-    : mCallbacks(aCallback)
+SpiInterface::SpiInterface(SpinelInterface::ReceiveFrameCallback aCallback,
+                           void *                                aCallbackContext,
+                           SpinelInterface::RxFrameBuffer &      aFrameBuffer)
+    : mReceiveFrameCallback(aCallback)
+    , mReceiveFrameContext(aCallbackContext)
     , mRxFrameBuffer(aFrameBuffer)
     , mSpiDevFd(-1)
     , mResetGpioValueFd(-1)
@@ -508,7 +513,7 @@ otError SpiInterface::PushPullSpi(void)
             // Upper layer will free the frame buffer.
             discardRxFrame = false;
 
-            mCallbacks.HandleReceivedFrame();
+            mReceiveFrameCallback(mReceiveFrameContext);
         }
     }
 
@@ -658,11 +663,9 @@ void SpiInterface::UpdateFdSet(fd_set &aReadFdSet, fd_set &aWriteFdSet, int &aMa
     }
 }
 
-void SpiInterface::Process(const fd_set &aReadFdSet, const fd_set &aWriteFdSet)
+void SpiInterface::Process(const RadioProcessContext &aContext)
 {
-    OT_UNUSED_VARIABLE(aWriteFdSet);
-
-    if (FD_ISSET(mIntGpioValueFd, &aReadFdSet))
+    if (FD_ISSET(mIntGpioValueFd, aContext.mReadFdSet))
     {
         struct gpioevent_data event;
 

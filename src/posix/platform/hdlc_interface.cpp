@@ -120,12 +120,17 @@
 
 #if OPENTHREAD_POSIX_CONFIG_RCP_UART_ENABLE
 
+using ot::Spinel::SpinelInterface;
+
 namespace ot {
 namespace Posix {
 
-HdlcInterface::HdlcInterface(SpinelInterface::Callbacks &aCallback, SpinelInterface::RxFrameBuffer &aFrameBuffer)
-    : mCallbacks(aCallback)
-    , mRxFrameBuffer(aFrameBuffer)
+HdlcInterface::HdlcInterface(SpinelInterface::ReceiveFrameCallback aCallback,
+                             void *                                aCallbackContext,
+                             SpinelInterface::RxFrameBuffer &      aFrameBuffer)
+    : mReceiveFrameCallback(aCallback)
+    , mReceiveFrameContext(aCallbackContext)
+    , mReceiveFrameBuffer(aFrameBuffer)
     , mSockFd(-1)
     , mHdlcDecoder(aFrameBuffer, HandleHdlcFrame, this)
 {
@@ -328,11 +333,9 @@ void HdlcInterface::UpdateFdSet(fd_set &aReadFdSet, fd_set &aWriteFdSet, int &aM
     }
 }
 
-void HdlcInterface::Process(const fd_set &aReadFdSet, const fd_set &aWriteFdSet)
+void HdlcInterface::Process(const RadioProcessContext &aContext)
 {
-    OT_UNUSED_VARIABLE(aWriteFdSet);
-
-    if (FD_ISSET(mSockFd, &aReadFdSet))
+    if (FD_ISSET(mSockFd, aContext.mReadFdSet))
     {
         Read();
     }
@@ -342,7 +345,7 @@ otError HdlcInterface::WaitForWritable(void)
 {
     otError        error   = OT_ERROR_NONE;
     struct timeval timeout = {kMaxWaitTime / 1000, (kMaxWaitTime % 1000) * 1000};
-    uint64_t       now     = platformGetTime();
+    uint64_t       now     = otPlatTimeGet();
     uint64_t       end     = now + kMaxWaitTime * US_PER_MS;
     fd_set         writeFds;
     fd_set         errorFds;
@@ -377,7 +380,7 @@ otError HdlcInterface::WaitForWritable(void)
             DieNow(OT_EXIT_ERROR_ERRNO);
         }
 
-        now = platformGetTime();
+        now = otPlatTimeGet();
 
         if (end > now)
         {
@@ -626,11 +629,11 @@ void HdlcInterface::HandleHdlcFrame(otError aError)
 {
     if (aError == OT_ERROR_NONE)
     {
-        mCallbacks.HandleReceivedFrame();
+        mReceiveFrameCallback(mReceiveFrameContext);
     }
     else
     {
-        mRxFrameBuffer.DiscardFrame();
+        mReceiveFrameBuffer.DiscardFrame();
         otLogWarnPlat("Error decoding hdlc frame: %s", otThreadErrorToString(aError));
     }
 }

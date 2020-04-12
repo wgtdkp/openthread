@@ -36,8 +36,9 @@
 
 #include "openthread-posix-config.h"
 
-#include "spinel_interface.hpp"
+#include "platform-posix.h"
 #include "lib/hdlc/hdlc.hpp"
+#include "lib/spinel/spinel_interface.hpp"
 
 #include <openthread/openthread-system.h>
 
@@ -58,11 +59,14 @@ public:
     /**
      * This constructor initializes the object.
      *
-     * @param[in] aCallback     A reference to a `Callback` object.
-     * @param[in] aFrameBuffer  A reference to a `RxFrameBuffer` object.
+     * @param[in] aCallback         A reference to a `Callback` object.
+     * @param[in] aCallbackContext  The context pointer passed to the callback.
+     * @param[in] aFrameBuffer      A reference to a `RxFrameBuffer` object.
      *
      */
-    SpiInterface(SpinelInterface::Callbacks &aCallback, SpinelInterface::RxFrameBuffer &aFrameBuffer);
+    SpiInterface(Spinel::SpinelInterface::ReceiveFrameCallback aCallback,
+                 void *                                        aCallbackContext,
+                 Spinel::SpinelInterface::RxFrameBuffer &      aFrameBuffer);
 
     /**
      * This destructor deinitializes the object.
@@ -129,11 +133,10 @@ public:
     /**
      * This method performs radio driver processing.
      *
-     * @param[in]   aReadFdSet      A reference to the read file descriptors.
-     * @param[in]   aWriteFdSet     A reference to the write file descriptors.
+     * @param[in]   aContext        The context containing fd_sets.
      *
      */
-    void Process(const fd_set &aReadFdSet, const fd_set &aWriteFdSet);
+    void Process(const RadioProcessContext &aContext);
 
 private:
     int     SetupGpioHandle(int aFd, uint8_t aLine, uint32_t aHandleFlags, const char *aLabel);
@@ -184,11 +187,12 @@ private:
 
     enum
     {
-        kMaxFrameSize = SpinelInterface::kMaxFrameSize,
+        kMaxFrameSize = Spinel::SpinelInterface::kMaxFrameSize,
     };
 
-    SpinelInterface::Callbacks &    mCallbacks;
-    SpinelInterface::RxFrameBuffer &mRxFrameBuffer;
+    Spinel::SpinelInterface::ReceiveFrameCallback mReceiveFrameCallback;
+    void *                                        mReceiveFrameContext;
+    Spinel::SpinelInterface::RxFrameBuffer &      mRxFrameBuffer;
 
     int mSpiDevFd;
     int mResetGpioValueFd;
@@ -218,6 +222,10 @@ private:
 
     bool     mDidPrintRateLimitLog;
     uint16_t mSpiSlaveDataLen;
+
+    // Non-copyable, intentionally not implemented.
+    SpiInterface(const SpiInterface &);
+    SpiInterface &operator=(const SpiInterface &);
 };
 
 } // namespace Posix
