@@ -79,7 +79,7 @@
  *
  */
 #ifndef UART_HWFC_ENABLED
-#define UART_HWFC_ENABLED 1
+#define UART_HWFC_ENABLED 0
 #endif
 
 /**
