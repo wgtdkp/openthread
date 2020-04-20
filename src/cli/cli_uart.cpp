@@ -102,13 +102,14 @@ OT_STATIC_ASSERT(OPENTHREAD_CONFIG_CLI_MAX_LINE_LENGTH <= OPENTHREAD_CONFIG_CLI_
 namespace ot {
 namespace Cli {
 
-static OT_DEFINE_ALIGNED_VAR(sCliUartRaw, sizeof(Uart), uint64_t);
+// static OT_DEFINE_ALIGNED_VAR(sCliUartRaw, sizeof(Uart), uint64_t);
 
 extern "C" void otCliUartInit(otInstance *aInstance)
 {
     Instance *instance = static_cast<Instance *>(aInstance);
 
-    Server::sServer = new (&sCliUartRaw) Uart(instance);
+    void *sCliUartRaw = malloc(sizeof(Uart));
+    Server::sServer = new (sCliUartRaw) Uart(instance);
 }
 
 Uart::Uart(Instance *aInstance)
