@@ -33,6 +33,7 @@ add_library(openthread-hdlc
 target_include_directories(openthread-hdlc
     PUBLIC
         ${OT_PUBLIC_INCLUDES}
+        ${PROJECT_SOURCE_DIR}/src/lib
     PRIVATE
         ${PROJECT_SOURCE_DIR}/src/core
         ${OT_PRIVATE_INCLUDES}
