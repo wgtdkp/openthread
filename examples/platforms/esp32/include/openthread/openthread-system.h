@@ -100,7 +100,7 @@ bool otSysPseudoResetWasRequested(void);
 void otSysMainloopInit(otSysMainloopContext *aMainloop);
 
 /**
- * This function updates the file descriptor sets with file descriptors used by OpenThread drivers.
+ * This function updates the mainloop context.
  *
  * @param[in]       aInstance   The OpenThread instance structure.
  * @param[inout]    aMainloop   A pointer to the mainloop context.
