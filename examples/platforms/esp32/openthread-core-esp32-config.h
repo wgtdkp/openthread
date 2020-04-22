@@ -63,7 +63,7 @@
 #define OPENTHREAD_CONFIG_COAP_API_ENABLE 1
 
 /* Define to 1 to enable the border agent feature. */
-#define OPENTHREAD_CONFIG_BORDER_AGENT_ENABLE 1
+#define OPENTHREAD_CONFIG_BORDER_AGENT_ENABLE 0
 
 /* Define to 1 if you want to enable Border Router */
 #define OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE 1
@@ -81,7 +81,7 @@
 #define OPENTHREAD_CONFIG_CHILD_SUPERVISION_ENABLE 1
 
 /* Define to 1 to enable the commissioner role. */
-#define OPENTHREAD_CONFIG_COMMISSIONER_ENABLE 1
+#define OPENTHREAD_CONFIG_COMMISSIONER_ENABLE 0
 
 /* Define to 1 if you want to enable DHCPv6 Client */
 #define OPENTHREAD_CONFIG_DHCP6_CLIENT_ENABLE 1
@@ -96,16 +96,16 @@
 #define OPENTHREAD_CONFIG_DNS_CLIENT_ENABLE 1
 
 /* Define to 1 to enable dtls support. */
-#define OPENTHREAD_CONFIG_DTLS_ENABLE 1
+#define OPENTHREAD_CONFIG_DTLS_ENABLE 0
 
 /* Define to 1 if you want to use jam detection feature */
-#define OPENTHREAD_CONFIG_JAM_DETECTION_ENABLE 1
+#define OPENTHREAD_CONFIG_JAM_DETECTION_ENABLE 0
 
 /* Define to 1 to enable the joiner role. */
-#define OPENTHREAD_CONFIG_JOINER_ENABLE 1
+#define OPENTHREAD_CONFIG_JOINER_ENABLE 0
 
 /* Define to 1 if you want to use legacy network support */
-#define OPENTHREAD_CONFIG_LEGACY_ENABLE 1
+#define OPENTHREAD_CONFIG_LEGACY_ENABLE 0
 
 /* Define to 1 if you want to use MAC filter feature */
 #define OPENTHREAD_CONFIG_MAC_FILTER_ENABLE 1
@@ -152,6 +152,8 @@
 
 /* Define to the full name of this package. */
 #define PACKAGE_NAME "OPENTHREAD"
+
+#define PACKAGE_VERSION "1.1.1"
 
 /* Define to the full name and version of this package. */
 #define PACKAGE_STRING "OPENTHREAD gcf8d4ec"

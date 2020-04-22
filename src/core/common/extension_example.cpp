@@ -33,6 +33,8 @@
 
 #include "openthread-core-config.h"
 
+#if OPENTHREAD_ENABLE_VENDOR_EXTENSION
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -94,3 +96,5 @@ void ExtensionBase::SignalNcpInit(Ncp::NcpBase &aNcpBase)
 
 } // namespace Extension
 } // namespace ot
+
+#endif // OPENTHREAD_ENABLE_VENDOR_EXTENSION

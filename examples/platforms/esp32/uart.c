@@ -13,8 +13,6 @@
 #include "openthread/openthread-system.h"
 #include "error_handling.h"
 
-static uint8_t sCliUartRxBuffer[OT_UART_RX_BUF_SIZE];
-
 static int sCliUartFd;
 
 otError otPlatUartEnable(void)
@@ -36,7 +34,7 @@ otError otPlatUartSend(const uint8_t *aBuf, uint16_t aBufLength)
 {
     otError error = OT_ERROR_NONE;
 
-    int rval = uart_write_bytes(OT_CLI_UART_NUM, aBuf, aBufLength);
+    int rval = write(sCliUartFd, aBuf, aBufLength);
 
     VerifyOrExit(rval == (int)aBufLength, error = OT_ERROR_FAILED);
 
