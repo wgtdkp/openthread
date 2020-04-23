@@ -62,7 +62,7 @@ void otPlatAlarmMilliStartAt(otInstance *aInstance, uint32_t aT0, uint32_t aDt)
     sAlarmDt             = aDt;
     sIsRunning = true;
 
-    printf("alarm start running, t0=%u, dt=%u\n", sAlarmT0, sAlarmDt);
+    //printf("alarm start running, t0=%u, dt=%u\n", sAlarmT0, sAlarmDt);
 }
 
 void otPlatAlarmMilliStop(otInstance *aInstance)
@@ -89,8 +89,6 @@ void platformAlarmUpdate(otSysMainloopContext *aMainloop)
         uint32_t remaining = sAlarmDt + sAlarmT0 - now;
         timeout->tv_sec = remaining / 1000;
         timeout->tv_usec = (remaining % 1000) * 1000;
-
-        printf("%u, %u, %u\n", sAlarmDt, sAlarmT0, now);
     }
     else {
         timeout->tv_sec = 0;
@@ -106,7 +104,7 @@ void platformAlarmProcess(otInstance *aInstance, const otSysMainloopContext *aMa
     {
         if (sAlarmT0 + sAlarmDt <= otPlatAlarmMilliGetNow())
         {
-            printf("sIsRunning set to false\n");
+            //printf("sIsRunning set to false\n");
             sIsRunning = false;
 
 #if OPENTHREAD_CONFIG_DIAG_ENABLE

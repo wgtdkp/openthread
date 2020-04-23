@@ -85,54 +85,46 @@ void otPlatFlashErase(otInstance *aInstance, uint8_t aSwapIndex)
     sEraseTask.mAddress = sOtDataPartition->address + SETTINGS_CONFIG_PAGE_SIZE * (aSwapIndex != 0);
     sEraseTask.mEraseSize = SETTINGS_CONFIG_PAGE_SIZE;
 
-    assert(xTaskCreate(FlashEraseTask, "ot_flash_erase", 2048, &sEraseTask, 5, NULL) == pdPASS);
+    int ret = xTaskCreate(FlashEraseTask, "ot_flash_erase", 2048, &sEraseTask, 5, NULL);
+    assert(ret == pdPASS);
 }
-
-/*
-otError utilsFlashStatusWait(uint32_t aTimeout) {
-    otError error = OT_ERROR_NONE;
-    uint32_t timeoutTick = aTimeout / portTICK_PERIOD_MS;
-    esp_err_t rval;
-
-    VerifyOrExit(sEraseQueue != NULL, error = OT_ERROR_FAILED);
-    if (xQueueReceive(sEraseQueue, &rval, timeoutTick)) {
-        VerifyOrExit(rval == ESP_OK, error = OT_ERROR_FAILED);
-    } else {
-        error = OT_ERROR_BUSY;
-    }
-exit:
-    return error;
-}
-*/
 
 void otPlatFlashRead(otInstance *aInstance, uint8_t aSwapIndex, uint32_t aOffset, void *aData, uint32_t aSize) {
     OT_UNUSED_VARIABLE(aInstance);
 
-    uint32_t address;
+    esp_err_t error = ESP_FAIL;
 
     VerifyOrExit(sOtDataPartition != NULL);
 
-    address = sOtDataPartition->address + SETTINGS_CONFIG_PAGE_SIZE * (aSwapIndex != 0) + aOffset;
-    VerifyOrExit(address + aSize < sOtDataPartition->address + sOtDataPartition->size);
+    aOffset += SETTINGS_CONFIG_PAGE_SIZE * (aSwapIndex != 0);
 
-    VerifyOrExit(esp_partition_read(sOtDataPartition, address, aData, aSize) == ESP_OK);
+    SuccessOrExit(error = esp_partition_read(sOtDataPartition, aOffset, aData, aSize));
 
 exit:
+    if (error != ESP_OK)
+    {
+        ESP_LOGE(OT_PLAT_LOG_TAG, "failed to read flash, swapIndes=%d, offset=%u, size=%u", aSwapIndex, aOffset, aSize);
+        abort();
+    }
     return;
 }
 
 void otPlatFlashWrite(otInstance *aInstance, uint8_t aSwapIndex, uint32_t aOffset, const void *aData, uint32_t aSize) {
     OT_UNUSED_VARIABLE(aInstance);
 
-    uint32_t address;
+    esp_err_t error = ESP_FAIL;
 
     VerifyOrExit(sOtDataPartition != NULL);
 
-    address = sOtDataPartition->address + SETTINGS_CONFIG_PAGE_SIZE * (aSwapIndex != 0) + aOffset;
-    VerifyOrExit(address + aSize < sOtDataPartition->address + sOtDataPartition->size);
+    aOffset += SETTINGS_CONFIG_PAGE_SIZE * (aSwapIndex != 0);
 
-    VerifyOrExit(esp_partition_write(sOtDataPartition, address, aData, aSize) == ESP_OK);
+    SuccessOrExit(error = esp_partition_write(sOtDataPartition, aOffset, aData, aSize));
 
 exit:
+    if (error != ESP_OK)
+    {
+        ESP_LOGE(OT_PLAT_LOG_TAG, "failed to write flash, swapIndes=%d, offset=%u, size=%u, error=%s", aSwapIndex, aOffset, aSize, esp_err_to_name(error));
+        abort();
+    }
     return;
 }

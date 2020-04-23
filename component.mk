@@ -6,8 +6,7 @@ COMPONENT_ADD_INCLUDEDIRS                   := \
 	src/core                                   \
 	src/ncp                                    \
 	src/lib/hdlc                               \
-	src/lib/spinel                             \
-	third_party/mbedtls
+	src/lib/spinel
 
 COMPONENT_PRIV_INCLUDEDIRS := \
 	src
