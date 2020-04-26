@@ -82,7 +82,7 @@ void otPlatFlashErase(otInstance *aInstance, uint8_t aSwapIndex)
     assert(sEraseQueue != NULL);
 
     sEraseTask.mPartition = sOtDataPartition;
-    sEraseTask.mAddress = sOtDataPartition->address + SETTINGS_CONFIG_PAGE_SIZE * (aSwapIndex != 0);
+    sEraseTask.mAddress = SETTINGS_CONFIG_PAGE_SIZE * (aSwapIndex != 0);
     sEraseTask.mEraseSize = SETTINGS_CONFIG_PAGE_SIZE;
 
     int ret = xTaskCreate(FlashEraseTask, "ot_flash_erase", 2048, &sEraseTask, 5, NULL);
