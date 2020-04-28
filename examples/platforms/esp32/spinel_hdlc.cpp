@@ -338,6 +338,7 @@ void HdlcInterface::InitUart(void) {
     // We have a driver now installed so set up the read/write functions to use driver also.
     esp_vfs_dev_uart_use_driver(OT_RADIO_UART_NUM);
 
+    // FIXME(wgtdkp): remove magic string.
     // Open the CLI UART as a unix file.
     mUartFd = open("/dev/uart/1", O_RDWR | O_NONBLOCK);
     if (mUartFd == -1)
