@@ -119,7 +119,7 @@ Instance::Instance(void)
 
 Instance &Instance::InitSingle(void)
 {
-    if (gInstanceRaw != NULL)
+    if (gInstanceRaw == NULL)
     {
         gInstanceRaw = (uint64_t*)malloc(sizeof(Instance));
     }
