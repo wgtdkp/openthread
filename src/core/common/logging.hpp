@@ -90,6 +90,7 @@ extern "C" {
 #define _OT_REGION_CORE_PREFIX "-CORE----: "
 #define _OT_REGION_UTIL_PREFIX "-UTIL----: "
 #define _OT_REGION_BBR_PREFIX "-BBR-----: "
+#define _OT_REGION_BLE_PREFIX "-BLE-----: "
 #else
 #define _OT_REGION_API_PREFIX _OT_REGION_SUFFIX
 #define _OT_REGION_MLE_PREFIX _OT_REGION_SUFFIX
@@ -108,6 +109,7 @@ extern "C" {
 #define _OT_REGION_CORE_PREFIX _OT_REGION_SUFFIX
 #define _OT_REGION_UTIL_PREFIX _OT_REGION_SUFFIX
 #define _OT_REGION_BBR_PREFIX _OT_REGION_SUFFIX
+#define _OT_REGION_BLE_PREFIX _OT_REGION_SUFFIX
 #endif
 
 /**
@@ -981,6 +983,69 @@ extern "C" {
 #define otLogCertMeshCoP(...) _otLogFormatter(OT_LOG_LEVEL_NONE, OT_LOG_REGION_MESH_COP, __VA_ARGS__, NULL)
 #else
 #define otLogCertMeshCoP(...)
+#endif
+
+/**
+ * @def otLogCritBle
+ *
+ * This method generates a log with level critical for the Bluetooth region.
+ *
+ * @param[in]  aFormat      A pointer to the format string.
+ * @param[in]  ...          Arguments for the format specification.
+ *
+ */
+
+/**
+ * @def otLogWarnBle
+ *
+ * This method generates a log with level warning for the Bluetooth region.
+ *
+ * @param[in]  aFormat      A pointer to the format string.
+ * @param[in]  ...          Arguments for the format specification.
+ *
+ */
+
+/**
+ * @def otLogNoteBle
+ *
+ * This method generates a log with level note for the Bluetooth region.
+ *
+ * @param[in]  aFormat      A pointer to the format string.
+ * @param[in]  ...          Arguments for the format specification.
+ *
+ */
+
+/**
+ * @def otLogInfoBle
+ *
+ * This method generates a log with level info for the Bluetooth region.
+ *
+ * @param[in]  aFormat      A pointer to the format string.
+ * @param[in]  ...          Arguments for the format specification.
+ *
+ */
+
+/**
+ * @def otLogDebgBle
+ *
+ * This method generates a log with level debug for the Bluetooth region.
+ *
+ * @param[in]  aFormat      A pointer to the format string.
+ * @param[in]  ...          Arguments for the format specification.
+ *
+ */
+#if OPENTHREAD_CONFIG_LOG_BLE == 1
+#define otLogCritBle(aFormat, ...) otLogCrit(OT_LOG_REGION_BLE, _OT_REGION_BLE_PREFIX aFormat, ##__VA_ARGS__)
+#define otLogWarnBle(aFormat, ...) otLogWarn(OT_LOG_REGION_BLE, _OT_REGION_BLE_PREFIX aFormat, ##__VA_ARGS__)
+#define otLogNoteBle(aFormat, ...) otLogNote(OT_LOG_REGION_BLE, _OT_REGION_BLE_PREFIX aFormat, ##__VA_ARGS__)
+#define otLogInfoBle(aFormat, ...) otLogInfo(OT_LOG_REGION_BLE, _OT_REGION_BLE_PREFIX aFormat, ##__VA_ARGS__)
+#define otLogDebgBle(aFormat, ...) otLogDebg(OT_LOG_REGION_BLE, _OT_REGION_BLE_PREFIX aFormat, ##__VA_ARGS__)
+#else
+#define otLogCritBle(aFormat, ...)
+#define otLogWarnBle(aFormat, ...)
+#define otLogNoteBle(aFormat, ...)
+#define otLogInfoBle(aFormat, ...)
+#define otLogDebgBle(aFormat, ...)
 #endif
 
 /**
