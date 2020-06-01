@@ -1,4 +1,4 @@
 [submodule "third-party/mynewt-nimble/repo"]
-	path = third-party/mynewt-nimble/repo
+	path = third_party/mynewt-nimble/repo
 	url = https://github.com/apache/mynewt-nimble.git
 	branch = 1_2_0_dev

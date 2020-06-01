@@ -217,6 +217,16 @@
 #endif
 
 /**
+ * @def OPENTHREAD_CONFIG_LOG_BLE
+ *
+ * Define to enable BLE logging.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_LOG_BLE
+#define OPENTHREAD_CONFIG_LOG_BLE 1
+#endif
+
+/**
  * @def OPENTHREAD_CONFIG_LOG_CLI
  *
  * Define to enable CLI logging.
