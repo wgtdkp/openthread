@@ -622,6 +622,30 @@ AC_MSG_RESULT(${enable_ncp})
 AM_CONDITIONAL([OPENTHREAD_ENABLE_NCP], [test "${enable_ncp}" = "yes"])
 
 #
+# BLE host
+#
+
+AC_MSG_CHECKING([whether to build BLE host])
+AC_ARG_WITH(ble-host,
+    [AS_HELP_STRING([--with-ble-host=TARGET], [Build BLE host for one of: nimble @<:@default=no@:>@.])],
+    [
+        case "${with_ble_host}" in
+        no)
+            ;;
+        nimble)
+            ;;
+        *)
+            AC_MSG_RESULT(ERROR)
+            AC_MSG_ERROR([Invalid value given for --with-blehost: ${with_ble_host}])
+            ;;
+        esac
+    ],
+    [with_ble_host=no])
+
+AM_CONDITIONAL([OPENTHREAD_CONFIG_BLE_ENABLE], [test ${with_ble_host} != "no"])
+AM_CONDITIONAL([OPENTHREAD_CONFIG_BLE_HOST_NIMBLE_ENABLE],[test "${with_ble_host}" = "nimble"])
+
+#
 # Readline - readline library to use for POSIX CLI
 #
 
@@ -1034,6 +1058,7 @@ src/lib/spinel/Makefile
 third_party/Makefile
 third_party/jlink/Makefile
 third_party/mbedtls/Makefile
+third_party/mynewt-nimble/Makefile
 third_party/NordicSemiconductor/Makefile
 third_party/silabs/Makefile
 examples/Makefile
@@ -1140,6 +1165,7 @@ AC_MSG_NOTICE([
   OpenThread NCP Spinel Encrypter           : ${with_ncp_spinel_encrypter_libs}
   OpenThread Vendor Extension Source        : ${with_vendor_extension}
   OpenThread builtin mbedtls support        : ${enable_builtin_mbedtls}
+  OpenThread BLE Host                       : ${with_ble_host}
   OpenThread Examples                       : ${with_examples}
   OpenThread Platform Libraries             : ${with_platform}
 

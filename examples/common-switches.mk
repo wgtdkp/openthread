@@ -30,6 +30,7 @@
 
 BACKBONE_ROUTER     ?= 0
 BIG_ENDIAN          ?= 0
+BLE_HOST            ?= 0
 BORDER_AGENT        ?= 0
 BORDER_ROUTER       ?= 0
 COAP                ?= 0
@@ -82,6 +83,10 @@ endif
 
 ifeq ($(BIG_ENDIAN),1)
 COMMONCFLAGS                   += -DBYTE_ORDER_BIG_ENDIAN=1
+endif
+
+ifeq ($(BLE_HOST),nimble)
+configure_OPTIONS              += --with-ble-host=nimble
 endif
 
 ifeq ($(BORDER_AGENT),1)

@@ -108,4 +108,10 @@ SUBDIRS                                += \
     $(NULL)
 endif # OPENTHREAD_ENABLE_BUILTIN_MBEDTLS
 
+if OPENTHREAD_CONFIG_BLE_HOST_NIMBLE_ENABLE
+SUBDIRS                                += \
+    mynewt-nimble                         \
+    $(NULL)
+endif
+
 include $(abs_top_nlbuild_autotools_dir)/automake/post.am
