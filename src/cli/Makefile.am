@@ -158,6 +158,7 @@ SOURCES_COMMON =                      \
     cli_dataset.cpp                   \
     cli_joiner.cpp                    \
     cli_server.cpp                    \
+    cli_toble_platform.cpp            \
     cli_uart.cpp                      \
     cli_udp.cpp                       \
     $(NULL)
@@ -180,6 +181,7 @@ noinst_HEADERS                      = \
     cli_dataset.hpp                   \
     cli_joiner.hpp                    \
     cli_server.hpp                    \
+    cli_toble_platform.hpp            \
     cli_uart.hpp                      \
     cli_udp.hpp                       \
     x509_cert_key.hpp                 \

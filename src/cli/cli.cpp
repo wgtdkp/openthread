@@ -238,6 +238,9 @@ const struct Command Interpreter::sCommands[] = {
 #endif
     {"state", &Interpreter::ProcessState},
     {"thread", &Interpreter::ProcessThread},
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    {"toble", &Interpreter::ProcessToblePlatform},
+#endif
     {"txpower", &Interpreter::ProcessTxPower},
     {"udp", &Interpreter::ProcessUdp},
     {"version", &Interpreter::ProcessVersion},
@@ -270,6 +273,9 @@ Interpreter::Interpreter(Instance *aInstance)
 #endif
 #if OPENTHREAD_CONFIG_COMMISSIONER_ENABLE && OPENTHREAD_FTD
     , mCommissioner(*this)
+#endif
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    , mToblePlatform(*this)
 #endif
 #if OPENTHREAD_CONFIG_JOINER_ENABLE
     , mJoiner(*this)
@@ -3512,6 +3518,17 @@ void Interpreter::ProcessCommissioner(uint8_t aArgsLength, char *aArgs[])
 {
     otError error;
     error = mCommissioner.Process(aArgsLength, aArgs);
+    AppendResult(error);
+}
+
+#endif
+
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+
+void Interpreter::ProcessToblePlatform(uint8_t aArgsLength, char *aArgs[])
+{
+    otError error;
+    error = mToblePlatform.Process(aArgsLength, aArgs);
     AppendResult(error);
 }
 

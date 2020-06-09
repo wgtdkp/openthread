@@ -235,4 +235,40 @@ void otSimSendUartWriteEvent(const uint8_t *aData, uint16_t aLength);
  */
 bool platformRadioIsTransmitPending(void);
 
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+/**
+ * This function initializes the ToBLE platform layer service used by OpenThread.
+ *
+ * @param[in]  aSpeedUpFactor  The speed up factor.
+ *
+ */
+void platformTobleInit(uint32_t aSpeedUpFactor);
+
+/**
+ * This function shuts down the ToBLE platform layer service used by OpenThread.
+ *
+ */
+void platformTobleDeinit(void);
+
+/**
+ * This function updates the file descriptor sets with file descriptors used by the ToBLE platform layer service.
+ *
+ * @param[inout]  aReadFdSet   A pointer to the read file descriptors.
+ * @param[inout]  aWriteFdSet  A pointer to the write file descriptors.
+ * @param[inout]  aTimeout     A pointer to the timeval struct.
+ * @param[inout]  aMaxFd       A pointer to the max file descriptor.
+ *
+ */
+void platformTobleUpdateFdSet(fd_set *aReadFdSet, fd_set *aWriteFdSet, struct timeval *aTimeout, int *aMaxFd);
+
+/**
+ * This function performs ToBLE platform layer service processing.
+ *
+ * @param[in]  aInstance    The OpenThread instance structure.
+ * @param[in]  aReadFdSet   A pointer to the read file descriptors.
+ * @param[in]  aWriteFdSet  A pointer to the write file descriptors.
+ *
+ */
+void platformTobleProcess(otInstance *aInstance, const fd_set *aReadFdSet, const fd_set *aWriteFdSet);
+#endif // OPENTHREAD_CONFIG_TOBLE_ENABLE
 #endif // PLATFORM_SIMULATION_H_

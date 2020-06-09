@@ -57,6 +57,10 @@
 #include "cli/cli_coap_secure.hpp"
 #endif
 
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+#include "cli/cli_toble_platform.hpp"
+#endif
+
 #include "common/code_utils.hpp"
 #include "common/instance.hpp"
 
@@ -100,6 +104,7 @@ class Interpreter
     friend class Commissioner;
     friend class Dataset;
     friend class Joiner;
+    friend class ToblePlatform;
     friend class UdpExample;
 
 public:
@@ -264,6 +269,9 @@ private:
     otError ProcessIpMulticastAddrAdd(uint8_t aArgsLength, char *aArgs[]);
     otError ProcessIpMulticastAddrDel(uint8_t aArgsLength, char *aArgs[]);
     otError ProcessMulticastPromiscuous(uint8_t aArgsLength, char *aArgs[]);
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    void ProcessToblePlatform(uint8_t aArgsLength, char *aArgs[]);
+#endif
 #if OPENTHREAD_CONFIG_JOINER_ENABLE
     void ProcessJoiner(uint8_t aArgsLength, char *aArgs[]);
 #endif
@@ -447,6 +455,10 @@ private:
 
 #if OPENTHREAD_CONFIG_COMMISSIONER_ENABLE && OPENTHREAD_FTD
     Commissioner mCommissioner;
+#endif
+
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    ToblePlatform mToblePlatform;
 #endif
 
 #if OPENTHREAD_CONFIG_JOINER_ENABLE

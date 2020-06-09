@@ -52,6 +52,7 @@ PLATFORM_SOURCES                          = \
     radio.c                                 \
     spi-stubs.c                             \
     system.c                                \
+    toble-sim.c                             \
     uart.c                                  \
     virtual_time/alarm-sim.c                \
     virtual_time/otns.c                     \

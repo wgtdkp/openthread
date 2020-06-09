@@ -106,6 +106,9 @@ void otSysInit(int aArgCount, char *aArgVector[])
     platformAlarmInit(speedUpFactor);
     platformRadioInit();
     platformRandomInit();
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    platformTobleInit(speedUpFactor);
+#endif
 }
 
 bool otSysPseudoResetWasRequested(void)
@@ -116,6 +119,9 @@ bool otSysPseudoResetWasRequested(void)
 void otSysDeinit(void)
 {
     platformRadioDeinit();
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    platformTobleDeinit();
+#endif
 }
 
 void otSysProcessDrivers(otInstance *aInstance)
@@ -134,6 +140,9 @@ void otSysProcessDrivers(otInstance *aInstance)
     platformUartUpdateFdSet(&read_fds, &write_fds, &error_fds, &max_fd);
     platformRadioUpdateFdSet(&read_fds, &write_fds, &max_fd);
     platformAlarmUpdateTimeout(&timeout);
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    platformTobleUpdateFdSet(&read_fds, &write_fds, &timeout, &max_fd);
+#endif
 
     if (otTaskletsArePending(aInstance))
     {
@@ -147,6 +156,9 @@ void otSysProcessDrivers(otInstance *aInstance)
     {
         platformUartProcess();
         platformRadioProcess(aInstance, &read_fds, &write_fds);
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+        platformTobleProcess(aInstance, &read_fds, &write_fds);
+#endif
     }
     else if (errno != EINTR)
     {

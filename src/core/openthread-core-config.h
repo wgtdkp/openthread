@@ -76,6 +76,7 @@
 #include "config/sntp_client.h"
 #include "config/time_sync.h"
 #include "config/tmf.h"
+#include "config/toble.h"
 
 #if OPENTHREAD_CONFIG_COAP_SECURE_API_ENABLE || OPENTHREAD_CONFIG_BORDER_AGENT_ENABLE || \
     OPENTHREAD_CONFIG_COMMISSIONER_ENABLE || OPENTHREAD_CONFIG_JOINER_ENABLE
