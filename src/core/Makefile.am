@@ -238,6 +238,7 @@ SOURCES_COMMON                             = \
     thread/thread_netif.cpp                  \
     thread/time_sync_service.cpp             \
     thread/topology.cpp                      \
+    toble/adv_data.cpp                       \
     utils/channel_manager.cpp                \
     utils/channel_monitor.cpp                \
     utils/child_supervision.cpp              \
