@@ -1,5 +1,5 @@
 
-#include "btp.hpp"
+#include "toble/btp.hpp"
 
 #include <openthread/platform/toble.h>
 
@@ -9,15 +9,15 @@
 namespace ot {
 namespace Toble {
 
-#if OPENTHREAD_CONFIG_ENABLE_TOBLE && OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE && OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
 
-void Btp::HandleC1WriteDone(Platform::Connection *aPlatConn)
+void Btp::HandleC1WriteDone(Platform::ConnectionId aPlatConn)
 {
     Connection *conn = Get<ConnectionTable>().Find(aPlatConn);
 
     assert(Get<Toble>().IsCentral());
 
-    VerifyOrExit(conn != NULL);
+    VerifyOrExit(conn != NULL, OT_NOOP);
 
     switch (conn->mSession.mState)
     {
@@ -37,22 +37,22 @@ exit:
     return;
 }
 
-void Btp::HandleC2Indication(Platform::Connection *aPlatConn, const uint8_t *aFrame, uint16_t aLength)
+void Btp::HandleC2Indication(Platform::ConnectionId aPlatConn, const uint8_t *aFrame, uint16_t aLength)
 {
     Connection * conn  = Get<ConnectionTable>().Find(aPlatConn);
     const Frame *frame = reinterpret_cast<const Frame *>(aFrame);
 
     assert(Get<Toble>().IsCentral());
 
-    VerifyOrExit(conn != NULL);
+    VerifyOrExit(conn != NULL, OT_NOOP);
 
-    VerifyOrExit(conn->mSession.mState == kStateHandshake || conn->mSession.mState == kStateConnected);
+    VerifyOrExit(conn->mSession.mState == kStateHandshake || conn->mSession.mState == kStateConnected, OT_NOOP);
 
-    VerifyOrExit(aLength > 0);
+    VerifyOrExit(aLength > 0, OT_NOOP);
 
     if (frame->IsHandshake())
     {
-        VerifyOrExit(aLength >= sizeof(HandshakeResponse));
+        VerifyOrExit(aLength >= sizeof(HandshakeResponse), OT_NOOP);
         HandleHandshake(*conn, static_cast<const HandshakeResponse &>(*frame));
     }
     else
@@ -68,7 +68,7 @@ void Btp::HandleHandshake(Connection &aConn, const HandshakeResponse &aResponse)
 {
     Session &session = aConn.mSession;
 
-    VerifyOrExit(session.mState == kStateHandshake);
+    VerifyOrExit(session.mState == kStateHandshake, OT_NOOP);
 
     otLogDebgBle("BTP handshake receive");
 
@@ -100,7 +100,7 @@ exit:
     return;
 }
 
-#endif // #if OPENTHREAD_CONFIG_ENABLE_TOBLE && OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
+#endif // #if OPENTHREAD_CONFIG_TOBLE_ENABLE && OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
 
 } // namespace Toble
 } // namespace ot

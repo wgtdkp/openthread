@@ -10,12 +10,11 @@
 #include "common/timer.hpp"
 #include "toble/btp_frame.hpp"
 #include "toble/platform.hpp"
-#include "utils/wrap_stdint.h"
 
 namespace ot {
 namespace Toble {
 
-#if OPENTHREAD_CONFIG_ENABLE_TOBLE
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
 
 class Connection;
 
@@ -49,8 +48,8 @@ private:
     class Session
     {
     public:
-        bool    IsTimerExpired(void) const { return static_cast<int32_t>(mTimerExpire - TimerMilli::GetNow()) <= 0; }
-        int32_t GetTimer(void) const { return static_cast<int32_t>(mTimerExpire - TimerMilli::GetNow()); }
+        bool    IsTimerExpired(void) const { return (mTimerExpire < TimerMilli::GetNow()); }
+        int32_t GetTimer(void) const { return mTimerExpire - TimerMilli::GetNow(); }
         void    SetTimer(uint32_t aDelay)
         {
             mTimerExpire = TimerMilli::GetNow() + aDelay;
@@ -70,7 +69,7 @@ private:
 
         State mState;
 
-        uint32_t mTimerExpire;
+        TimeMilli mTimerExpire;
 
         uint16_t mMtu;
 
@@ -98,14 +97,14 @@ private:
 
     void Reset(Session &aSession);
 
-    void HandleConnectionReady(Platform::Connection *aPlatConn);
+    void HandleConnectionReady(Platform::ConnectionId aPlatConn);
 
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
     void HandleHandshake(Connection &aConn, const HandshakeResponse &aResponse);
 
     // Callbacks from platform
-    void HandleC1WriteDone(Platform::Connection *aConn);
-    void HandleC2Indication(Platform::Connection *aConn, const uint8_t *aFrame, uint16_t aLength);
+    void HandleC1WriteDone(Platform::ConnectionId aConnId);
+    void HandleC2Indication(Platform::ConnectionId aConnId, const uint8_t *aFrame, uint16_t aLength);
 #endif
 
 #if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
@@ -118,9 +117,9 @@ private:
     void HandleHandshake(Connection &aConn, const HandshakeRequest &aRequest);
 
     // Callbacks from platform
-    void HandleC1Write(Platform::Connection *aPlatConn, const uint8_t *aFrame, uint16_t aLength);
-    void HandleC2Subscribed(Platform::Connection *aPlatConn, bool aIsSubscribed);
-    void HandleC2IndicateDone(Platform::Connection *aPlatConn);
+    void HandleC1Write(Platform::ConnectionId aPlatConn, const uint8_t *aFrame, uint16_t aLength);
+    void HandleC2Subscribed(Platform::ConnectionId aPlatConn, bool aIsSubscribed);
+    void HandleC2IndicateDone(Platform::ConnectionId aPlatConn);
 #endif
 
     void HandleSentData(Connection &aConn);
@@ -136,7 +135,7 @@ private:
     TimerMilli mTimer;
 };
 
-#endif // #if OPENTHREAD_CONFIG_ENABLE_TOBLE
+#endif // #if OPENTHREAD_CONFIG_TOBLE_ENABLE
 
 } // namespace Toble
 } // namespace ot

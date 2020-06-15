@@ -31,7 +31,7 @@
  *   This file contains the implementation for ToBLE transport abstraction.
  */
 
-#include "transport.hpp"
+#include "toble/transport.hpp"
 
 #include "common/code_utils.hpp"
 #include "common/locator-getters.hpp"
@@ -39,8 +39,7 @@
 namespace ot {
 namespace Toble {
 
-#if OPENTHREAD_CONFIG_ENABLE_TOBLE
-
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
 Transport::Transport(Instance &aInstance)
     : InstanceLocator(aInstance)
     , mBtp(aInstance)
@@ -182,7 +181,7 @@ void Transport::HandleReceiveDone(Connection &aConn, uint8_t *aFrame, uint16_t a
     }
 }
 
-#endif // #if OPENTHREAD_CONFIG_ENABLE_TOBLE
+#endif // #if OPENTHREAD_CONFIG_TOBLE_ENABLE
 
 } // namespace Toble
 } // namespace ot

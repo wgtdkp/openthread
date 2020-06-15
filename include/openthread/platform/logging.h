@@ -135,6 +135,7 @@ typedef enum otLogRegion
     OT_LOG_REGION_CORE     = 15, ///< OpenThread Core
     OT_LOG_REGION_UTIL     = 16, ///< Utility module
     OT_LOG_REGION_BBR      = 17, ///< Backbone Router (available since Thread 1.2)
+    OT_LOG_REGION_BLE      = 18, ///< BLE
 } otLogRegion;
 
 /**

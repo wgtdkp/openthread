@@ -44,7 +44,7 @@
 #include "toble/adv_data.hpp"
 #include "toble/platform.hpp"
 
-#if OPENTHREAD_CONFIG_ENABLE_TOBLE && OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE && OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
 
 namespace ot {
 namespace Toble {
@@ -60,11 +60,11 @@ class Controller : public InstanceLocator
     friend class ot::Toble::Toble;
 
 public:
-    Controller(Instance &aInstance);
+    explicit Controller(Instance &aInstance);
 
     otError Sleep(void);
     otError Receive(void);
-    otError Transmit(Mac::Frame &aFrame);
+    otError Transmit(Mac::TxFrame &aFrame);
 
     // Callbacks from `Transport`
     void HandleTransportSendDone(Connection &aConn, otError aError);
@@ -99,25 +99,24 @@ private:
     void InvokeRadioTxDone(otError aError);
 
     // Callbacks from platform
-    void HandleConnected(Platform::Connection *aPlatConn);
-    void HandleDisconnected(Platform::Connection *aPlatConn);
+    void HandleConnected(Platform::ConnectionId aPlatConn);
+    void HandleDisconnected(Platform::ConnectionId aPlatConn);
 
     static void HandleTimer(Timer &aTimer);
     void        HandleTimer(void);
 
     static const char *StateToString(State aState);
 
-    Connection *mConn;
-    TimerMilli  mTimer;
-    State       mState;
-    Mac::Frame *mTxFrame;
-    uint8_t     mAdvDataBuffer[AdvData::kMaxSize];
+    Connection *  mConn;
+    TimerMilli    mTimer;
+    State         mState;
+    Mac::TxFrame *mTxFrame;
+    uint8_t       mAdvDataBuffer[AdvData::kMaxSize];
 };
-
 } // namespace Peripheral
 } // namespace Toble
 } // namespace ot
 
-#endif // OPENTHREAD_CONFIG_ENABLE_TOBLE && OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+#endif // OPENTHREAD_CONFIG_TOBLE_ENABLE && OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
 
 #endif // TOBLE_CONTROLLER_PERIPHERAL_HPP_

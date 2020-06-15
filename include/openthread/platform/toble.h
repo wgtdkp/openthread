@@ -111,6 +111,15 @@ typedef uint8_t otTobleConnectionId; ///< An identifier representing ToBLE conne
 
 #define OT_TOBLE_ADV_DATA_MAX_LENGTH 31     ///< Maximum length of advertising data [bytes].
 #define OT_TOBLE_CONNECTION_ID_INVALID 0xff ///< Invalid ToBLE connection identifier.
+/**
+ * This enumeration represents the ToBLE link mode.
+ *
+ */
+typedef enum otTobleLinkMode
+{
+    OT_TOBLE_LINK_MODE_PERIPHERAL = 0, ///< ToBLE link is in peripheral mode.
+    OT_TOBLE_LINK_MODE_CENTRAL    = 1, ///< ToBLE link is in central mode.
+} otTobleLinkMode;
 
 /**
  * This type represents advertisement configuration.

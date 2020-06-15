@@ -46,6 +46,36 @@
 #endif
 
 /**
+ * @def OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
+ *
+ * Enables ToBLE operation as a central,
+ *
+ * This compiles in all the central related code. When ToBLE is enabled `OPENTHREAD_CONFIG_ENABLE_TOBLE` we need either
+ * central or peripheral (or both) enabled.
+ *
+ * In the case where both central and peripheral modes are enabled, OpenThread API otTobleSetMode() is provided to
+ * allow user to select the mode at run-time.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
+#define OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE 1
+#endif
+
+/**
+ * Enabled ToBLE operation as a peripheral.
+ *
+ * This compiles in all the peripheral related code. When ToBLE is enabled `OPENTHREAD_CONFIG_ENABLE_TOBLE` we need
+ * either central or peripheral (or both) enabled.
+ *
+ * In the case where both central and peripheral modes are enabled, OpenThread API otTobleSetMode() is provided to
+ * allow user to select the mode at run-time.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+#define OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE 1
+#endif
+
+/**
  * @def OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
  *
  * Define to 1 to support ToBLE L2CAP transport.
@@ -53,6 +83,35 @@
  */
 #ifndef OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
 #define OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE 0
+#endif
+
+/**
+ * @def OPENTHREAD_CONFIG_TOBLE_154_ATTACH_ATTEMPT_RATIO
+ *
+ * Specifies the default radio (how many attempts) to try to attach using ToBLE vs 802.15.4 when device is detached.
+ *
+ * This configuration is applicable when `OPENTHREAD_CONFIG_TOBLE_MULTI_RADIO_ENABLE` is enabled.
+ *
+ * The ratio value indicates the number of attach attempts on 802.15.4 link before an attempt using ToBLE link is
+ * performed (while device is detached). When ratio values is larger than one, it would first perform `value - 1`
+ * attach attempts on IEEE 802.15.4 link and if all fail, then a single attach attempt on ToBLE link is performed.
+ * Afterwards, the same cycle repeats (e.g., value of two would instruct the device to alternate between two links).
+ * If the ratio value is set to one, the device will only use ToBLE link, and if it is set to zero, the device will
+ * always try to attach using IEEE 802.15.4 link.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_TOBLE_154_ATTACH_ATTEMPT_RATIO
+#define OPENTHREAD_CONFIG_TOBLE_154_ATTACH_ATTEMPT_RATIO 2
+#endif
+
+/**
+ * @def OPENTHREAD_CONFIG_TOBLE_ATT_MTU_MAX
+ *
+ * Specifies the maximum BTP segment size.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_TOBLE_BTP_MAX_SEGMENT_SIZE
+#define OPENTHREAD_CONFIG_TOBLE_BTP_MAX_SEGMENT_SIZE 256
 #endif
 
 #endif // CONFIG_TOBLE_H_

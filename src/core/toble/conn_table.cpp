@@ -31,7 +31,7 @@
  *   This file implements ToBLE connection table.
  */
 
-#include "conn_table.hpp"
+#include "toble/conn_table.hpp"
 
 #include "common/code_utils.hpp"
 #include "common/debug.hpp"
@@ -42,7 +42,7 @@
 #include "common/random.hpp"
 #include "mac/mac_frame.hpp"
 
-#if OPENTHREAD_CONFIG_ENABLE_TOBLE
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
 
 namespace ot {
 namespace Toble {
@@ -68,11 +68,11 @@ Connection::InfoString Connection::ToString(void) const
     switch (mState)
     {
     case kConnecting:
-        str.Append("connecting, dt:%d", mDisconnectTime - TimerMilli::GetNow());
+        str.Append("connecting, dt:%d", mDisconnectTime - TimerMilli::GetNow().GetValue());
         break;
 
     case kConnected:
-        str.Append("connected, dt:%d", mDisconnectTime - TimerMilli::GetNow());
+        str.Append("connected, dt:%d", mDisconnectTime - TimerMilli::GetNow().GetValue());
         break;
 
     case kSending:
@@ -105,12 +105,11 @@ Connection::InfoString Connection::ToString(void) const
 
 //----------------------------------------------------------------------------------------------------------------------
 // ConnectionTable
-
 ConnectionTable::ConnectionTable(void)
 {
     for (Connection *conn = &mConnArray[0]; conn < OT_ARRAY_END(mConnArray); conn++)
     {
-        conn->mPlatConn = NULL;
+        conn->mPlatConn = OT_TOBLE_CONNECTION_ID_INVALID;
     }
 }
 
@@ -120,7 +119,7 @@ Connection *ConnectionTable::Iterate(Connection *aPrev)
 
     for (next = ((aPrev == NULL) ? &mConnArray[0] : (aPrev + 1)); next < OT_ARRAY_END(mConnArray); next++)
     {
-        VerifyOrExit(!next->IsInUse());
+        VerifyOrExit(!next->IsInUse(), OT_NOOP);
     }
 
     next = NULL;
@@ -129,13 +128,13 @@ exit:
     return next;
 }
 
-Connection *ConnectionTable::Find(Platform::Connection *aPlatConn)
+Connection *ConnectionTable::Find(Platform::ConnectionId aPlatConn)
 {
     Connection *conn;
 
     for (conn = &mConnArray[0]; conn < OT_ARRAY_END(mConnArray); conn++)
     {
-        VerifyOrExit(conn->mPlatConn != aPlatConn);
+        VerifyOrExit(conn->mPlatConn != aPlatConn, OT_NOOP);
     }
 
     conn = NULL;
@@ -147,7 +146,7 @@ exit:
 Connection *ConnectionTable::GetNew(void)
 {
     // Find an element with `mPlatConn` being NULL.
-    Connection *conn = Find(NULL);
+    Connection *conn = Find(OT_TOBLE_CONNECTION_ID_INVALID);
 
     if (conn != NULL)
     {
@@ -167,14 +166,14 @@ Connection *ConnectionTable::Find(const Mac::Address &aAddress)
     {
         for (conn = GetFirst(); conn != NULL; conn = GetNext(conn))
         {
-            VerifyOrExit(conn->mShortAddr != aAddress.GetShort());
+            VerifyOrExit(conn->mShortAddr != aAddress.GetShort(), OT_NOOP);
         }
     }
     else if (aAddress.IsExtended())
     {
         for (conn = GetFirst(); conn != NULL; conn = GetNext(conn))
         {
-            VerifyOrExit(conn->mExtAddr != aAddress.GetExtended());
+            VerifyOrExit(conn->mExtAddr != aAddress.GetExtended(), OT_NOOP);
         }
     }
 
@@ -188,7 +187,7 @@ Connection *ConnectionTable::FindEarliestDisconnectTime(void)
 
     for (Connection *conn = GetFirst(); conn != NULL; conn = GetNext(conn))
     {
-        if ((earlist == NULL) || TimerScheduler::IsStrictlyBefore(conn->mDisconnectTime, earlist->mDisconnectTime))
+        if ((earlist == NULL) || (conn->mDisconnectTime < earlist->mDisconnectTime))
         {
             earlist = conn;
         }
@@ -202,4 +201,4 @@ Connection *ConnectionTable::FindEarliestDisconnectTime(void)
 } // namespace Toble
 } // namespace ot
 
-#endif // OPENTHREAD_CONFIG_ENABLE_TOBLE
+#endif // OPENTHREAD_CONFIG_TOBLE_ENABLE

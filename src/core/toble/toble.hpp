@@ -36,7 +36,6 @@
 
 #include "openthread-core-config.h"
 
-#include <openthread/toble.h>
 #include <openthread/platform/radio.h>
 #include <openthread/platform/toble.h>
 
@@ -50,7 +49,7 @@
 #include "toble/platform.hpp"
 #include "toble/transport.hpp"
 
-#if OPENTHREAD_CONFIG_ENABLE_TOBLE
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
 
 namespace ot {
 
@@ -65,7 +64,7 @@ class Toble : public InstanceLocator
     friend class Platform::Callbacks;
 
 public:
-    Toble(Instance &aInstance);
+    explicit Toble(ot::Instance &aInstance);
 
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE && OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
     otError         SetMode(otTobleLinkMode aMode);
@@ -87,7 +86,7 @@ private:
     // Radio APIs
     otError     Sleep(void);
     otError     Receive(uint8_t aChannel);
-    otError     Transmit(Mac::Frame &aFrame);
+    otError     Transmit(Mac::TxFrame &aFrame);
     otError     Enable(void) { return (mEnabled = true, OT_ERROR_NONE); }
     otError     Disable(void) { return (mEnabled = false, OT_ERROR_NONE); }
     bool        IsEnabled(void) { return mEnabled; }
@@ -116,12 +115,13 @@ private:
     uint32_t    GetPreferredChannelMask(void) { return OT_RADIO_2P4GHZ_OQPSK_CHANNEL_MASK; }
 
     // Callbacks from Toble::Platform
-    void HandleConnected(Platform::Connection *aPlatConn);
-    void HandleDisconnected(Platform::Connection *aPlatConn);
+    void HandleConnected(Platform::ConnectionId aPlatConn);
+    void HandleDisconnected(Platform::ConnectionId aPlatConn);
 
-    bool            mEnabled;
-    Mac::Frame      mTxFrame;
-    uint8_t         mTxPsdu[OT_RADIO_TOBLE_FRAME_MAX_SIZE];
+    bool       mEnabled;
+    Mac::Frame mTxFrame;
+    uint8_t    mTxPsdu[OT_RADIO_TOBLE_FRAME_MAX_SIZE];
+
     Platform        mPlatform;
     ConnectionTable mConnTable;
     Transport       mTransport;
@@ -140,6 +140,5 @@ private:
 } // namespace Toble
 } // namespace ot
 
-#endif // OPENTHREAD_CONFIG_ENABLE_TOBLE
-
-#endif // TOBLE_CONTROLLER_HPP_
+#endif // OPENTHREAD_CONFIG_TOBLE_ENABLE
+#endif // TOBLE_HPP_

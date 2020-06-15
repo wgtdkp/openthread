@@ -31,7 +31,7 @@
  *   This file implements ToBLE.
  */
 
-#include "toble.hpp"
+#include "toble/toble.hpp"
 
 #include "common/code_utils.hpp"
 #include "common/debug.hpp"
@@ -42,15 +42,12 @@
 #include "common/random.hpp"
 #include "mac/mac_frame.hpp"
 
-#if OPENTHREAD_CONFIG_ENABLE_TOBLE
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
 
 namespace ot {
 namespace Toble {
 
-//---------------------------------------------------------------------------------------------------------------------
-// Toble
-
-Toble::Toble(Instance &aInstance)
+Toble::Toble(ot::Instance &aInstance)
     : InstanceLocator(aInstance)
     , mEnabled(false)
     , mTxFrame()
@@ -73,7 +70,7 @@ Toble::Toble(Instance &aInstance)
 
 otError Toble::Sleep(void)
 {
-    otError error;
+    otError error = OT_ERROR_NONE;
 
     if (IsCentral())
     {
@@ -93,7 +90,7 @@ otError Toble::Sleep(void)
 
 otError Toble::Receive(uint8_t aChannel)
 {
-    otError error;
+    otError error = OT_ERROR_NONE;
 
     if (IsCentral())
     {
@@ -113,10 +110,10 @@ otError Toble::Receive(uint8_t aChannel)
     return error;
 }
 
-otError Toble::Transmit(Mac::Frame &aFrame)
+otError Toble::Transmit(Mac::TxFrame &aFrame)
 {
-    otError error;
-
+    otError error = OT_ERROR_NONE;
+    OT_UNUSED_VARIABLE(aFrame);
     if (IsCentral())
     {
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
@@ -133,8 +130,9 @@ otError Toble::Transmit(Mac::Frame &aFrame)
     return error;
 }
 
-void Toble::HandleConnected(Platform::Connection *aPlatConn)
+void Toble::HandleConnected(Platform::ConnectionId aPlatConn)
 {
+    OT_UNUSED_VARIABLE(aPlatConn);
     if (IsCentral())
     {
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
@@ -149,8 +147,9 @@ void Toble::HandleConnected(Platform::Connection *aPlatConn)
     }
 }
 
-void Toble::HandleDisconnected(Platform::Connection *aPlatConn)
+void Toble::HandleDisconnected(Platform::ConnectionId aPlatConn)
 {
+    OT_UNUSED_VARIABLE(aPlatConn);
     if (IsCentral())
     {
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
@@ -170,7 +169,7 @@ otError Toble::SetMode(otTobleLinkMode aMode)
 {
     otError error = OT_ERROR_NONE;
 
-    VerifyOrExit(Get<Mle::MleRouter>().GetRole() == OT_DEVICE_ROLE_DISABLED, error = OT_ERROR_INVALID_STATE);
+    VerifyOrExit(Get<Mle::MleRouter>().GetRole() == Mle::kRoleDisabled, error = OT_ERROR_INVALID_STATE);
     mMode = aMode;
 
     otLogNoteBle("Toble mode set to %s", IsCentral() ? "central" : "peripheral");
@@ -179,8 +178,7 @@ exit:
     return error;
 }
 #endif
-
 } // namespace Toble
 } // namespace ot
 
-#endif // OPENTHREAD_CONFIG_ENABLE_TOBLE
+#endif // OPENTHREAD_CONFIG_TOBLE_ENABLE

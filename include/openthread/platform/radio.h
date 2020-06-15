@@ -105,6 +105,16 @@ enum
 };
 
 /**
+ * This enumeration defines the Thread over BLE radio constants.
+ *
+ */
+enum
+{
+    OT_RADIO_TOBLE_FRAME_MAX_SIZE = 1280, ///< Maximum frame size for Thread over BLE radio
+    OT_RADIO_TOBLE_FCS_SIZE       = 0,    ///< FCS size of Thread
+};
+
+/**
  * This type represents radio capabilities.
  *
  * The value is a bit-field indicating the capabilities supported by the radio. See `OT_RADIO_CAPS_*` definitions.

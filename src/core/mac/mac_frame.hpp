@@ -955,7 +955,7 @@ public:
      * @returns This method returns the FCS size.
      *
      */
-    uint16_t GetFcsSize(void) const { return kFcsSize; }
+    static uint16_t GetFcsSize(void) { return kFcsSize; }
 
     /**
      * This method returns information about the frame object as an `InfoString` object.

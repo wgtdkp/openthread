@@ -40,7 +40,7 @@
 #include "toble/platform.hpp"
 #include "toble/transport.hpp"
 
-#if OPENTHREAD_CONFIG_ENABLE_TOBLE
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
 
 namespace ot {
 namespace Toble {
@@ -48,10 +48,10 @@ namespace Toble {
 class Connection
 {
 public:
-    bool IsInUse(void) const { return (mPlatConn != NULL); }
+    bool IsInUse(void) const { return (mPlatConn != OT_TOBLE_CONNECTION_ID_INVALID); }
 
-    Platform::Connection *mPlatConn;
-    Transport::Type       mTransport;
+    Platform::ConnectionId mPlatConn;
+    Transport::Type        mTransport;
 
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
     enum
@@ -64,7 +64,7 @@ public:
 
     Mac::ShortAddress mShortAddr;
     Mac::ExtAddress   mExtAddr;
-    uint32_t          mDisconnectTime;
+    TimeMilli         mDisconnectTime;
     int8_t            mRssi;
     enum
     {
@@ -101,9 +101,9 @@ public:
     Connection *GetFirst(void) { return Iterate(NULL); }
     Connection *GetNext(Connection *aPrev) { return Iterate(aPrev); }
 
-    Connection *Find(Platform::Connection *aPlatConn);
+    Connection *Find(Platform::ConnectionId aPlatConn);
     Connection *GetNew(void);
-    void        Remove(Connection &aConn) { aConn.mPlatConn = NULL; }
+    void        Remove(Connection &aConn) { aConn.mPlatConn = OT_TOBLE_CONNECTION_ID_INVALID; }
 
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
     Connection *Find(const Mac::Address &aAddress);
@@ -119,6 +119,6 @@ private:
 } // namespace Toble
 } // namespace ot
 
-#endif // OPENTHREAD_CONFIG_ENABLE_TOBLE
+#endif // OPENTHREAD_CONFIG_TOBLE_ENABLE
 
 #endif // TOBLE_CONNECTION_TABLE_HPP_

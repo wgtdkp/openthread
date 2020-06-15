@@ -44,6 +44,7 @@ namespace Toble {
 
 using ot::Encoding::BigEndian::HostSwap16;
 using ot::Encoding::BigEndian::HostSwap32;
+using ot::Encoding::BigEndian::HostSwap64;
 
 /**
  * This class implements LTV generation and parsing.
@@ -180,7 +181,7 @@ public:
         otError error = OT_ERROR_NONE;
         VerifyOrExit(GetLength() + sizeof(uint16_t) <= aMaxLength, error = OT_ERROR_NO_BUFS);
 
-        *reinterpret_cast<uint16_t *>(GetValue() + GetValueLength()) = ot::Encoding::LittleEndian::HostSwap16(aValue);
+        *reinterpret_cast<uint16_t *>(GetValue() + GetValueLength()) = HostSwap16(aValue);
         mLength += sizeof(uint16_t);
 
     exit:
@@ -204,7 +205,7 @@ public:
         otError error = OT_ERROR_NONE;
         VerifyOrExit(GetLength() + sizeof(uint32_t) <= aMaxLength, error = OT_ERROR_NO_BUFS);
 
-        *reinterpret_cast<uint32_t *>(GetValue() + GetValueLength()) = ot::Encoding::LittleEndian::HostSwap32(aValue);
+        *reinterpret_cast<uint32_t *>(GetValue() + GetValueLength()) = HostSwap32(aValue);
         mLength += sizeof(uint32_t);
 
     exit:
@@ -228,7 +229,7 @@ public:
         otError error = OT_ERROR_NONE;
         VerifyOrExit(GetLength() + sizeof(uint64_t) <= aMaxLength, error = OT_ERROR_NO_BUFS);
 
-        *reinterpret_cast<uint64_t *>(GetValue() + GetValueLength()) = ot::Encoding::LittleEndian::HostSwap64(aValue);
+        *reinterpret_cast<uint64_t *>(GetValue() + GetValueLength()) = HostSwap64(aValue);
         mLength += sizeof(uint64_t);
 
     exit:
@@ -336,7 +337,7 @@ public:
 
         VerifyOrExit(aIterator + sizeof(uint16_t) <= GetValueLength(), error = OT_ERROR_PARSE);
 
-        aValue = *reinterpret_cast<const uint16_t *>(GetValue() + aIterator);
+        aValue = HostSwap16(*reinterpret_cast<const uint16_t *>(GetValue() + aIterator));
         aIterator += sizeof(uint16_t);
 
     exit:
@@ -361,7 +362,7 @@ public:
 
         VerifyOrExit(aIterator + sizeof(uint32_t) <= GetValueLength(), error = OT_ERROR_PARSE);
 
-        aValue = *reinterpret_cast<const uint32_t *>(GetValue() + aIterator);
+        aValue = HostSwap32(*reinterpret_cast<const uint32_t *>(GetValue() + aIterator));
         aIterator += sizeof(uint32_t);
 
     exit:
@@ -386,7 +387,7 @@ public:
 
         VerifyOrExit(aIterator + sizeof(uint64_t) <= GetValueLength(), error = OT_ERROR_PARSE);
 
-        aValue = *reinterpret_cast<const uint64_t *>(GetValue() + aIterator);
+        aValue = HostSwap32(*reinterpret_cast<const uint64_t *>(GetValue() + aIterator));
         aIterator += sizeof(uint64_t);
 
     exit:

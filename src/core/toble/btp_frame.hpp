@@ -7,15 +7,14 @@
 #include <openthread/platform/toolchain.h>
 
 #include "common/encoding.hpp"
-#include "utils/wrap_stdint.h"
-
-using ot::Encoding::LittleEndian::HostSwap16;
-using ot::Encoding::LittleEndian::HostSwap32;
 
 namespace ot {
 namespace Toble {
 
-#if OPENTHREAD_CONFIG_ENABLE_TOBLE
+using ot::Encoding::LittleEndian::HostSwap16;
+using ot::Encoding::LittleEndian::HostSwap32;
+
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
 
 OT_TOOL_PACKED_BEGIN
 class Frame
@@ -109,7 +108,7 @@ private:
     uint8_t  mWindowSize;
 } OT_TOOL_PACKED_END;
 
-#endif // #if OPENTHREAD_CONFIG_ENABLE_TOBLE
+#endif // #if OPENTHREAD_CONFIG_TOBLE_ENABLE
 
 } // namespace Toble
 } // namespace ot

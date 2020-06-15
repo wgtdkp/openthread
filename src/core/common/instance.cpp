@@ -97,6 +97,9 @@ Instance::Instance(void)
 #if OPENTHREAD_CONFIG_OTNS_ENABLE
     , mOtns(*this)
 #endif
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    , mToble(*this)
+#endif
 #endif // OPENTHREAD_MTD || OPENTHREAD_FTD
 #if OPENTHREAD_RADIO || OPENTHREAD_CONFIG_LINK_RAW_ENABLE
     , mLinkRaw(*this)

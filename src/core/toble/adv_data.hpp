@@ -102,11 +102,18 @@ private:
 } OT_TOOL_PACKED_END;
 
 OT_TOOL_PACKED_BEGIN
-class Beacon
+class AdvData
 {
 public:
-    Beacon(void)
-        : mLength(0)
+    enum
+    {
+        kBlevDataLength = 31,
+        kMaxSize        = 31,
+    };
+
+    AdvData(uint8_t *aData, uint8_t aLength)
+        : mData(aData)
+        , mLength(aLength)
     {
     }
 
@@ -116,23 +123,19 @@ public:
 protected:
     enum
     {
-        kBlevDataLength = 31,
-    };
-
-    enum
-    {
         kBleAdvDataTypeFlags       = 0x01,
         kBleAdvDataTypeServiceData = 0x16,
         kBleFlagsUuid              = 0x06,
         kBleServiceDataUuid        = 0xfffb,
     };
 
-    uint8_t mData[kBlevDataLength];
+    uint8_t *mData;
+    // uint8_t mData[kBlevDataLength];
     uint8_t mLength;
 } OT_TOOL_PACKED_END;
 
 OT_TOOL_PACKED_BEGIN
-class ConnectBeacon : public Beacon
+class ConnectBeacon : public AdvData
 {
 public:
     struct Info
@@ -158,6 +161,11 @@ public:
         uint8_t           mL2capPsm;
     };
 
+    ConnectBeacon(uint8_t *aData, uint8_t aLength)
+        : AdvData(aData, aLength)
+    {
+    }
+
     otError Populate(const Info &aInfo);
     otError Parse(Info &aInfo) const;
 
@@ -180,7 +188,7 @@ private:
 } OT_TOOL_PACKED_END;
 
 OT_TOOL_PACKED_BEGIN
-class DiscoveryBeacon : public Beacon
+class DiscoveryBeacon : public AdvData
 {
 public:
     struct Info
@@ -240,7 +248,7 @@ private:
 } OT_TOOL_PACKED_END;
 
 OT_TOOL_PACKED_BEGIN
-class DiscoveryScanResponse : public Beacon
+class DiscoveryScanResponse : public AdvData
 {
 public:
     otError Populate(const DiscoveryBeacon::Info &aInfo);

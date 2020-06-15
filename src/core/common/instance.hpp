@@ -87,6 +87,10 @@
 
 #endif // (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)
 
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+#include "toble/toble.hpp"
+#endif
+
 #endif // OPENTHREAD_FTD || OPENTHREAD_MTD
 #if OPENTHREAD_ENABLE_VENDOR_EXTENSION
 #include "common/extension.hpp"
@@ -376,6 +380,10 @@ private:
 
 #if OPENTHREAD_CONFIG_OTNS_ENABLE
     Utils::Otns mOtns;
+#endif
+
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    Toble::Toble mToble;
 #endif
 
 #endif // OPENTHREAD_MTD || OPENTHREAD_FTD
@@ -748,6 +756,59 @@ template <> inline Utils::Otns &Instance::Get(void)
     return mOtns;
 }
 #endif
+
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+template <> inline Toble::Toble &Instance::Get(void)
+{
+    return mToble;
+}
+
+#if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
+template <> inline Toble::Central::Controller &Instance::Get(void)
+{
+    return mToble.mCentralController;
+}
+#endif
+
+#if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+template <> inline Toble::Peripheral::Controller &Instance::Get(void)
+{
+    return mToble.mPeripheralController;
+}
+#endif
+
+template <> inline Toble::Platform &Instance::Get(void)
+{
+    return mToble.mPlatform;
+}
+
+template <> inline Toble::Platform::Callbacks &Instance::Get(void)
+{
+    return mToble.mPlatform.mCallbacks;
+}
+
+template <> inline Toble::ConnectionTable &Instance::Get(void)
+{
+    return mToble.mConnTable;
+}
+
+template <> inline Toble::Transport &Instance::Get(void)
+{
+    return mToble.mTransport;
+}
+
+template <> inline Toble::Btp &Instance::Get(void)
+{
+    return mToble.mTransport.mBtp;
+}
+
+#if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
+template <> inline Toble::L2cap &Instance::Get(void)
+{
+    return mToble.mTransport.mL2cap;
+}
+#endif
+#endif // OPENTHREAD_CONFIG_TOBLE_ENABLE
 
 #endif // OPENTHREAD_MTD || OPENTHREAD_FTD
 

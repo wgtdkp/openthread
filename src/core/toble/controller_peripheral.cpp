@@ -31,7 +31,7 @@
  *   This file implements ToBLE Controller for peripheral.
  */
 
-#include "controller_peripheral.hpp"
+#include "toble/controller_peripheral.hpp"
 
 #include "common/code_utils.hpp"
 #include "common/debug.hpp"
@@ -43,7 +43,7 @@
 #include "mac/mac.hpp"
 #include "mac/mac_frame.hpp"
 
-#if OPENTHREAD_CONFIG_ENABLE_TOBLE && OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE && OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
 
 #define OT_TOBLE_DEFAULT_RSSI 0
 
@@ -157,19 +157,19 @@ void Controller::StartReceive(void)
 
 void Controller::StartRxModeAdv(void)
 {
-    AdvData             advData(mAdvDataBuffer, sizeof(mAdvDataBuffer));
-    AdvData::Info       info;
+    ConnectBeacon       advData(mAdvDataBuffer, sizeof(mAdvDataBuffer));
+    ConnectBeacon::Info info;
     Platform::AdvConfig config;
 
 #if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
-    info.mL2capSupport = true;
-    info.mL2capPsm     = Get<Platform>().GetL2capPsm();
+    info.mL2capTransport = true;
+    info.mL2capPsm       = Get<Platform>().GetL2capPsm();
 #else
-    info.mL2capSupport = false;
+    info.mL2capTransport = false;
 #endif
 
     info.mFramePending = false;
-    info.mDataPolling  = false;
+    info.mDataPending  = false;
     info.mPanId        = Get<Mac::Mac>().GetPanId();
     info.mSrcShort     = Get<Mac::Mac>().GetShortAddress();
     info.mSrcExtended  = Get<Mac::Mac>().GetExtAddress();
@@ -177,7 +177,7 @@ void Controller::StartRxModeAdv(void)
 
     advData.Populate(info);
 
-    config.mType     = OT_TOBLE_ADV_TYPE_UNDIRECTED_CONNECTABLE_NONSCANNABLE;
+    config.mType     = OT_TOBLE_ADV_NONCONN_IND;
     config.mInterval = kRxModeAdvInterval;
     config.mData     = advData.GetData();
     config.mLength   = advData.GetLength();
@@ -188,7 +188,7 @@ void Controller::StartRxModeAdv(void)
     Get<Platform>().StartAdv(config);
 }
 
-otError Controller::Transmit(Mac::Frame &aFrame)
+otError Controller::Transmit(Mac::TxFrame &aFrame)
 {
     otError error = OT_ERROR_NONE;
 
@@ -241,22 +241,22 @@ exit:
 void Controller::StartTxModeAdv(void)
 {
     otError             error;
-    AdvData             advData(mAdvDataBuffer, sizeof(mAdvDataBuffer));
-    AdvData::Info       info;
+    ConnectBeacon       advData(mAdvDataBuffer, sizeof(mAdvDataBuffer));
+    ConnectBeacon::Info info;
     Platform::AdvConfig config;
 
     assert(mState == kStateTxAdvertising);
     assert(mTxFrame != NULL);
 
 #if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
-    info.mL2capSupport = true;
-    info.mL2capPsm     = Get<Platform>().GetL2capPsm();
+    info.mL2capTransport = true;
+    info.mL2capPsm       = Get<Platform>().GetL2capPsm();
 #else
-    info.mL2capSupport = false;
+    info.mL2capTransport = false;
 #endif
 
     info.mFramePending = true; // indicating "tx mode"
-    info.mDataPolling  = false;
+    info.mDataPending  = false;
     info.mSrcShort     = Get<Mac::Mac>().GetShortAddress();
     info.mSrcExtended  = Get<Mac::Mac>().GetExtAddress();
 
@@ -282,7 +282,7 @@ void Controller::StartTxModeAdv(void)
 
     advData.Populate(info);
 
-    config.mType     = OT_TOBLE_ADV_TYPE_UNDIRECTED_CONNECTABLE_NONSCANNABLE;
+    config.mType     = OT_TOBLE_ADV_NONCONN_IND;
     config.mInterval = kTxModeAdvInterval;
     config.mData     = advData.GetData();
     config.mLength   = advData.GetLength();
@@ -356,7 +356,7 @@ void Controller::HandleTimer(void)
     }
 }
 
-void Controller::HandleConnected(Platform::Connection *aPlatConn)
+void Controller::HandleConnected(Platform::ConnectionId aPlatConn)
 {
     otLogInfoBle("PeriCtrl::HandleConnected()");
 
@@ -408,11 +408,11 @@ exit:
     return;
 }
 
-void Controller::HandleDisconnected(Platform::Connection *aPlatConn)
+void Controller::HandleDisconnected(Platform::ConnectionId aPlatConn)
 {
     Connection *conn = Get<ConnectionTable>().Find(aPlatConn);
 
-    VerifyOrExit((conn != NULL) && (conn == mConn));
+    VerifyOrExit((conn != NULL) && (conn == mConn), OT_NOOP);
 
     otLogInfoBle("PeriCtrl::Disconnected()");
 
@@ -450,8 +450,8 @@ void Controller::HandleTransportSendDone(Connection &aConn, otError aError)
 {
     otLogInfoBle("PeriCtrl::HandleTransportSendDone(err:%s)", otThreadErrorToString(aError));
 
-    VerifyOrExit(mState == kStateTxSending);
-    VerifyOrExit(mConn == &aConn);
+    VerifyOrExit(mState == kStateTxSending, OT_NOOP);
+    VerifyOrExit(mConn == &aConn, OT_NOOP);
 
     StartReceive();
     InvokeRadioTxDone(aError);
@@ -463,7 +463,7 @@ exit:
 // This is callback from transport layer (BTP or L2CAP) to indicate received frame.
 void Controller::HandleTransportReceiveDone(Connection &aConn, uint8_t *aFrame, uint16_t aLength, otError aError)
 {
-    Mac::Frame rxFrame;
+    Mac::RxFrame rxFrame;
 
     if ((mState == kStateRx) && (&aConn == mConn))
     {
@@ -475,15 +475,13 @@ void Controller::HandleTransportReceiveDone(Connection &aConn, uint8_t *aFrame, 
     // OT core can possibly modify the frame content (up to length), e.g., in-place decryption.
     rxFrame.mPsdu    = aFrame;
     rxFrame.mLength  = aLength;
-    rxFrame.mChannel = Get<Mac::Mac>().GetRadioChannel();
-    rxFrame.mIeInfo  = NULL;
+    rxFrame.mChannel = Get<Mac::Mac>().GetPanChannel();
 
     rxFrame.mInfo.mRxInfo.mAckedWithFramePending = true;
 
-    rxFrame.mInfo.mRxInfo.mMsec = TimerMilli::GetNow();
-    rxFrame.mInfo.mRxInfo.mUsec = 0;
-    rxFrame.mInfo.mRxInfo.mRssi = OT_TOBLE_DEFAULT_RSSI;
-    rxFrame.mInfo.mRxInfo.mLqi  = OT_RADIO_LQI_NONE;
+    rxFrame.mInfo.mRxInfo.mTimestamp = TimerMilli::GetNow().GetValue() * 1000;
+    rxFrame.mInfo.mRxInfo.mRssi      = OT_TOBLE_DEFAULT_RSSI;
+    rxFrame.mInfo.mRxInfo.mLqi       = OT_RADIO_LQI_NONE;
 
     otLogInfoBle("PeriCtrl::HandleBtpReceiveDone(err:%s, [%s])", otThreadErrorToString(aError),
                  rxFrame.ToInfoString().AsCString());
@@ -495,8 +493,8 @@ void Controller::InvokeRadioTxDone(otError aError)
 {
     if ((aError == OT_ERROR_NONE) && mTxFrame->GetAckRequest())
     {
-        uint8_t    ackPsdu[kAckFrameLength];
-        Mac::Frame ackFrame;
+        uint8_t      ackPsdu[kAckFrameLength];
+        Mac::RxFrame ackFrame;
 
         memset(ackPsdu, 0, sizeof(ackPsdu));
 
@@ -504,11 +502,9 @@ void Controller::InvokeRadioTxDone(otError aError)
         ackFrame.mLength = kAckFrameLength;
 
         ackFrame.mChannel = mTxFrame->GetChannel();
-        ackFrame.mIeInfo  = NULL;
 
         ackFrame.mInfo.mRxInfo.mAckedWithFramePending = false;
-        ackFrame.mInfo.mRxInfo.mMsec                  = TimerMilli::GetNow();
-        ackFrame.mInfo.mRxInfo.mUsec                  = 0;
+        ackFrame.mInfo.mRxInfo.mTimestamp             = TimerMilli::GetNow().GetValue() * 1000;
         ackFrame.mInfo.mRxInfo.mRssi                  = OT_RADIO_RSSI_INVALID;
         ackFrame.mInfo.mRxInfo.mLqi                   = OT_RADIO_LQI_NONE;
 
@@ -565,4 +561,4 @@ const char *Controller::StateToString(State aState)
 } // namespace Toble
 } // namespace ot
 
-#endif // OPENTHREAD_CONFIG_ENABLE_TOBLE && OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+#endif // OPENTHREAD_CONFIG_TOBLE_ENABLE && OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE

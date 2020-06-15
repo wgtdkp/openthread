@@ -1,5 +1,5 @@
 
-#include "btp.hpp"
+#include "toble/btp.hpp"
 
 #include <openthread/platform/toble.h>
 
@@ -15,8 +15,7 @@ using ot::Encoding::LittleEndian::WriteUint16;
 namespace ot {
 namespace Toble {
 
-#if OPENTHREAD_CONFIG_ENABLE_TOBLE
-
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
 Btp::Btp(Instance &aInstance)
     : InstanceLocator(aInstance)
     , mTimer(aInstance, &Btp::HandleTimer, this)
@@ -30,15 +29,14 @@ void Btp::Start(Connection &aConn)
     aConn.mSession.mState = kStateIdle;
 }
 
-void Btp::HandleConnectionReady(Platform::Connection *aPlatConn)
+void Btp::HandleConnectionReady(Platform::ConnectionId aPlatConn)
 {
     Connection *conn = Get<ConnectionTable>().Find(aPlatConn);
 
     otLogDebgBle("Btp::ConnectionReady (%p -> %p)", aPlatConn, conn);
 
-    VerifyOrExit(conn != NULL);
-
-    VerifyOrExit(Get<Toble>().IsCentral());
+    VerifyOrExit(conn != NULL, OT_NOOP);
+    VerifyOrExit(Get<Toble>().IsCentral(), OT_NOOP);
 
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
     conn->mSession.mRequest.Init(Get<Platform>().GetConnMtu(aPlatConn), kWindowSize);
@@ -77,7 +75,8 @@ void Btp::SendData(Connection &aConn)
     uint8_t *cur     = &session.mTxBuf[1];
     uint16_t frameLength;
 
-    VerifyOrExit(!session.mIsSending && session.mState == kStateConnected);
+    OT_UNUSED_VARIABLE(frameLength);
+    VerifyOrExit(!session.mIsSending && session.mState == kStateConnected, OT_NOOP);
 
     session.mTxBuf[0] = 0;
 
@@ -85,7 +84,7 @@ void Btp::SendData(Connection &aConn)
 
     if (session.mRxSeqnoCurrent == session.mRxSeqnoAcked)
     {
-        VerifyOrExit(session.GetTxWindowRemaining() > 1);
+        VerifyOrExit(session.GetTxWindowRemaining() > 1, OT_NOOP);
     }
     else
     {
@@ -188,7 +187,7 @@ void Btp::HandleDataFrame(Connection &aConn, const uint8_t *aFrame, uint16_t aLe
     const Frame &  frame(*reinterpret_cast<const Frame *>(aFrame));
     const uint8_t *cur = &aFrame[1];
 
-    VerifyOrExit(session.mState == kStateConnected);
+    VerifyOrExit(session.mState == kStateConnected, OT_NOOP);
 
     otLogDebgBle("BTP receive");
 
@@ -325,7 +324,7 @@ void Btp::Reset(Session &aSession)
     UpdateTimer();
 }
 
-#endif // #if OPENTHREAD_CONFIG_ENABLE_TOBLE
+#endif // #if OPENTHREAD_CONFIG_TOBLE_ENABLE
 
 } // namespace Toble
 } // namespace ot

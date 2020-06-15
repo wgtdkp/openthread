@@ -39,12 +39,11 @@
 #include "common/locator.hpp"
 #include "toble/btp.hpp"
 #include "toble/l2cap.hpp"
-#include "utils/wrap_stdint.h"
 
 namespace ot {
 namespace Toble {
 
-#if OPENTHREAD_CONFIG_ENABLE_TOBLE
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
 
 class Connection;
 
@@ -80,7 +79,7 @@ private:
 #endif
 };
 
-#endif // #if OPENTHREAD_CONFIG_ENABLE_TOBLE
+#endif // #if OPENTHREAD_CONFIG_TOBLE_ENABLE
 
 } // namespace Toble
 } // namespace ot

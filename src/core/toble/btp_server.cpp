@@ -1,5 +1,5 @@
 
-#include "btp.hpp"
+#include "toble/btp.hpp"
 
 #include "common/locator-getters.hpp"
 #include "common/logging.hpp"
@@ -7,25 +7,25 @@
 namespace ot {
 namespace Toble {
 
-#if OPENTHREAD_CONFIG_ENABLE_TOBLE && OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE && OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
 
-void Btp::HandleC2Subscribed(Platform::Connection *aPlatConn, bool aIsSubscribed)
+void Btp::HandleC2Subscribed(Platform::ConnectionId aPlatConn, bool aIsSubscribed)
 {
     Connection *conn = Get<ConnectionTable>().Find(aPlatConn);
 
     assert(!Get<Toble>().IsCentral());
 
-    VerifyOrExit(conn != NULL);
+    VerifyOrExit(conn != NULL, OT_NOOP);
 
     if (aIsSubscribed)
     {
-        VerifyOrExit(conn->mSession.mState == kStateHandshake);
+        VerifyOrExit(conn->mSession.mState == kStateHandshake, OT_NOOP);
         otLogDebgBle("BTP subscribed");
         Get<Platform>().IndicateC2(aPlatConn, &conn->mSession.mResponse, sizeof(HandshakeResponse));
     }
     else
     {
-        VerifyOrExit(conn->mSession.mState != kStateIdle);
+        VerifyOrExit(conn->mSession.mState != kStateIdle, OT_NOOP);
         otLogDebgBle("BTP unsubscribed");
 
         // Optional future enhancement: Trigger a BLE disconnect on un-subscribe.
@@ -39,13 +39,13 @@ exit:
     return;
 }
 
-void Btp::HandleC2IndicateDone(Platform::Connection *aPlatConn)
+void Btp::HandleC2IndicateDone(Platform::ConnectionId aPlatConn)
 {
     Connection *conn = Get<ConnectionTable>().Find(aPlatConn);
 
     assert(!Get<Toble>().IsCentral());
 
-    VerifyOrExit(conn != NULL);
+    VerifyOrExit(conn != NULL, OT_NOOP);
 
     switch (conn->mSession.mState)
     {
@@ -74,20 +74,20 @@ exit:
     return;
 }
 
-void Btp::HandleC1Write(Platform::Connection *aPlatConn, const uint8_t *aFrame, uint16_t aLength)
+void Btp::HandleC1Write(Platform::ConnectionId aPlatConn, const uint8_t *aFrame, uint16_t aLength)
 {
     Connection * conn  = Get<ConnectionTable>().Find(aPlatConn);
     const Frame *frame = reinterpret_cast<const Frame *>(aFrame);
 
     assert(!Get<Toble>().IsCentral());
 
-    VerifyOrExit(aLength > 0);
+    VerifyOrExit(aLength > 0, OT_NOOP);
 
-    VerifyOrExit(conn != NULL);
+    VerifyOrExit(conn != NULL, OT_NOOP);
 
     if (frame->IsHandshake())
     {
-        VerifyOrExit(aLength >= sizeof(HandshakeRequest));
+        VerifyOrExit(aLength >= sizeof(HandshakeRequest), OT_NOOP);
         HandleHandshake(*conn, static_cast<const HandshakeRequest &>(*frame));
     }
     else
@@ -103,7 +103,7 @@ void Btp::HandleHandshake(Connection &aConn, const HandshakeRequest &aRequest)
 {
     Session &session = aConn.mSession;
 
-    VerifyOrExit(session.mState == kStateIdle);
+    VerifyOrExit(session.mState == kStateIdle, OT_NOOP);
 
     otLogDebgBle("BTP handshake receive");
 
@@ -147,7 +147,7 @@ exit:
     return;
 }
 
-#endif // #if OPENTHREAD_CONFIG_ENABLE_TOBLE && OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+#endif // #if OPENTHREAD_CONFIG_TOBLE_ENABLE && OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
 
 } // namespace Toble
 } // namespace ot

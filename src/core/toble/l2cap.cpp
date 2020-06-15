@@ -42,7 +42,7 @@
 namespace ot {
 namespace Toble {
 
-#if OPENTHREAD_CONFIG_ENABLE_TOBLE && OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE && OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
 
 L2cap::L2cap(Instance &aInstance)
     : InstanceLocator(aInstance)
@@ -71,7 +71,7 @@ void L2cap::Send(Connection &aConn, const uint8_t *aBuf, uint16_t aLength)
 // Get<Transport>().HandleSendDone()
 // Get<Transport>().HandleReceiveDone()
 
-#endif // #if OPENTHREAD_CONFIG_ENABLE_TOBLE & OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
+#endif // #if OPENTHREAD_CONFIG_TOBLE_ENABLE & OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
 
 } // namespace Toble
 } // namespace ot

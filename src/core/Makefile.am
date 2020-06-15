@@ -239,6 +239,16 @@ SOURCES_COMMON                             = \
     thread/time_sync_service.cpp             \
     thread/topology.cpp                      \
     toble/adv_data.cpp                       \
+    toble/btp.cpp                            \
+    toble/btp_client.cpp                     \
+    toble/btp_server.cpp                     \
+    toble/conn_table.cpp                     \
+    toble/controller_central.cpp             \
+    toble/controller_peripheral.cpp          \
+    toble/l2cap.cpp                          \
+    toble/platform.cpp                       \
+    toble/toble.cpp                          \
+    toble/transport.cpp                      \
     utils/channel_manager.cpp                \
     utils/channel_monitor.cpp                \
     utils/child_supervision.cpp              \
@@ -450,6 +460,16 @@ HEADERS_COMMON                             = \
     thread/thread_uri_paths.hpp              \
     thread/time_sync_service.hpp             \
     thread/topology.hpp                      \
+    toble/adv_data.hpp                       \
+    toble/btp.hpp                            \
+    toble/btp_frame.hpp                      \
+    toble/conn_table.hpp                     \
+    toble/controller_central.hpp             \
+    toble/controller_peripheral.hpp          \
+    toble/l2cap.hpp                          \
+    toble/platform.hpp                       \
+    toble/toble.hpp                          \
+    toble/transport.hpp                      \
     utils/channel_manager.hpp                \
     utils/channel_monitor.hpp                \
     utils/child_supervision.hpp              \
@@ -461,6 +481,17 @@ HEADERS_COMMON                             = \
     utils/slaac_address.hpp                  \
     utils/static_assert.hpp                  \
     $(NULL)
+
+#    toble/btp.hpp                            \
+#    toble/btp_frame.hpp                      \
+#    toble/conn_table.hpp                     \
+#    toble/controller_central.hpp             \
+#    toble/controller_peripheral.hpp          \
+#    toble/l2cap.hpp                          \
+#    toble/platform.hpp                       \
+#    toble/toble.hpp                          \
+#    toble/transport.hpp                      \
+#
 
 noinst_HEADERS                             = \
     $(HEADERS_COMMON)                        \

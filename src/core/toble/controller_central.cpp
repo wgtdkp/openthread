@@ -31,7 +31,7 @@
  *   This file implements ToBLE Controller for central mode.
  */
 
-#include "controller_central.hpp"
+#include "toble/controller_central.hpp"
 
 #include "common/code_utils.hpp"
 #include "common/debug.hpp"
@@ -43,7 +43,7 @@
 #include "mac/mac.hpp"
 #include "mac/mac_frame.hpp"
 
-#if OPENTHREAD_CONFIG_ENABLE_TOBLE && OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE && OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
 
 #define DEBUG_SHOW_ALL_ADVERTISEMENTS 0
 
@@ -163,7 +163,7 @@ void Controller::StartRxScanning(void)
     SetState(kStateRxScanning);
 }
 
-otError Controller::Transmit(Mac::Frame &aFrame)
+otError Controller::Transmit(Mac::TxFrame &aFrame)
 {
     otError error = OT_ERROR_NONE;
 
@@ -243,7 +243,7 @@ void Controller::StartTransmit(void)
         // did not yet know its short address, so the connection table entry recorded
         // it with its extended address only.
 
-        Neighbor *neighbor = Get<Mle::MleRouter>().GetNeighbor(mTxDest.GetShort());
+        Neighbor *neighbor = Get<Mle::MleRouter>().GetNeighbor(mTxDest);
 
         if (neighbor != NULL)
         {
@@ -399,13 +399,13 @@ void Controller::HandleAdv(Platform::AdvType aAdvType,
                            uint16_t          aLength,
                            int8_t            aRssi)
 {
-    AdvData                    advData(aData, aLength);
-    AdvData::Info              advInfo;
+    ConnectBeacon              advData(const_cast<uint8_t *>(aData), aLength);
+    ConnectBeacon::Info        advInfo;
     Mac::Address               srcAddr;
     Connection *               conn;
     Platform::ConnectionConfig config;
 
-    VerifyOrExit(aAdvType & OT_TOBLE_ADV_TYPE_CONNECTABLE);
+    VerifyOrExit((aAdvType == OT_TOBLE_ADV_IND) || (aAdvType == OT_TOBLE_ADV_DIRECT_IND), OT_NOOP);
 
 #if DEBUG_SHOW_ALL_ADVERTISEMENTS
     otLogNoteBle("CentCtrl::HandleAdv(src:%s, rssi:%d, data:%s)", aSource.ToString().AsCString(), aRssi,
@@ -438,7 +438,7 @@ void Controller::HandleAdv(Platform::AdvType aAdvType,
     // Decide based on the current state and the received adv info
     // whether to establish a connection with the peer or not.
 
-    VerifyOrExit(advInfo.mPanId == Get<Mac::Mac>().GetPanId());
+    VerifyOrExit(advInfo.mPanId == Get<Mac::Mac>().GetPanId(), OT_NOOP);
 
     switch (mState)
     {
@@ -448,7 +448,7 @@ void Controller::HandleAdv(Platform::AdvType aAdvType,
         // peer is trying to transmit), and that the destination from adv data
         // matches our address or is broadcast.
 
-        VerifyOrExit(advInfo.mFramePending);
+        VerifyOrExit(advInfo.mFramePending, OT_NOOP);
 
         switch (advInfo.mDest.GetType())
         {
@@ -457,12 +457,12 @@ void Controller::HandleAdv(Platform::AdvType aAdvType,
             break;
 
         case Mac::Address::kTypeShort:
-            VerifyOrExit((advInfo.mDest.GetShort() == Get<Mac::Mac>().GetShortAddress()) ||
-                         advInfo.mDest.IsBroadcast());
+            VerifyOrExit((advInfo.mDest.GetShort() == Get<Mac::Mac>().GetShortAddress()) || advInfo.mDest.IsBroadcast(),
+                         OT_NOOP);
             break;
 
         case Mac::Address::kTypeExtended:
-            VerifyOrExit(advInfo.mDest.GetExtended() == Get<Mac::Mac>().GetExtAddress());
+            VerifyOrExit(advInfo.mDest.GetExtended() == Get<Mac::Mac>().GetExtAddress(), OT_NOOP);
             break;
         }
 
@@ -479,11 +479,11 @@ void Controller::HandleAdv(Platform::AdvType aAdvType,
             break;
 
         case Mac::Address::kTypeShort:
-            VerifyOrExit(advInfo.mSrcShort == mTxDest.GetShort());
+            VerifyOrExit(advInfo.mSrcShort == mTxDest.GetShort(), OT_NOOP);
             break;
 
         case Mac::Address::kTypeExtended:
-            VerifyOrExit(advInfo.mSrcExtended == mTxDest.GetExtended());
+            VerifyOrExit(advInfo.mSrcExtended == mTxDest.GetExtended(), OT_NOOP);
             break;
         }
 
@@ -517,7 +517,7 @@ void Controller::HandleAdv(Platform::AdvType aAdvType,
         }
     }
 
-    VerifyOrExit(conn == NULL);
+    VerifyOrExit(conn == NULL, OT_NOOP);
 
     // Create a new connection to the device.
 
@@ -536,7 +536,7 @@ void Controller::HandleAdv(Platform::AdvType aAdvType,
     Get<Platform>().StopScan();
     conn->mPlatConn = Get<Platform>().CreateConnection(aSource, config);
 
-    if (conn->mPlatConn == NULL)
+    if (conn->mPlatConn == OT_TOBLE_CONNECTION_ID_INVALID)
     {
         otLogNoteBle("CentCtrl: Platform could not create new connection - restart scanning");
 
@@ -624,14 +624,14 @@ void Controller::HandleConnTimer(Timer &aTimer)
 
 void Controller::HandleConnTimer(void)
 {
-    uint32_t    now = TimerMilli::GetNow();
+    TimeMilli   now = TimerMilli::GetNow();
     Connection *conn;
 
     otLogInfoBle("CentCtrl::HandleConnTimer()");
 
     for (conn = Get<ConnectionTable>().GetFirst(); conn != NULL; conn = Get<ConnectionTable>().GetNext(conn))
     {
-        if (!TimerScheduler::IsStrictlyBefore(now, conn->mDisconnectTime))
+        if (now >= conn->mDisconnectTime)
         {
             otLogNoteBle("Timed out - disconnecting conn:[%s]", conn->ToString().AsCString());
 
@@ -737,12 +737,12 @@ void Controller::HandleConnTimer(void)
     UpdateConnTimer();
 }
 
-void Controller::HandleConnected(Platform::Connection *aPlatConn)
+void Controller::HandleConnected(Platform::ConnectionId aPlatConn)
 {
     Connection *conn;
 
     conn = Get<ConnectionTable>().Find(aPlatConn);
-    VerifyOrExit(conn != NULL);
+    VerifyOrExit(conn != NULL, OT_NOOP);
 
     conn->mState = Connection::kConnected;
 
@@ -766,7 +766,7 @@ void Controller::HandleConnected(Platform::Connection *aPlatConn)
         break;
 
     case kStateRxConnecting:
-        VerifyOrExit(conn == mRxConn);
+        VerifyOrExit(conn == mRxConn, OT_NOOP);
         mRxConn = NULL;
         StartRxScanning();
         break;
@@ -780,13 +780,13 @@ void Controller::HandleConnected(Platform::Connection *aPlatConn)
         break;
 
     case kStateTxSendingRxConnecting:
-        VerifyOrExit(conn == mRxConn);
+        VerifyOrExit(conn == mRxConn, OT_NOOP);
         mRxConn = NULL;
         SetState(kStateTxSending);
         break;
 
     case kStateTxConnecting:
-        VerifyOrExit(conn == mTxConn);
+        VerifyOrExit(conn == mTxConn, OT_NOOP);
         SetState(kStateTxSending);
         mTxConn->mState = Connection::kSending;
         Get<Transport>().Send(*mTxConn, mTxFrame->GetPsdu(), mTxFrame->GetPsduLength());
@@ -799,12 +799,12 @@ exit:
     return;
 }
 
-void Controller::HandleDisconnected(Platform::Connection *aPlatConn)
+void Controller::HandleDisconnected(Platform::ConnectionId aPlatConn)
 {
     Connection *conn;
 
     conn = Get<ConnectionTable>().Find(aPlatConn);
-    VerifyOrExit(conn != NULL);
+    VerifyOrExit(conn != NULL, OT_NOOP);
 
     otLogNoteBle("CentCtrl::HandleDisconnected(conn:[%s])", conn->ToString().AsCString());
 
@@ -820,25 +820,25 @@ void Controller::HandleDisconnected(Platform::Connection *aPlatConn)
         break;
 
     case kStateRxConnecting:
-        VerifyOrExit(conn == mRxConn);
+        VerifyOrExit(conn == mRxConn, OT_NOOP);
         mRxConn = NULL;
         StartRxScanning();
         break;
 
     case kStateTxPending:
-        VerifyOrExit(conn == mRxConn);
+        VerifyOrExit(conn == mRxConn, OT_NOOP);
         mRxConn = NULL;
         StartTransmit();
         break;
 
     case kStateTxConnecting:
-        VerifyOrExit(conn == mTxConn);
+        VerifyOrExit(conn == mTxConn, OT_NOOP);
         mTxConn = NULL;
         StartTxScanning();
         break;
 
     case kStateTxSending:
-        VerifyOrExit(conn == mTxConn);
+        VerifyOrExit(conn == mTxConn, OT_NOOP);
         // Peer disconnected while sending a frame to it. Restart
         // scanning and wait for a new connection or a tx timeout.
         mTxConn = NULL;
@@ -893,7 +893,7 @@ void Controller::HandleTransportSendDone(Connection &aConn, otError aError)
         ExitNow();
     }
 
-    VerifyOrExit(mTxConn == &aConn);
+    VerifyOrExit(mTxConn == &aConn, OT_NOOP);
 
     mTxConn = NULL;
     InvokeRadioTxDone(aError);
@@ -904,7 +904,7 @@ exit:
 
 void Controller::HandleTransportReceiveDone(Connection &aConn, uint8_t *aFrame, uint16_t aLength, otError aError)
 {
-    Mac::Frame rxFrame;
+    Mac::RxFrame rxFrame;
 
     otLogInfoBle("CentCtrl::HandleTransportReceiveDone(err:%s, conn:[%s])", otThreadErrorToString(aError),
                  aConn.ToString().AsCString());
@@ -931,15 +931,13 @@ void Controller::HandleTransportReceiveDone(Connection &aConn, uint8_t *aFrame, 
     // (up to length), e.g., in-place decryption.
     rxFrame.mPsdu    = aFrame;
     rxFrame.mLength  = aLength;
-    rxFrame.mChannel = Get<Mac::Mac>().GetRadioChannel();
-    rxFrame.mIeInfo  = NULL;
+    rxFrame.mChannel = Get<Mac::Mac>().GetPanChannel();
 
     rxFrame.mInfo.mRxInfo.mAckedWithFramePending = true;
 
-    rxFrame.mInfo.mRxInfo.mMsec = TimerMilli::GetNow();
-    rxFrame.mInfo.mRxInfo.mUsec = 0;
-    rxFrame.mInfo.mRxInfo.mRssi = aConn.mRssi;
-    rxFrame.mInfo.mRxInfo.mLqi  = OT_RADIO_LQI_NONE;
+    rxFrame.mInfo.mRxInfo.mTimestamp = TimerMilli::GetNow().GetValue() * 1000;
+    rxFrame.mInfo.mRxInfo.mRssi      = aConn.mRssi;
+    rxFrame.mInfo.mRxInfo.mLqi       = OT_RADIO_LQI_NONE;
 
     if (aConn.mShortAddr == Mac::kShortAddrInvalid)
     {
@@ -984,8 +982,8 @@ void Controller::InvokeRadioTxDone(otError aError)
 
     if ((aError == OT_ERROR_NONE) && mTxFrame->GetAckRequest())
     {
-        uint8_t    ackPsdu[kAckFrameLength];
-        Mac::Frame ackFrame;
+        uint8_t      ackPsdu[kAckFrameLength];
+        Mac::RxFrame ackFrame;
 
         memset(ackPsdu, 0, sizeof(ackPsdu));
 
@@ -993,11 +991,9 @@ void Controller::InvokeRadioTxDone(otError aError)
         ackFrame.mLength = kAckFrameLength;
 
         ackFrame.mChannel = mTxFrame->GetChannel();
-        ackFrame.mIeInfo  = NULL;
 
         ackFrame.mInfo.mRxInfo.mAckedWithFramePending = false;
-        ackFrame.mInfo.mRxInfo.mMsec                  = TimerMilli::GetNow();
-        ackFrame.mInfo.mRxInfo.mUsec                  = 0;
+        ackFrame.mInfo.mRxInfo.mTimestamp             = TimerMilli::GetNow().GetValue() * 1000;
         ackFrame.mInfo.mRxInfo.mRssi                  = OT_RADIO_RSSI_INVALID;
         ackFrame.mInfo.mRxInfo.mLqi                   = OT_RADIO_LQI_NONE;
 
@@ -1070,4 +1066,4 @@ const char *Controller::StateToString(State aState)
 } // namespace Toble
 } // namespace ot
 
-#endif // OPENTHREAD_CONFIG_ENABLE_TOBLE && OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
+#endif // OPENTHREAD_CONFIG_TOBLE_ENABLE && OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
