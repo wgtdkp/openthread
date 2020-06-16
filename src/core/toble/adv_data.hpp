@@ -45,43 +45,6 @@
 
 namespace ot {
 namespace Toble {
-
-OT_TOOL_PACKED_BEGIN
-class ControlField
-{
-public:
-    enum
-    {
-        kBeaconVersion   = 3,
-        kOpCodeDiscovery = 0,
-        kOpCodeConnect   = 1,
-    };
-
-    ControlField(void)
-        : mControlField(0)
-    {
-    }
-
-    void Init(uint8_t aControlField) { mControlField = aControlField; }
-
-    uint8_t GetVersion(void) const { return (mControlField & kVersionMask) >> kVersionOffset; }
-    uint8_t GetOpCode(void) const { return (mControlField & kOpCodeMask) >> kOpCodeOffset; }
-    void    SetVersion(uint8_t aVersion) { mControlField |= (aVersion << kVersionOffset) & kVersionMask; }
-    void    SetOpCode(uint8_t aOpCode) { mControlField |= (aOpCode << kOpCodeOffset) & kOpCodeMask; }
-    uint8_t GetValue(void) { return mControlField; }
-
-private:
-    enum
-    {
-        kOpCodeOffset  = 0,
-        kOpCodeMask    = 0x0f << kOpCodeOffset,
-        kVersionOffset = 4,
-        kVersionMask   = 0x0f << kVersionOffset,
-    };
-
-    uint8_t mControlField;
-} OT_TOOL_PACKED_END;
-
 OT_TOOL_PACKED_BEGIN
 class BitField
 {
@@ -93,7 +56,12 @@ public:
 
     void Init(uint8_t aBitField) { mBitField = aBitField; }
     void SetBit(uint8_t aOffset, bool aValue) { mBitField |= static_cast<uint8_t>(aValue) << aOffset; }
-    bool GetBit(uint8_t aOffset) { return (mBitField &= (1 << aOffset)) != 0; }
+    bool GetBit(uint8_t aOffset) const { return (mBitField & (1 << aOffset)) != 0; }
+    void SetBits(uint8_t aOffset, uint8_t aValue, uint8_t aMask)
+    {
+        mBitField = (mBitField & ~aMask) | ((aValue << aOffset) & aMask);
+    }
+    uint8_t GetBits(uint8_t aOffset, uint8_t aMask) const { return ((mBitField & aMask) >> aOffset); }
 
     uint8_t GetValue(void) const { return mBitField; }
 
@@ -102,13 +70,43 @@ private:
 } OT_TOOL_PACKED_END;
 
 OT_TOOL_PACKED_BEGIN
+class ControlField : public BitField
+{
+public:
+    enum
+    {
+        kBeaconVersion       = 3, ///< Version of Thread protocol.
+        kOpCodeAdvertisement = 0, ///< Toble Advertisement.
+        kOpCodeScanRespone   = 1, ///< Toble Scan response.
+    };
+
+    ControlField(void)
+        : BitField()
+    {
+    }
+
+    uint8_t GetVersion(void) const { return GetBits(kVersionOffset, kVersionMask); }
+    uint8_t GetOpCode(void) const { return GetBits(kOpCodeOffset, kOpCodeMask); }
+    void    SetVersion(uint8_t aVersion) { SetBits(kVersionOffset, kVersionMask, aVersion); }
+    void    SetOpCode(uint8_t aOpCode) { SetBits(kOpCodeOffset, kOpCodeMask, aOpCode); }
+
+private:
+    enum
+    {
+        kOpCodeOffset  = 0,
+        kOpCodeMask    = 0x0f << kOpCodeOffset,
+        kVersionOffset = 4,
+        kVersionMask   = 0x0f << kVersionOffset,
+    };
+} OT_TOOL_PACKED_END;
+
+OT_TOOL_PACKED_BEGIN
 class AdvData
 {
 public:
     enum
     {
-        kBlevDataLength = 31,
-        kMaxSize        = 31,
+        kMaxSize = 31,
     };
 
     AdvData(uint8_t *aData, uint8_t aLength)
@@ -130,14 +128,36 @@ protected:
     };
 
     uint8_t *mData;
-    // uint8_t mData[kBlevDataLength];
-    uint8_t mLength;
+    uint8_t  mLength;
 } OT_TOOL_PACKED_END;
 
 OT_TOOL_PACKED_BEGIN
-class ConnectBeacon : public AdvData
+class Advertisement : public AdvData
 {
 public:
+    /**
+     * This enumeration type represents the radio link state of ToBLE Peripheral.
+     *
+     */
+    typedef enum
+    {
+        kRxReady           = 0, ///< Rx ready.
+        kTxReadyToShort    = 1, ///< TX ready to RLOC16 destination address.
+        kTxReadyToExtended = 2, ///< TX ready to Extended destination address.
+    } LinkState;
+
+    /**
+     * This enumeration type represents the role of the BLE Peripheral sending the ToBLE Advertisement.
+     *
+     */
+    typedef enum
+    {
+        kJoiner                 = 0, ///< Joiner (Unconfigured).
+        kBedPeripheral          = 1, ///< BED-P.
+        kInactiveBlerPeripheral = 2, ///< BLER-P (Inactive — REED, disconnected, or not taking children).
+        kActiveBlerPeripheral   = 3, ///< BLER-P (Active).
+    } TobleRole;
+
     struct Info
     {
         enum
@@ -149,19 +169,24 @@ public:
 
         InfoString ToString(void) const;
 
-        bool              mL2capTransport;
-        bool              mExtendedAddress;
-        bool              mDestAddress;
-        bool              mDataPending;
-        bool              mFramePending;
+        bool      mL2capTransport;
+        bool      mJoiningPermitted;
+        bool      mDtcEnabled;
+        bool      mBorderAgentEnabled;
+        LinkState mLinkState;
+        TobleRole mTobleRole;
+
+        uint8_t           mL2capPsm;
         Mac::PanId        mPanId;
         Mac::ShortAddress mSrcShort;
         Mac::ExtAddress   mSrcExtended;
         Mac::Address      mDest;
-        uint8_t           mL2capPsm;
+
+        MeshCoP::NetworkNameTlv  mNetworkName;
+        MeshCoP::SteeringDataTlv mSteeringData;
     };
 
-    ConnectBeacon(uint8_t *aData, uint8_t aLength)
+    Advertisement(uint8_t *aData, uint8_t aLength)
         : AdvData(aData, aLength)
     {
     }
@@ -172,96 +197,43 @@ public:
 private:
     enum
     {
-        kFramePendingRequestedOffset = 0,
-        kDataPendingOffset           = 1,
-        kDestAddressOffset           = 4,
-        kExtendedAddressOffset       = 5,
-        kL2capTransportOffset        = 7,
+        kLinkStateOffset          = 0,
+        kL2capTransportOffset     = 7,
+        kTobleRoleOffset          = 0,
+        kJoiningPermittedOffset   = 5,
+        kDtcEnabledOffset         = 6,
+        kBorderAgentEnabledOffset = 7,
+        kLinkStateMask            = 0x03 << kLinkStateOffset,
+        kTobleRoleMask            = 0x03 << kTobleRoleOffset,
     };
 
     enum
     {
         kBleFlagsLength          = 2,
-        kBleServiceDataMinLength = 13,
-        kBleServiceDataMaxLength = 25,
+        kBleServiceDataMinLength = 18,
+        kBleServiceDataMaxLength = 27,
     };
 } OT_TOOL_PACKED_END;
 
 OT_TOOL_PACKED_BEGIN
-class DiscoveryBeacon : public AdvData
+class ScanResponse : public AdvData
 {
 public:
-    struct Info
+    ScanResponse(uint8_t *aData, uint8_t aLength)
+        : AdvData(aData, aLength)
     {
-        enum
-        {
-            kInfoStringSize = 100,
-        };
+    }
 
-        typedef String<kInfoStringSize> InfoString;
-
-        InfoString ToString(void) const;
-
-        bool     mBorderAgentEnabled;
-        bool     mDtcEnabled;
-        bool     mUnconfigured;
-        bool     mJoiningPermitted;
-        bool     mActiveRouter;
-        bool     mRouterCapable;
-        bool     mScanCapableRouter;
-        bool     mConnectionRequested;
-        bool     mFramePendingRequested;
-        bool     mL2capTransport;
-        uint64_t mDiscoveryId;
-        uint8_t  mL2capPsm;
-
-        MeshCoP::JoinerUdpPortTlv       mJoinerUdpPort;
-        MeshCoP::CommissionerUdpPortTlv mCommissionerUdpPort;
-        MeshCoP::NetworkNameTlv         mNetworkName;
-        MeshCoP::SteeringDataTlv        mSteeringData;
-    };
-
-    otError Populate(const Info &aInfo);
-    otError Parse(Info &aInfo) const;
+    otError Populate(const Advertisement::Info &aInfo);
+    otError Parse(Advertisement::Info &aInfo) const;
 
 private:
     enum
     {
-        kScanCapableRouterOffset     = 1,
-        kRouterCapableOffset         = 2,
-        kActiveRouterOffset          = 3,
-        kJoiningPermittedOffset      = 4,
-        kUnconfiguredOffset          = 5,
-        kDtcEnabledOffset            = 6,
-        kBorderAgentEnabledOffset    = 7,
-        kL2capTransportOffset        = 0,
-        kFramePendingRequestedOffset = 6,
-        kConnectionRequestedOffset   = 7,
-    };
-
-    enum
-    {
-        kBleFlagsLength          = 2,
-        kBleServiceDataMinLength = 13,
-        kBleServiceDataMaxLength = 25,
+        kBleServiceDataMinLength = 4,
+        kBleServiceDataMaxLength = 22,
     };
 } OT_TOOL_PACKED_END;
-
-OT_TOOL_PACKED_BEGIN
-class DiscoveryScanResponse : public AdvData
-{
-public:
-    otError Populate(const DiscoveryBeacon::Info &aInfo);
-    otError Parse(DiscoveryBeacon::Info &aInfo) const;
-
-private:
-    enum
-    {
-        kBleServiceDataMinLength = 11,
-        kBleServiceDataMaxLength = 19,
-    };
-} OT_TOOL_PACKED_END;
-
 } // namespace Toble
 } // namespace ot
 

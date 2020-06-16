@@ -157,8 +157,8 @@ void Controller::StartReceive(void)
 
 void Controller::StartRxModeAdv(void)
 {
-    ConnectBeacon       advData(mAdvDataBuffer, sizeof(mAdvDataBuffer));
-    ConnectBeacon::Info info;
+    Advertisement       advData(mAdvDataBuffer, sizeof(mAdvDataBuffer));
+    Advertisement::Info info;
     Platform::AdvConfig config;
 
 #if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
@@ -168,11 +168,10 @@ void Controller::StartRxModeAdv(void)
     info.mL2capTransport = false;
 #endif
 
-    info.mFramePending = false;
-    info.mDataPending  = false;
-    info.mPanId        = Get<Mac::Mac>().GetPanId();
-    info.mSrcShort     = Get<Mac::Mac>().GetShortAddress();
-    info.mSrcExtended  = Get<Mac::Mac>().GetExtAddress();
+    info.mLinkState   = Advertisement::kRxReady;
+    info.mPanId       = Get<Mac::Mac>().GetPanId();
+    info.mSrcShort    = Get<Mac::Mac>().GetShortAddress();
+    info.mSrcExtended = Get<Mac::Mac>().GetExtAddress();
     info.mDest.SetNone();
 
     advData.Populate(info);
@@ -241,8 +240,8 @@ exit:
 void Controller::StartTxModeAdv(void)
 {
     otError             error;
-    ConnectBeacon       advData(mAdvDataBuffer, sizeof(mAdvDataBuffer));
-    ConnectBeacon::Info info;
+    Advertisement       advData(mAdvDataBuffer, sizeof(mAdvDataBuffer));
+    Advertisement::Info info;
     Platform::AdvConfig config;
 
     assert(mState == kStateTxAdvertising);
@@ -255,10 +254,8 @@ void Controller::StartTxModeAdv(void)
     info.mL2capTransport = false;
 #endif
 
-    info.mFramePending = true; // indicating "tx mode"
-    info.mDataPending  = false;
-    info.mSrcShort     = Get<Mac::Mac>().GetShortAddress();
-    info.mSrcExtended  = Get<Mac::Mac>().GetExtAddress();
+    info.mSrcShort    = Get<Mac::Mac>().GetShortAddress();
+    info.mSrcExtended = Get<Mac::Mac>().GetExtAddress();
 
     // Get PanId and destination from the current tx frame
 
@@ -279,6 +276,15 @@ void Controller::StartTxModeAdv(void)
 
     error = mTxFrame->GetDstAddr(info.mDest);
     assert(error == OT_ERROR_NONE);
+
+    if (info.mDest.IsShort())
+    {
+        info.mLinkState = Advertisement::kTxReadyToShort;
+    }
+    else
+    {
+        info.mLinkState = Advertisement::kTxReadyToExtended;
+    }
 
     advData.Populate(info);
 

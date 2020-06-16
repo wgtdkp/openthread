@@ -399,8 +399,8 @@ void Controller::HandleAdv(Platform::AdvType aAdvType,
                            uint16_t          aLength,
                            int8_t            aRssi)
 {
-    ConnectBeacon              advData(const_cast<uint8_t *>(aData), aLength);
-    ConnectBeacon::Info        advInfo;
+    Advertisement              advData(const_cast<uint8_t *>(aData), aLength);
+    Advertisement::Info        advInfo;
     Mac::Address               srcAddr;
     Connection *               conn;
     Platform::ConnectionConfig config;
@@ -448,7 +448,10 @@ void Controller::HandleAdv(Platform::AdvType aAdvType,
         // peer is trying to transmit), and that the destination from adv data
         // matches our address or is broadcast.
 
-        VerifyOrExit(advInfo.mFramePending, OT_NOOP);
+        // VerifyOrExit(advInfo.mFramePending, OT_NOOP);
+        VerifyOrExit((advInfo.mLinkState == Advertisement::kTxReadyToShort) ||
+                         (advInfo.mLinkState == Advertisement::kTxReadyToExtended),
+                     OT_NOOP);
 
         switch (advInfo.mDest.GetType())
         {

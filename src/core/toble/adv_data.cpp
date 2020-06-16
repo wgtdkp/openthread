@@ -40,36 +40,50 @@
 namespace ot {
 namespace Toble {
 
-ConnectBeacon::Info::InfoString ConnectBeacon::Info::ToString(void) const
+Advertisement::Info::InfoString Advertisement::Info::ToString(void) const
 {
-    InfoString str("PANID:0x%04x, FP:%d DP:%d DST:%d EXT:%d L2:%s, SRC16:0x%04x ", mPanId, mFramePending, mDataPending,
-                   mDestAddress, mExtendedAddress, mL2capTransport, mSrcShort);
+    InfoString str("L2:%d State:%d BA:%d D:%d J:%d Role:%d, PANID:0x%04x, SRC16:0x%04x ", mL2capTransport, mLinkState,
+                   mBorderAgentEnabled, mDtcEnabled, mJoiningPermitted, mTobleRole, mPanId, mSrcShort);
 
-    if (mExtendedAddress)
-    {
-        SuccessOrExit(str.Append(", SRC64:%s", mSrcExtended.ToString().AsCString()));
-    }
+    SuccessOrExit(str.Append(", SRC64:%s", mSrcExtended.ToString().AsCString()));
 
     if (mL2capTransport)
     {
         SuccessOrExit(str.Append(", PSM:%d", mL2capPsm));
     }
 
-    if (mDestAddress)
+    if (mLinkState == kTxReadyToShort || mLinkState == kTxReadyToExtended)
     {
         SuccessOrExit(str.Append(", DST:%s", mDest.ToString().AsCString()));
+    }
+
+    if (mJoiningPermitted)
+    {
+        const uint8_t *value = mSteeringData.GetValue();
+
+        SuccessOrExit(str.Append(", SteeringData:"));
+        for (uint8_t i = 0; i < mSteeringData.GetSteeringDataLength(); i++)
+        {
+            SuccessOrExit(str.Append("%02X ", value[i]));
+        }
+    }
+
+    if (mBorderAgentEnabled)
+    {
+        SuccessOrExit(str.Append(", NetworkName:%s", mNetworkName.GetNetworkName().GetBuffer()));
     }
 
 exit:
     return str;
 }
 
-otError ConnectBeacon::Populate(const Info &aInfo)
+otError Advertisement::Populate(const Info &aInfo)
 {
     otError      error = OT_ERROR_NONE;
     Ltv *        ltv   = reinterpret_cast<Ltv *>(mData);
     ControlField controlField;
-    BitField     connectFlags;
+    BitField     connectionFlags;
+    BitField     capabilitiesFlags;
 
     ltv->Init();
     ltv->SetType(kBleAdvDataTypeFlags);
@@ -83,43 +97,37 @@ otError ConnectBeacon::Populate(const Info &aInfo)
     SuccessOrExit(error = ltv->AppendUint16(kBleServiceDataMaxLength, kBleServiceDataUuid));
 
     controlField.SetVersion(ControlField::kBeaconVersion);
-    controlField.SetOpCode(ControlField::kOpCodeConnect);
+    controlField.SetOpCode(ControlField::kOpCodeAdvertisement);
     SuccessOrExit(error = ltv->AppendUint8(kBleServiceDataMaxLength, controlField.GetValue()));
 
-    connectFlags.SetBit(kFramePendingRequestedOffset, aInfo.mFramePending);
-    connectFlags.SetBit(kDataPendingOffset, aInfo.mDataPending);
-    connectFlags.SetBit(kDestAddressOffset, aInfo.mDestAddress);
-    connectFlags.SetBit(kExtendedAddressOffset, aInfo.mExtendedAddress);
-    connectFlags.SetBit(kL2capTransportOffset, aInfo.mL2capTransport);
+    connectionFlags.SetBit(kL2capTransportOffset, aInfo.mL2capTransport);
+    connectionFlags.SetBits(kLinkStateOffset, kLinkStateMask, aInfo.mLinkState);
+    SuccessOrExit(error = ltv->AppendUint8(kBleServiceDataMaxLength, connectionFlags.GetValue()));
 
-    SuccessOrExit(error = ltv->AppendUint8(kBleServiceDataMaxLength, connectFlags.GetValue()));
+    capabilitiesFlags.SetBit(kBorderAgentEnabledOffset, aInfo.mBorderAgentEnabled);
+    capabilitiesFlags.SetBit(kDtcEnabledOffset, aInfo.mDtcEnabled);
+    capabilitiesFlags.SetBit(kJoiningPermittedOffset, aInfo.mJoiningPermitted);
+    capabilitiesFlags.SetBits(kTobleRoleOffset, kTobleRoleMask, aInfo.mTobleRole);
+    SuccessOrExit(error = ltv->AppendUint8(kBleServiceDataMaxLength, capabilitiesFlags.GetValue()));
+
     SuccessOrExit(error = ltv->AppendUint16(kBleServiceDataMaxLength, aInfo.mPanId));
     SuccessOrExit(error = ltv->AppendShortAddress(kBleServiceDataMaxLength, aInfo.mSrcShort));
-
-    if (aInfo.mExtendedAddress)
-    {
-        SuccessOrExit(error = ltv->AppendExtAddress(kBleServiceDataMaxLength, aInfo.mSrcExtended));
-    }
+    SuccessOrExit(error = ltv->AppendExtAddress(kBleServiceDataMaxLength, aInfo.mSrcExtended));
 
     if (aInfo.mL2capTransport)
     {
         SuccessOrExit(error = ltv->AppendUint8(kBleServiceDataMaxLength, aInfo.mL2capPsm));
     }
 
-    if (aInfo.mDestAddress)
+    if (aInfo.mLinkState == kTxReadyToShort)
     {
-        if (aInfo.mExtendedAddress && (aInfo.mDest.GetType() == Mac::Address::kTypeExtended))
-        {
-            SuccessOrExit(error = ltv->AppendExtAddress(kBleServiceDataMaxLength, aInfo.mDest.GetExtended()));
-        }
-        else if (!aInfo.mExtendedAddress && (aInfo.mDest.GetType() == Mac::Address::kTypeShort))
-        {
-            SuccessOrExit(error = ltv->AppendShortAddress(kBleServiceDataMaxLength, aInfo.mDest.GetShort()));
-        }
-        else
-        {
-            ExitNow(error = OT_ERROR_INVALID_ARGS);
-        }
+        VerifyOrExit(aInfo.mDest.IsShort(), error = OT_ERROR_INVALID_ARGS);
+        SuccessOrExit(error = ltv->AppendShortAddress(kBleServiceDataMaxLength, aInfo.mDest.GetShort()));
+    }
+    else if (aInfo.mLinkState == kTxReadyToExtended)
+    {
+        VerifyOrExit(aInfo.mDest.IsExtended(), error = OT_ERROR_INVALID_ARGS);
+        SuccessOrExit(error = ltv->AppendExtAddress(kBleServiceDataMaxLength, aInfo.mDest.GetExtended()));
     }
 
     mLength += ltv->GetSize();
@@ -133,13 +141,14 @@ exit:
     return error;
 }
 
-otError ConnectBeacon::Parse(Info &aInfo) const
+otError Advertisement::Parse(Info &aInfo) const
 {
     otError       error    = OT_ERROR_NONE;
     const Ltv *   ltv      = reinterpret_cast<const Ltv *>(mData);
     Ltv::Iterator iterator = Ltv::kIteratorInit;
     ControlField  controlField;
-    BitField      connectFlags;
+    BitField      connectionFlags;
+    BitField      capabilitiesFlags;
     uint8_t       uint8Value;
     uint16_t      uint16Value;
 
@@ -160,169 +169,92 @@ otError ConnectBeacon::Parse(Info &aInfo) const
     SuccessOrExit(error = ltv->GetUint8(iterator, uint8Value));
     controlField.Init(uint8Value);
     VerifyOrExit(controlField.GetVersion() == ControlField::kBeaconVersion, error = OT_ERROR_PARSE);
-    VerifyOrExit(controlField.GetOpCode() == ControlField::kOpCodeConnect, error = OT_ERROR_PARSE);
+    VerifyOrExit(controlField.GetOpCode() == ControlField::kOpCodeAdvertisement, error = OT_ERROR_PARSE);
 
     SuccessOrExit(error = ltv->GetUint8(iterator, uint8Value));
-    connectFlags.Init(uint8Value);
+    connectionFlags.Init(uint8Value);
+    aInfo.mL2capTransport = connectionFlags.GetBit(kL2capTransportOffset);
+    aInfo.mLinkState      = static_cast<LinkState>(connectionFlags.GetBits(kLinkStateOffset, kLinkStateMask));
 
-    aInfo.mFramePending    = connectFlags.GetBit(kFramePendingRequestedOffset);
-    aInfo.mDataPending     = connectFlags.GetBit(kDataPendingOffset);
-    aInfo.mDestAddress     = connectFlags.GetBit(kDestAddressOffset);
-    aInfo.mExtendedAddress = connectFlags.GetBit(kExtendedAddressOffset);
-    aInfo.mL2capTransport  = connectFlags.GetBit(kL2capTransportOffset);
+    SuccessOrExit(error = ltv->GetUint8(iterator, uint8Value));
+
+    capabilitiesFlags.Init(uint8Value);
+    aInfo.mBorderAgentEnabled = capabilitiesFlags.GetBit(kBorderAgentEnabledOffset);
+    aInfo.mDtcEnabled         = capabilitiesFlags.GetBit(kDtcEnabledOffset);
+    aInfo.mJoiningPermitted   = capabilitiesFlags.GetBit(kJoiningPermittedOffset);
+    aInfo.mTobleRole          = static_cast<TobleRole>(capabilitiesFlags.GetBits(kTobleRoleOffset, kTobleRoleMask));
 
     SuccessOrExit(error = ltv->GetUint16(iterator, aInfo.mPanId));
     SuccessOrExit(error = ltv->GetShortAddress(iterator, aInfo.mSrcShort));
-
-    if (aInfo.mExtendedAddress)
-    {
-        SuccessOrExit(error = ltv->GetExtAddress(iterator, aInfo.mSrcExtended));
-    }
 
     if (aInfo.mL2capTransport)
     {
         SuccessOrExit(error = ltv->GetUint8(iterator, aInfo.mL2capPsm));
     }
 
-    if (aInfo.mDestAddress)
+    if (aInfo.mLinkState == kTxReadyToShort)
     {
-        if (aInfo.mExtendedAddress)
-        {
-            Mac::ExtAddress address;
-            SuccessOrExit(error = ltv->GetExtAddress(iterator, address));
-            aInfo.mDest.SetExtended(address);
-        }
-        else
-        {
-            Mac::ShortAddress address;
+        Mac::ShortAddress address;
 
-            SuccessOrExit(error = ltv->GetShortAddress(iterator, address));
-            aInfo.mDest.SetShort(address);
-        }
+        SuccessOrExit(error = ltv->GetShortAddress(iterator, address));
+        aInfo.mDest.SetShort(address);
+    }
+    else if (aInfo.mLinkState == kTxReadyToExtended)
+    {
+        Mac::ExtAddress address;
+        SuccessOrExit(error = ltv->GetExtAddress(iterator, address));
+        aInfo.mDest.SetExtended(address);
     }
 
 exit:
     return error;
 }
 
-DiscoveryBeacon::Info::InfoString DiscoveryBeacon::Info::ToString(void) const
-{
-    InfoString str("B:%d D:%d U:%d J:%d A:%d R:%d S:%d C:%d FP:%d L2:%d, Id:%016x ", mBorderAgentEnabled, mDtcEnabled,
-                   mUnconfigured, mJoiningPermitted, mActiveRouter, mRouterCapable, mScanCapableRouter,
-                   mConnectionRequested, mFramePendingRequested, mL2capTransport, mDiscoveryId);
-
-    if (mL2capTransport)
-    {
-        SuccessOrExit(str.Append(", PSM:%d", mL2capPsm));
-    }
-
-    if (mUnconfigured)
-    {
-        SuccessOrExit(str.Append(", JoinerUdpPort:%d", mJoinerUdpPort.GetUdpPort()));
-    }
-
-    if (mBorderAgentEnabled)
-    {
-        SuccessOrExit(str.Append(", CommissionerUdpPort:%d", mCommissionerUdpPort.GetUdpPort()));
-    }
-
-    if (mJoiningPermitted)
-    {
-        const uint8_t *value = mSteeringData.GetValue();
-
-        SuccessOrExit(str.Append(", SteeringData:"));
-        for (uint8_t i = 0; i < mSteeringData.GetSteeringDataLength(); i++)
-        {
-            SuccessOrExit(str.Append("%02X ", value[i]));
-        }
-    }
-    else
-    {
-        SuccessOrExit(str.Append(", NetworkName:%s", mNetworkName.GetNetworkName().GetBuffer()));
-    }
-
-exit:
-    return str;
-}
-
-otError DiscoveryBeacon::Populate(const Info &aInfo)
+otError ScanResponse::Populate(const Advertisement::Info &aInfo)
 {
     otError      error = OT_ERROR_NONE;
     Ltv *        ltv   = reinterpret_cast<Ltv *>(mData);
     ControlField controlField;
-    BitField     roleFlags;
-    BitField     transportFlags;
+    BitField     connectionFlags;
+    BitField     capabilitiesFlags;
 
-    ltv->Init();
-    ltv->SetType(kBleAdvDataTypeFlags);
-    SuccessOrExit(error = ltv->AppendUint8(kBleFlagsLength, kBleFlagsUuid));
-
-    mLength = ltv->GetSize();
-
-    ltv = ltv->GetNext();
     ltv->Init();
     ltv->SetType(kBleAdvDataTypeServiceData);
     SuccessOrExit(error = ltv->AppendUint16(kBleServiceDataMaxLength, kBleServiceDataUuid));
 
     controlField.SetVersion(ControlField::kBeaconVersion);
-    controlField.SetOpCode(ControlField::kOpCodeDiscovery);
+    controlField.SetOpCode(ControlField::kOpCodeScanRespone);
     SuccessOrExit(error = ltv->AppendUint8(kBleServiceDataMaxLength, controlField.GetValue()));
-
-    roleFlags.SetBit(kScanCapableRouterOffset, aInfo.mScanCapableRouter);
-    roleFlags.SetBit(kRouterCapableOffset, aInfo.mRouterCapable);
-    roleFlags.SetBit(kActiveRouterOffset, aInfo.mActiveRouter);
-    roleFlags.SetBit(kJoiningPermittedOffset, aInfo.mJoiningPermitted);
-    roleFlags.SetBit(kUnconfiguredOffset, aInfo.mUnconfigured);
-    roleFlags.SetBit(kDtcEnabledOffset, aInfo.mDtcEnabled);
-    roleFlags.SetBit(kBorderAgentEnabledOffset, aInfo.mBorderAgentEnabled);
-    SuccessOrExit(error = ltv->AppendUint8(kBleServiceDataMaxLength, roleFlags.GetValue()));
-
-    transportFlags.SetBit(kL2capTransportOffset, aInfo.mL2capTransport);
-    transportFlags.SetBit(kFramePendingRequestedOffset, aInfo.mFramePendingRequested);
-    transportFlags.SetBit(kConnectionRequestedOffset, aInfo.mConnectionRequested);
-    SuccessOrExit(error = ltv->AppendUint8(kBleServiceDataMaxLength, transportFlags.GetValue()));
-
-    SuccessOrExit(error = ltv->AppendUint64(kBleServiceDataMaxLength, aInfo.mDiscoveryId));
-
-    if (aInfo.mL2capTransport)
-    {
-        SuccessOrExit(error = ltv->AppendUint8(kBleServiceDataMaxLength, aInfo.mL2capPsm));
-    }
-
-    if (aInfo.mUnconfigured)
-    {
-        SuccessOrExit(error = ltv->AppendTlv(kBleServiceDataMaxLength, aInfo.mJoinerUdpPort));
-    }
 
     if (aInfo.mBorderAgentEnabled)
     {
-        SuccessOrExit(error = ltv->AppendTlv(kBleServiceDataMaxLength, aInfo.mCommissionerUdpPort));
+        SuccessOrExit(error = ltv->AppendTlv(kBleServiceDataMaxLength, aInfo.mNetworkName));
     }
 
-    mLength += ltv->GetSize();
+    if (aInfo.mJoiningPermitted)
+    {
+        SuccessOrExit(error = ltv->AppendTlv(kBleServiceDataMaxLength, aInfo.mSteeringData));
+    }
+
+    mLength = ltv->GetSize();
 
 exit:
+    if (error != OT_ERROR_NONE)
+    {
+        mLength = 0;
+    }
+
     return error;
 }
 
-otError DiscoveryBeacon::Parse(Info &aInfo) const
+otError ScanResponse::Parse(Advertisement::Info &aInfo) const
 {
     otError       error    = OT_ERROR_NONE;
     const Ltv *   ltv      = reinterpret_cast<const Ltv *>(mData);
     Ltv::Iterator iterator = Ltv::kIteratorInit;
     ControlField  controlField;
-    BitField      roleFlags;
-    BitField      transportFlags;
     uint8_t       uint8Value;
     uint16_t      uint16Value;
-
-    VerifyOrExit(ltv->GetType() == kBleAdvDataTypeFlags, error = OT_ERROR_PARSE);
-    VerifyOrExit(ltv->GetLength() == kBleFlagsLength, error = OT_ERROR_PARSE);
-    SuccessOrExit(error = ltv->GetUint8(iterator, uint8Value));
-    VerifyOrExit(uint8Value == kBleFlagsUuid, error = OT_ERROR_PARSE);
-
-    ltv      = ltv->GetNext();
-    iterator = Ltv::kIteratorInit;
 
     VerifyOrExit(ltv->GetType() == kBleAdvDataTypeServiceData, error = OT_ERROR_PARSE);
     VerifyOrExit(ltv->GetLength() >= kBleServiceDataMinLength && ltv->GetLength() <= kBleServiceDataMaxLength,
@@ -333,93 +265,21 @@ otError DiscoveryBeacon::Parse(Info &aInfo) const
     SuccessOrExit(error = ltv->GetUint8(iterator, uint8Value));
     controlField.Init(uint8Value);
     VerifyOrExit(controlField.GetVersion() == ControlField::kBeaconVersion, error = OT_ERROR_PARSE);
-    VerifyOrExit(controlField.GetOpCode() == ControlField::kOpCodeDiscovery, error = OT_ERROR_PARSE);
-
-    SuccessOrExit(error = ltv->GetUint8(iterator, uint8Value));
-    roleFlags.Init(uint8Value);
-    aInfo.mScanCapableRouter  = roleFlags.GetBit(kScanCapableRouterOffset);
-    aInfo.mRouterCapable      = roleFlags.GetBit(kRouterCapableOffset);
-    aInfo.mActiveRouter       = roleFlags.GetBit(kActiveRouterOffset);
-    aInfo.mJoiningPermitted   = roleFlags.GetBit(kJoiningPermittedOffset);
-    aInfo.mUnconfigured       = roleFlags.GetBit(kUnconfiguredOffset);
-    aInfo.mDtcEnabled         = roleFlags.GetBit(kDtcEnabledOffset);
-    aInfo.mBorderAgentEnabled = roleFlags.GetBit(kBorderAgentEnabledOffset);
-
-    SuccessOrExit(error = ltv->GetUint8(iterator, uint8Value));
-    transportFlags.Init(uint8Value);
-    aInfo.mL2capTransport        = transportFlags.GetBit(kL2capTransportOffset);
-    aInfo.mFramePendingRequested = transportFlags.GetBit(kFramePendingRequestedOffset);
-    aInfo.mConnectionRequested   = transportFlags.GetBit(kConnectionRequestedOffset);
-
-    SuccessOrExit(error = ltv->GetUint64(iterator, aInfo.mDiscoveryId));
-
-    if (aInfo.mL2capTransport)
-    {
-        SuccessOrExit(ltv->GetUint8(iterator, aInfo.mL2capPsm));
-    }
-
-    if (aInfo.mUnconfigured)
-    {
-        SuccessOrExit(error = ltv->GetTlv(iterator, aInfo.mJoinerUdpPort));
-    }
+    VerifyOrExit(controlField.GetOpCode() == ControlField::kOpCodeScanRespone, error = OT_ERROR_PARSE);
 
     if (aInfo.mBorderAgentEnabled)
     {
-        SuccessOrExit(error = ltv->GetTlv(iterator, aInfo.mCommissionerUdpPort));
+        SuccessOrExit(error = ltv->GetTlv(iterator, aInfo.mNetworkName));
     }
-
-exit:
-    return error;
-}
-
-otError DiscoveryScanResponse::Populate(const DiscoveryBeacon::Info &aInfo)
-{
-    otError error = OT_ERROR_NONE;
-    Ltv *   ltv   = reinterpret_cast<Ltv *>(mData);
-
-    ltv->Init();
-    ltv->SetType(kBleAdvDataTypeServiceData);
-    SuccessOrExit(error = ltv->AppendUint16(kBleServiceDataMaxLength, kBleServiceDataUuid));
-
-    if (aInfo.mJoiningPermitted)
-    {
-        SuccessOrExit(error = ltv->AppendTlv(kBleServiceDataMaxLength, aInfo.mSteeringData));
-    }
-    else
-    {
-        SuccessOrExit(error = ltv->AppendTlv(kBleServiceDataMaxLength, aInfo.mNetworkName));
-    }
-
-exit:
-    return error;
-}
-
-otError DiscoveryScanResponse::Parse(DiscoveryBeacon::Info &aInfo) const
-{
-    otError       error    = OT_ERROR_NONE;
-    const Ltv *   ltv      = reinterpret_cast<const Ltv *>(mData);
-    Ltv::Iterator iterator = Ltv::kIteratorInit;
-    uint16_t      uint16Value;
-
-    VerifyOrExit(ltv->GetType() == kBleAdvDataTypeServiceData, error = OT_ERROR_PARSE);
-    VerifyOrExit(ltv->GetLength() >= kBleServiceDataMinLength && ltv->GetLength() <= kBleServiceDataMaxLength,
-                 error = OT_ERROR_PARSE);
-    SuccessOrExit(error = ltv->GetUint16(iterator, uint16Value));
-    VerifyOrExit(uint16Value == kBleServiceDataUuid, error = OT_ERROR_PARSE);
 
     if (aInfo.mJoiningPermitted)
     {
         SuccessOrExit(error = ltv->GetTlv(iterator, aInfo.mSteeringData));
     }
-    else
-    {
-        SuccessOrExit(error = ltv->GetTlv(iterator, aInfo.mNetworkName));
-    }
 
 exit:
     return error;
 }
-
 } // namespace Toble
 } // namespace ot
 #endif // OPENTHREAD_CONFIG_TOBLE_ENABLE
