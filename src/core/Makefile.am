@@ -238,6 +238,7 @@ SOURCES_COMMON                             = \
     thread/thread_netif.cpp                  \
     thread/time_sync_service.cpp             \
     thread/topology.cpp                      \
+    toble/ads.cpp                            \
     toble/adv_data.cpp                       \
     toble/btp.cpp                            \
     toble/btp_client.cpp                     \
