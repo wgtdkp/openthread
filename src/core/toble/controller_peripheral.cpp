@@ -362,7 +362,7 @@ void Controller::HandleTimer(void)
     }
 }
 
-void Controller::HandleConnected(Platform::ConnectionId aPlatConn)
+void Controller::HandleConnected(Platform::Connection *aPlatConn)
 {
     otLogInfoBle("PeriCtrl::HandleConnected()");
 
@@ -414,7 +414,7 @@ exit:
     return;
 }
 
-void Controller::HandleDisconnected(Platform::ConnectionId aPlatConn)
+void Controller::HandleDisconnected(Platform::Connection *aPlatConn)
 {
     Connection *conn = Get<ConnectionTable>().Find(aPlatConn);
 

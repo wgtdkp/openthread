@@ -115,8 +115,8 @@ private:
     uint32_t    GetPreferredChannelMask(void) { return OT_RADIO_2P4GHZ_OQPSK_CHANNEL_MASK; }
 
     // Callbacks from Toble::Platform
-    void HandleConnected(Platform::ConnectionId aPlatConn);
-    void HandleDisconnected(Platform::ConnectionId aPlatConn);
+    void HandleConnected(Platform::Connection *aPlatConn);
+    void HandleDisconnected(Platform::Connection *aPlatConn);
 
     bool       mEnabled;
     Mac::Frame mTxFrame;

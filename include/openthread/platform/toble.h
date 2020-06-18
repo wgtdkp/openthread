@@ -107,10 +107,10 @@ typedef enum otTobleConnectionLinkType
     kConnectionLinkTypeL2Cap    ///< Connection uses L2CAP transport
 } otTobleConnectionLinkType;
 
-typedef uint8_t otTobleConnectionId; ///< An identifier representing ToBLE connection.
+typedef void otTobleConnection; ///< A type representing a ToBLE connection.
 
-#define OT_TOBLE_ADV_DATA_MAX_LENGTH 31     ///< Maximum length of advertising data [bytes].
-#define OT_TOBLE_CONNECTION_ID_INVALID 0xff ///< Invalid ToBLE connection identifier.
+#define OT_TOBLE_ADV_DATA_MAX_LENGTH 31 ///< Maximum length of advertising data [bytes].
+
 /**
  * This enumeration represents the ToBLE link mode.
  *
@@ -168,10 +168,10 @@ void otPlatTobleInit(otInstance *aInstance);
  * callback `otPlatTobleHandleDisconnected()`.
  *
  * @param[in] aInstance   A pointer to OpenThread instance.
- * @param[in] aConnId     The connection disconnect
+ * @param[in] aConn       A pointer to a BLE connection.
  *
  */
-void otPlatTobleDisconnect(otInstance *aInstance, otTobleConnectionId aConnId);
+void otPlatTobleDisconnect(otInstance *aInstance, otTobleConnection *aConn);
 
 /**
  * This is a callback to indicate that a connection is established.
@@ -181,10 +181,10 @@ void otPlatTobleDisconnect(otInstance *aInstance, otTobleConnectionId aConnId);
  * while device is sending connectable advertisements.
  *
  * @param[in] aInstance   A pointer to OpenThread instance.
- * @param[in] aConnId     ToBLE connection identifier.
+ * @param[in] aConn       A pointer to a BLE connection..
  *
  */
-extern void otPlatTobleHandleConnected(otInstance *aInstance, otTobleConnectionId aConnId);
+extern void otPlatTobleHandleConnected(otInstance *aInstance, otTobleConnection *aConn);
 
 /**
  * This is a callback to indicate that a previously connected connection got disconnected.
@@ -192,10 +192,10 @@ extern void otPlatTobleHandleConnected(otInstance *aInstance, otTobleConnectionI
  * After this call, the `aConn` should be considered invalid and not used again.
  *
  * @param[in] aInstance   A pointer to OpenThread instance.
- * @param[in] aConnId     ToBLE connection identifier.
+ * @param[in] aConn       A pointer to a BLE connection..
  *
  */
-extern void otPlatTobleHandleDisconnected(otInstance *aInstance, otTobleConnectionId aConnId);
+extern void otPlatTobleHandleDisconnected(otInstance *aInstance, otTobleConnection *aConn);
 
 /**
  * This functions get the MTU size of a connection.
@@ -204,12 +204,12 @@ extern void otPlatTobleHandleDisconnected(otInstance *aInstance, otTobleConnecti
  * On peripheral, this can be called only after callback `otPlatTobleHandleC2Subscribed()` is received.
  *
  * @param[in] aInstance   A pointer to OpenThread instance.
- * @param[in] aConnId     ToBLE connection identifier.
+ * @param[in] aConn       A pointer to a BLE connection..
  *
  * @returns The MTU size of connection.
  *
  */
-uint16_t otPlatTobleGetMtu(otInstance *aInstance, otTobleConnectionId aConnId);
+uint16_t otPlatTobleGetMtu(otInstance *aInstance, otTobleConnection *aConn);
 
 /*----------------------------------------------------------------------------------------------------------------------
  * Central APIs
@@ -281,9 +281,9 @@ extern void otPlatTobleHandleAdv(otInstance *          aInstance,
  * @returns On success an identifier for the created connection, or OT_TOBLE_CONNECTION_ID_INVALID on failure.
  *
  */
-otTobleConnectionId otPlatTobleCreateConnection(otInstance *             aInstance,
-                                                const otTobleAddress *   aPeerAddress,
-                                                otTobleConnectionConfig *aConfig);
+otTobleConnection *otPlatTobleCreateConnection(otInstance *             aInstance,
+                                               const otTobleAddress *   aPeerAddress,
+                                               otTobleConnectionConfig *aConfig);
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  * Central APIs for BTP transport support
@@ -295,16 +295,16 @@ otTobleConnectionId otPlatTobleCreateConnection(otInstance *             aInstan
  *
  * The platform should call this after `otPlatTobleHandleConnected()` to indicate the connection is ready for use.
  * Only after getting this call, we can use any of the other functions that interact with the connection (e.g.
- * `otPlatTobleGetMtu()` or `otPlatTobleC1Write(), etc. - all functions that have `aConnId` as input parameter). The
+ * `otPlatTobleGetMtu()` or `otPlatTobleC1Write(), etc. - all functions that have `aConn` as input parameter). The
  * only exception to this is the `otPlatTobleDisconnect()` which can be called any time after connection is created.
  *
  * @param[in] aInstance   A pointer to OpenThread instance.
- * @param[in] aConnId     ToBLE connection identifier.
+ * @param[in] aConn       A pointer to a BLE connection..
  * @param[in] aLinkType   A connection link type which is used as low level transport.
  *
  */
 extern void otPlatTobleHandleConnectionIsReady(otInstance *              aInstance,
-                                               otTobleConnectionId       aConnId,
+                                               otTobleConnection *       aConn,
                                                otTobleConnectionLinkType aLinkType);
 
 /**
@@ -315,21 +315,21 @@ extern void otPlatTobleHandleConnectionIsReady(otInstance *              aInstan
  * This can be called only after callback `otPlatTobleHandleConnectionIsReady()` is received for the connection.
  *
  * @param[in] aInstance   A pointer to OpenThread instance.
- * @param[in] aConnId     ToBLE connection identifier.
+ * @param[in] aConn       A pointer to a BLE connection..
  * @param[in] aBuffer     A pointer to buffer to write.
  * @param[in] aLength     Length of buffer (number of bytes).
  *
  */
-void otPlatTobleC1Write(otInstance *aInstance, otTobleConnectionId aConnId, const void *aBuffer, uint16_t aLength);
+void otPlatTobleC1Write(otInstance *aInstance, otTobleConnection *aConn, const void *aBuffer, uint16_t aLength);
 
 /**
  * This is a callback to notify that a C1 write request was done.
  *
  * @param[in] aInstance   A pointer to OpenThread instance.
- * @param[in] aConnId     ToBLE connection identifier.
+ * @param[in] aConn       A pointer to a BLE connection..
  *
  */
-extern void otPlatTobleHandleC1WriteDone(otInstance *aInstance, otTobleConnectionId aConnId);
+extern void otPlatTobleHandleC1WriteDone(otInstance *aInstance, otTobleConnection *aConn);
 
 /**
  * This function requests a subscription change to C2 (BTP) on a given connection.
@@ -339,25 +339,25 @@ extern void otPlatTobleHandleC1WriteDone(otInstance *aInstance, otTobleConnectio
  * This can be called only after callback `otPlatTobleHandleConnectionIsReady()` is received for the connection.
  *
  * @param[in] aInstance    A pointer to OpenThread instance.
- * @param[in] aConnId      ToBLE connection identifier.
+ * @param[in] aConn        A pointer to a BLE connection..
  * @param[in] aSubscrive   TRUE to subscribe, FALSE to un-subscribe.
  *
  */
-void otPlatTobleC2Subscribe(otInstance *aInstance, otTobleConnectionId aConnId, bool aSubscribe);
+void otPlatTobleC2Subscribe(otInstance *aInstance, otTobleConnection *aConn, bool aSubscribe);
 
 /**
  * This is callback to notify that peer has indicated C2 (BTP) on a given connection.
  *
  * @param[in] aInstance   A pointer to OpenThread instance.
- * @param[in] aConnId     ToBLE connection identifier.
+ * @param[in] aConn       A pointer to a BLE connection..
  * @param[in] aBuffer     A pointer to buffer (from C2 indication).
  * @param[in] aLength     Length of buffer (number of bytes).
  *
  */
-extern void otPlatTobleHandleC2Indication(otInstance *        aInstance,
-                                          otTobleConnectionId aConnId,
-                                          const uint8_t *     aBuffer,
-                                          uint16_t            aLength);
+extern void otPlatTobleHandleC2Indication(otInstance *       aInstance,
+                                          otTobleConnection *aConn,
+                                          const uint8_t *    aBuffer,
+                                          uint16_t           aLength);
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  * Central APIs for L2CAP transport support
@@ -400,11 +400,11 @@ otError otPlatTobleAdvStop(otInstance *aInstance);
  * This is callback to notify that peer has subscribed to C2 (BTP) on a connection.
  *
  * @param[in] aInstance       A pointer to OpenThread instance.
- * @param[in] aConnId         A pointer to the connection.
+ * @param[in] aConn           A pointer to the connection.
  * @param[in] aIsSubscribed   TRUE if the peer subscribed, FALSE if un-subscribed.
  *
  */
-extern void otPlatTobleHandleC2Subscribed(otInstance *aInstance, otTobleConnectionId aConnId, bool aIsSubscribed);
+extern void otPlatTobleHandleC2Subscribed(otInstance *aInstance, otTobleConnection *aConn, bool aIsSubscribed);
 
 /**
  * This function request a C2 indicate on a connection.
@@ -414,35 +414,35 @@ extern void otPlatTobleHandleC2Subscribed(otInstance *aInstance, otTobleConnecti
  * This can be called only after `otPlatTobleHandleC2Subscribed() callback is received on the same connection.
  *
  * @param[in] aInstance   A pointer to OpenThread instance.
- * @param[in] aConnId     ToBLE connection identifier.
+ * @param[in] aConn       A pointer to a BLE connection..
  * @param[in] aBuffer     A pointer to buffer (from C2 indication)
  * @param[in] aLength     Length of buffer (number of bytes).
  *
  */
-void otPlatTobleC2Indicate(otInstance *aInstance, otTobleConnectionId aConnId, const void *aBuffer, uint16_t aLength);
+void otPlatTobleC2Indicate(otInstance *aInstance, otTobleConnection *aConn, const void *aBuffer, uint16_t aLength);
 
 /**
  * This is a callback to notify that a C2 indicate request was done.
  *
  * @param[in] aInstance  A pointer to OpenThread instance.
- * @param[in] aConnId    ToBLE connection identifier.
+ * @param[in] aConn      A pointer to a BLE connection..
  *
  */
-extern void otPlatTobleHandleC2IndicateDone(otInstance *aInstance, otTobleConnectionId aConnId);
+extern void otPlatTobleHandleC2IndicateDone(otInstance *aInstance, otTobleConnection *aConn);
 
 /**
  * This is callback to notify that peer has written to C1 (BTP) on a given connection.
  *
  * @param[in] aInstance   A pointer to OpenThread instance.
- * @param[in] aConnId     ToBLE connection identifier.
+ * @param[in] aConn       A pointer to a BLE connection..
  * @param[in] aBuffer     A pointer to buffer (from C1 write.)
  * @param[in] aLength     Length of buffer (number of bytes).
  *
  */
-extern void otPlatTobleHandleC1Write(otInstance *        aInstance,
-                                     otTobleConnectionId aConnId,
-                                     const uint8_t *     aBuffer,
-                                     uint16_t            aLength);
+extern void otPlatTobleHandleC1Write(otInstance *       aInstance,
+                                     otTobleConnection *aConn,
+                                     const uint8_t *    aBuffer,
+                                     uint16_t           aLength);
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  * Peripheral APIs for L2CAP transport support
@@ -461,7 +461,7 @@ uint8_t otPlatTobleGetL2capPsm(otInstance *aInstance);
  * @returns Type of the link, if no connection is established kConnectionLinkTypeUnknown is returned.
  *
  */
-otTobleConnectionLinkType otPlatTobleGetConnectionLinkType(const otTobleConnectionId aConnId);
+otTobleConnectionLinkType otPlatTobleGetConnectionLinkType(const otTobleConnection *aConn);
 
 /**
  * This is a callback to notify that new data frame came through the L2Cap connection.
@@ -470,40 +470,40 @@ otTobleConnectionLinkType otPlatTobleGetConnectionLinkType(const otTobleConnecti
  * cache this pointer.
  *
  * @param[in] aInstance   A pointer to OpenThread instance.
- * @param[in] aConnId     ToBLE connection identifier.
+ * @param[in] aConn       A pointer to a BLE connection..
  * @param[in] aBuffer     A pointer to incoming buffer
  * @param[in] aLength     Length of buffer (number of bytes).
  *
  */
-void otPlatTobleL2CapFrameReceived(otInstance *        aInstance,
-                                   otTobleConnectionId aConnId,
-                                   const uint8_t *     aBuffer,
-                                   uint16_t            aLength);
+void otPlatTobleL2CapFrameReceived(otInstance *       aInstance,
+                                   otTobleConnection *aConn,
+                                   const uint8_t *    aBuffer,
+                                   uint16_t           aLength);
 
 /**
  * This function sends a packet through L2Cap link layer.
  *
  * This function this can be called only after callback `otPlatTobleHandleConnectionIsReady()`is received with link type
- * indication L2Cap transport for `aConnId`.
+ * indication L2Cap transport for `aConn`.
  *
  * The platform notifies that the send request is done by calling `otPlatBleL2capOnSduSent()`.
  *
  * @param[in] aInstance   A pointer to OpenThread instance.
- * @param[in] aConnId     ToBLE connection identifier.
+ * @param[in] aConn       A pointer to a BLE connection..
  * @param[in] aBuffer     A pointer to buffer which will be sent.
  * @param[in] aLength     Length of buffer (number of bytes).
  *
- * @retval OT_ERROR_NOT_FOUND       If aConnId == NULL.
+ * @retval OT_ERROR_NOT_FOUND       If aConn == NULL.
  * @retval OT_ERROR_NONE            LE Credit Based Connection Request has been sent.
  * @retval OT_ERROR_INVALID_STATE   BLE Device is in an invalid state e.g. not in the GAP connection.
  * @retval OT_ERROR_INVALID_ARGS    Invalid parameters have been provided.
  * @retval OT_ERROR_NO_BUFS         No available internal buffer found.
  *
  */
-extern otError otPlatTobleL2capSend(otInstance *        aInstance,
-                                    otTobleConnectionId aConnId,
-                                    const uint8_t *     aBuffer,
-                                    uint16_t            aLength);
+extern otError otPlatTobleL2capSend(otInstance *       aInstance,
+                                    otTobleConnection *aConn,
+                                    const uint8_t *    aBuffer,
+                                    uint16_t           aLength);
 
 #ifdef __cplusplus
 } // extern "C"

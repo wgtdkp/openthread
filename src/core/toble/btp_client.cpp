@@ -11,7 +11,7 @@ namespace Toble {
 
 #if OPENTHREAD_CONFIG_TOBLE_ENABLE && OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
 
-void Btp::HandleC1WriteDone(Platform::ConnectionId aPlatConn)
+void Btp::HandleC1WriteDone(Platform::Connection *aPlatConn)
 {
     Connection *conn = Get<ConnectionTable>().Find(aPlatConn);
 
@@ -37,7 +37,7 @@ exit:
     return;
 }
 
-void Btp::HandleC2Indication(Platform::ConnectionId aPlatConn, const uint8_t *aFrame, uint16_t aLength)
+void Btp::HandleC2Indication(Platform::Connection *aPlatConn, const uint8_t *aFrame, uint16_t aLength)
 {
     Connection * conn  = Get<ConnectionTable>().Find(aPlatConn);
     const Frame *frame = reinterpret_cast<const Frame *>(aFrame);

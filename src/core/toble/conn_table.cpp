@@ -109,7 +109,7 @@ ConnectionTable::ConnectionTable(void)
 {
     for (Connection *conn = &mConnArray[0]; conn < OT_ARRAY_END(mConnArray); conn++)
     {
-        conn->mPlatConn = OT_TOBLE_CONNECTION_ID_INVALID;
+        conn->mPlatConn = NULL;
     }
 }
 
@@ -128,7 +128,7 @@ exit:
     return next;
 }
 
-Connection *ConnectionTable::Find(Platform::ConnectionId aPlatConn)
+Connection *ConnectionTable::Find(Platform::Connection *aPlatConn)
 {
     Connection *conn;
 
@@ -146,7 +146,7 @@ exit:
 Connection *ConnectionTable::GetNew(void)
 {
     // Find an element with `mPlatConn` being NULL.
-    Connection *conn = Find(OT_TOBLE_CONNECTION_ID_INVALID);
+    Connection *conn = Find(NULL);
 
     if (conn != NULL)
     {

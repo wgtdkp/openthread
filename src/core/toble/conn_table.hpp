@@ -48,10 +48,10 @@ namespace Toble {
 class Connection
 {
 public:
-    bool IsInUse(void) const { return (mPlatConn != OT_TOBLE_CONNECTION_ID_INVALID); }
+    bool IsInUse(void) const { return (mPlatConn != NULL); }
 
-    Platform::ConnectionId mPlatConn;
-    Transport::Type        mTransport;
+    Platform::Connection *mPlatConn;
+    Transport::Type       mTransport;
 
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
     enum
@@ -101,9 +101,9 @@ public:
     Connection *GetFirst(void) { return Iterate(NULL); }
     Connection *GetNext(Connection *aPrev) { return Iterate(aPrev); }
 
-    Connection *Find(Platform::ConnectionId aPlatConn);
+    Connection *Find(Platform::Connection *aPlatConn);
     Connection *GetNew(void);
-    void        Remove(Connection &aConn) { aConn.mPlatConn = OT_TOBLE_CONNECTION_ID_INVALID; }
+    void        Remove(Connection &aConn) { aConn.mPlatConn = NULL; }
 
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
     Connection *Find(const Mac::Address &aAddress);

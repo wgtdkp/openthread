@@ -99,8 +99,8 @@ private:
     void InvokeRadioTxDone(otError aError);
 
     // Callbacks from platform
-    void HandleConnected(Platform::ConnectionId aPlatConn);
-    void HandleDisconnected(Platform::ConnectionId aPlatConn);
+    void HandleConnected(Platform::Connection *aPlatConn);
+    void HandleDisconnected(Platform::Connection *aPlatConn);
 
     static void HandleTimer(Timer &aTimer);
     void        HandleTimer(void);

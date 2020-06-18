@@ -123,8 +123,8 @@ private:
                    uint16_t          aLength,
                    int8_t            aRssi);
 
-    void HandleConnected(Platform::ConnectionId aPlatConn);
-    void HandleDisconnected(Platform::ConnectionId aPlatConn);
+    void HandleConnected(Platform::Connection *aPlatConn);
+    void HandleDisconnected(Platform::Connection *aPlatConn);
 
     static void HandleConnTimer(Timer &aTimer);
     void        HandleConnTimer(void);

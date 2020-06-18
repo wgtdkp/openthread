@@ -97,14 +97,14 @@ private:
 
     void Reset(Session &aSession);
 
-    void HandleConnectionReady(Platform::ConnectionId aPlatConn);
+    void HandleConnectionReady(Platform::Connection *aPlatConn);
 
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
     void HandleHandshake(Connection &aConn, const HandshakeResponse &aResponse);
 
     // Callbacks from platform
-    void HandleC1WriteDone(Platform::ConnectionId aConnId);
-    void HandleC2Indication(Platform::ConnectionId aConnId, const uint8_t *aFrame, uint16_t aLength);
+    void HandleC1WriteDone(Platform::Connection *aPlatConn);
+    void HandleC2Indication(Platform::Connection *aPlatConn, const uint8_t *aFrame, uint16_t aLength);
 #endif
 
 #if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
@@ -117,9 +117,9 @@ private:
     void HandleHandshake(Connection &aConn, const HandshakeRequest &aRequest);
 
     // Callbacks from platform
-    void HandleC1Write(Platform::ConnectionId aPlatConn, const uint8_t *aFrame, uint16_t aLength);
-    void HandleC2Subscribed(Platform::ConnectionId aPlatConn, bool aIsSubscribed);
-    void HandleC2IndicateDone(Platform::ConnectionId aPlatConn);
+    void HandleC1Write(Platform::Connection *aPlatConn, const uint8_t *aFrame, uint16_t aLength);
+    void HandleC2Subscribed(Platform::Connection *aPlatConn, bool aIsSubscribed);
+    void HandleC2IndicateDone(Platform::Connection *aPlatConn);
 #endif
 
     void HandleSentData(Connection &aConn);

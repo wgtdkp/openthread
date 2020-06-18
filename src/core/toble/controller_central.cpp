@@ -539,7 +539,7 @@ void Controller::HandleAdv(Platform::AdvType aAdvType,
     Get<Platform>().StopScan();
     conn->mPlatConn = Get<Platform>().CreateConnection(aSource, config);
 
-    if (conn->mPlatConn == OT_TOBLE_CONNECTION_ID_INVALID)
+    if (conn->mPlatConn == NULL)
     {
         otLogNoteBle("CentCtrl: Platform could not create new connection - restart scanning");
 
@@ -740,7 +740,7 @@ void Controller::HandleConnTimer(void)
     UpdateConnTimer();
 }
 
-void Controller::HandleConnected(Platform::ConnectionId aPlatConn)
+void Controller::HandleConnected(Platform::Connection *aPlatConn)
 {
     Connection *conn;
 
@@ -802,7 +802,7 @@ exit:
     return;
 }
 
-void Controller::HandleDisconnected(Platform::ConnectionId aPlatConn)
+void Controller::HandleDisconnected(Platform::Connection *aPlatConn)
 {
     Connection *conn;
 

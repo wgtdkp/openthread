@@ -193,6 +193,10 @@ public:
      */
     void SetUserCommands(const otCliCommand *aCommands, uint8_t aLength);
 
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    ToblePlatform &GetToblePlatform(void) { return mToblePlatform; }
+#endif
+
 private:
     enum
     {

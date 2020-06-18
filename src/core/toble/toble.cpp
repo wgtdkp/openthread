@@ -130,7 +130,7 @@ otError Toble::Transmit(Mac::TxFrame &aFrame)
     return error;
 }
 
-void Toble::HandleConnected(Platform::ConnectionId aPlatConn)
+void Toble::HandleConnected(Platform::Connection *aPlatConn)
 {
     OT_UNUSED_VARIABLE(aPlatConn);
     if (IsCentral())
@@ -147,7 +147,7 @@ void Toble::HandleConnected(Platform::ConnectionId aPlatConn)
     }
 }
 
-void Toble::HandleDisconnected(Platform::ConnectionId aPlatConn)
+void Toble::HandleDisconnected(Platform::Connection *aPlatConn)
 {
     OT_UNUSED_VARIABLE(aPlatConn);
     if (IsCentral())

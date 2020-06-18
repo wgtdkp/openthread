@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2019, The OpenThread Authors.
+ *  Copyright (c) 2020, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -106,7 +106,7 @@ class Platform : public InstanceLocator
 public:
     typedef otTobleAdvType          AdvType;
     typedef otTobleAdvConfig        AdvConfig;
-    typedef otTobleConnectionId     ConnectionId;
+    typedef otTobleConnection       Connection;
     typedef otTobleConnectionConfig ConnectionConfig;
 
     class Callbacks : public InstanceLocator
@@ -114,20 +114,20 @@ public:
         friend class Platform;
 
     public:
-        void HandleConnected(ConnectionId aConnId);
-        void HandleDisconnected(ConnectionId aConnId);
-        void HandleConnectionReady(ConnectionId aConnId, otTobleConnectionLinkType aLinkType);
+        void HandleConnected(Connection *aConn);
+        void HandleDisconnected(Connection *aConn);
+        void HandleConnectionReady(Connection *aConn, otTobleConnectionLinkType aLinkType);
 
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
         void HandleAdv(AdvType aAdvType, const Address &aSource, const uint8_t *aData, uint16_t aLength, int8_t aRssi);
-        void HandleC1WriteDone(ConnectionId aConnId);
-        void HandleC2Indication(ConnectionId aConnId, const uint8_t *aBuf, uint16_t aLength);
+        void HandleC1WriteDone(Connection *aConn);
+        void HandleC2Indication(Connection *aConn, const uint8_t *aBuf, uint16_t aLength);
 #endif
 
 #if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
-        void HandleC2Subscribed(ConnectionId aConnId, bool aIsSubscribed);
-        void HandleC2IndicateDone(ConnectionId aConnId);
-        void HandleC1Write(ConnectionId aConnId, const uint8_t *aFrame, uint16_t aLength);
+        void HandleC2Subscribed(Connection *aConn, bool aIsSubscribed);
+        void HandleC2IndicateDone(Connection *aConn);
+        void HandleC1Write(Connection *aConn, const uint8_t *aFrame, uint16_t aLength);
 #endif
 
     private:
@@ -147,9 +147,9 @@ public:
 
     void Init(void) { otPlatTobleInit(GetInstance()); }
 
-    void Disconnect(ConnectionId aConnId) { otPlatTobleDisconnect(GetInstance(), aConnId); }
+    void Disconnect(Connection *aConn) { otPlatTobleDisconnect(GetInstance(), aConn); }
 
-    uint16_t GetConnMtu(ConnectionId aConnId) { return otPlatTobleGetMtu(GetInstance(), aConnId); }
+    uint16_t GetConnMtu(Connection *aConn) { return otPlatTobleGetMtu(GetInstance(), aConn); }
 
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
 
@@ -160,19 +160,19 @@ public:
 
     otError StopScan(void) { return otPlatTobleScanStop(GetInstance()); }
 
-    ConnectionId CreateConnection(const Address &aPeerAddress, ConnectionConfig &aConfig)
+    Connection *CreateConnection(const Address &aPeerAddress, ConnectionConfig &aConfig)
     {
         return otPlatTobleCreateConnection(GetInstance(), &aPeerAddress, &aConfig);
     }
 
-    void WriteC1(ConnectionId aConnId, const void *aBuf, uint16_t aLength)
+    void WriteC1(Connection *aConn, const void *aBuf, uint16_t aLength)
     {
-        otPlatTobleC1Write(GetInstance(), aConnId, aBuf, aLength);
+        otPlatTobleC1Write(GetInstance(), aConn, aBuf, aLength);
     }
 
-    void SubscribeC2(ConnectionId aConnId, bool aSubscribe)
+    void SubscribeC2(Connection *aConn, bool aSubscribe)
     {
-        return otPlatTobleC2Subscribe(GetInstance(), aConnId, aSubscribe);
+        return otPlatTobleC2Subscribe(GetInstance(), aConn, aSubscribe);
     }
 
 #if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
@@ -186,9 +186,9 @@ public:
     otError StartAdv(const AdvConfig &aConfig) { return otPlatTobleAdvStart(GetInstance(), &aConfig); }
     otError StopAdv(void) { return otPlatTobleAdvStop(GetInstance()); }
 
-    void IndicateC2(ConnectionId aConnId, const void *aFrame, uint16_t aLength)
+    void IndicateC2(Connection *aConn, const void *aFrame, uint16_t aLength)
     {
-        otPlatTobleC2Indicate(GetInstance(), aConnId, aFrame, aLength);
+        otPlatTobleC2Indicate(GetInstance(), aConn, aFrame, aLength);
     }
 
 #if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE

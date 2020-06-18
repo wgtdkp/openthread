@@ -29,7 +29,7 @@ void Btp::Start(Connection &aConn)
     aConn.mSession.mState = kStateIdle;
 }
 
-void Btp::HandleConnectionReady(Platform::ConnectionId aPlatConn)
+void Btp::HandleConnectionReady(Platform::Connection *aPlatConn)
 {
     Connection *conn = Get<ConnectionTable>().Find(aPlatConn);
 

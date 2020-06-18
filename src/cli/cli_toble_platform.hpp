@@ -67,12 +67,42 @@ public:
      */
     otError Process(uint8_t aArgsLength, char *aArgs[]);
 
+    void HandleConnected(otTobleConnection *aConn);
+    void HandleDisconnected(otTobleConnection *aConn);
+
 private:
     struct Command
     {
         const char *mName;
         otError (ToblePlatform::*mCommand)(uint8_t aArgsLength, char *aArgs[]);
     };
+
+    typedef enum
+    {
+        kStateFree          = 0,
+        kStateConnecting    = 1,
+        kStateConnected     = 2,
+        kStateDisconnecting = 3,
+    } State;
+
+    typedef struct Connection
+    {
+        State              mState;
+        otTobleAddress     mAddress;
+        otTobleConnection *mPlatConn;
+    } Connection;
+
+    enum
+    {
+        kNumConnections      = 4,
+        kInvalidConnectionId = 0xff,
+    };
+
+    Connection *FindConnection(otTobleConnection *aConn);
+    Connection *GetNewConnection(void);
+    Connection *GetConnection(otTobleConnection *aConn);
+    Connection *GetConnection(uint8_t aConnId);
+    uint8_t     GetConnectionId(Connection *aConn);
 
     otError ProcessHelp(uint8_t aArgsLength, char *aArgs[]);
     otError ProcessAdv(uint8_t aArgsLength, char *aArgs[]);
@@ -85,7 +115,7 @@ private:
     static const Command sCommands[];
     Interpreter &        mInterpreter;
 
-    otTobleConnectionId       mConnId;
+    Connection                mConns[kNumConnections];
     otTobleConnectionLinkType mLinkType;
     otTobleRole               mRole;
 };
