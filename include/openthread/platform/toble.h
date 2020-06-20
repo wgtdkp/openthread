@@ -505,6 +505,37 @@ extern otError otPlatTobleL2capSend(otInstance *       aInstance,
                                     const uint8_t *    aBuffer,
                                     uint16_t           aLength);
 
+bool otPlatTobleDiagModeGet();
+void otPlatTobleDiagModeSet(otInstance *aInstance, bool aMode);
+
+extern void otPlatTobleDiagHandleConnected(otInstance *aInstance, otTobleConnection *aConn);
+extern void otPlatTobleDiagHandleDisconnected(otInstance *aInstance, otTobleConnection *aConn);
+extern void otPlatTobleDiagHandleAdv(otInstance *          aInstance,
+                                     otTobleAdvType        aAdvType,
+                                     const otTobleAddress *aSource,
+                                     const uint8_t *       aData,
+                                     uint16_t              aLength,
+                                     int8_t                aRssi);
+extern void otPlatTobleDiagHandleConnectionIsReady(otInstance *              aInstance,
+                                                   otTobleConnection *       aConn,
+                                                   otTobleConnectionLinkType aLinkType);
+extern void otPlatTobleDiagHandleC1WriteDone(otInstance *aInstance, otTobleConnection *aConn);
+extern void otPlatTobleDiagHandleC2Indication(otInstance *       aInstance,
+                                              otTobleConnection *aConn,
+                                              const uint8_t *    aBuffer,
+                                              uint16_t           aLength);
+extern void otPlatTobleDiagHandleC2Subscribed(otInstance *aInstance, otTobleConnection *aConn, bool aIsSubscribed);
+extern void otPlatTobleDiagHandleC2IndicateDone(otInstance *aInstance, otTobleConnection *aConn);
+extern void otPlatTobleDiagHandleC1Write(otInstance *       aInstance,
+                                         otTobleConnection *aConn,
+                                         const uint8_t *    aBuffer,
+                                         uint16_t           aLength);
+
+extern otError otPlatTobleDiagL2capSend(otInstance *       aInstance,
+                                        otTobleConnection *aConn,
+                                        const uint8_t *    aBuffer,
+                                        uint16_t           aLength);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

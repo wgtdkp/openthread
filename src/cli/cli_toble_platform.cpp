@@ -44,11 +44,10 @@ using ot::Encoding::BigEndian::HostSwap16;
 namespace ot {
 namespace Cli {
 
-const struct ToblePlatform::Command ToblePlatform::sCommands[] = {{"help", &ToblePlatform::ProcessHelp},
-                                                                  {"adv", &ToblePlatform::ProcessAdv},
-                                                                  {"connect", &ToblePlatform::ProcessConnect},
-                                                                  {"scan", &ToblePlatform::ProcessScan},
-                                                                  {"send", &ToblePlatform::ProcessSend}};
+const struct ToblePlatform::Command ToblePlatform::sCommands[] = {
+    {"help", &ToblePlatform::ProcessHelp},       {"adv", &ToblePlatform::ProcessAdv},
+    {"connect", &ToblePlatform::ProcessConnect}, {"scan", &ToblePlatform::ProcessScan},
+    {"send", &ToblePlatform::ProcessSend},       {"show", &ToblePlatform::ProcessSend}};
 
 ToblePlatform::ToblePlatform(Interpreter &aInterpreter)
     : mInterpreter(aInterpreter)
@@ -298,6 +297,55 @@ exit:
     return error;
 }
 
+const char *ToblePlatform::GetStateString(State aState)
+{
+    const char *string = "Unknown";
+
+    switch (aState)
+    {
+    case kStateFree:
+        string = "Free";
+        break;
+    case kStateConnecting:
+        string = "Connecting";
+        break;
+    case kStateConnected:
+        string = "Connected";
+        break;
+    case kStateReady:
+        string = "Ready";
+        break;
+    case kStateDisconnecting:
+        string = "Disconnesting";
+        break;
+    }
+
+    return string;
+}
+
+otError ToblePlatform::ProcessShow(uint8_t aArgsLength, char *aArgs[])
+{
+    OT_UNUSED_VARIABLE(aArgsLength);
+    OT_UNUSED_VARIABLE(aArgs);
+
+    mInterpreter.mServer->OutputFormat("\r\n| ConnectionId | State |   Address |\r\n");
+    mInterpreter.mServer->OutputFormat("+---------+----------+--------------+------+---------------------|\r\n");
+
+    for (uint8_t i = 0; i < OT_ARRAY_LENGTH(mConns); i++)
+    {
+        if (mConns[i].mState != kStateFree)
+        {
+            uint8_t *address = mConns[i].mAddress.mAddress;
+
+            mInterpreter.mServer->OutputFormat("| %d  |   %s |  %02x%02x%02x%02x%02x%02x \r\n", i,
+                                               GetStateString(mConns[i].mState), address[0], address[1], address[2],
+                                               address[3], address[4], address[5]);
+        }
+    }
+
+    return OT_ERROR_NONE;
+}
+
 otError ToblePlatform::Process(uint8_t aArgsLength, char *aArgs[])
 {
     otError error = OT_ERROR_INVALID_COMMAND;
@@ -356,13 +404,13 @@ void PrintBytes(const uint8_t *aBuffer, uint8_t aLength)
     }
 }
 
-extern "C" void otPlatTobleHandleConnected(otInstance *aInstance, otTobleConnection *aConn)
+extern "C" void otPlatTobleDiagHandleConnected(otInstance *aInstance, otTobleConnection *aConn)
 {
     OT_UNUSED_VARIABLE(aInstance);
     Server::sServer->GetInterpreter().GetToblePlatform().HandleConnected(aConn);
 }
 
-extern "C" void otPlatTobleHandleDisconnected(otInstance *aInstance, otTobleConnection *aConn)
+extern "C" void otPlatTobleDiagHandleDisconnected(otInstance *aInstance, otTobleConnection *aConn)
 {
     OT_UNUSED_VARIABLE(aInstance);
     Server::sServer->GetInterpreter().GetToblePlatform().HandleDisconnected(aConn);
@@ -398,12 +446,12 @@ const char *GetTobleAdvTypeString(otTobleAdvType aType)
     return string;
 }
 
-extern "C" void otPlatTobleHandleAdv(otInstance *          aInstance,
-                                     otTobleAdvType        aAdvType,
-                                     const otTobleAddress *aSource,
-                                     const uint8_t *       aData,
-                                     uint16_t              aLength,
-                                     int8_t                aRssi)
+extern "C" void otPlatTobleDiagHandleAdv(otInstance *          aInstance,
+                                         otTobleAdvType        aAdvType,
+                                         const otTobleAddress *aSource,
+                                         const uint8_t *       aData,
+                                         uint16_t              aLength,
+                                         int8_t                aRssi)
 {
     OT_UNUSED_VARIABLE(aInstance);
     OT_UNUSED_VARIABLE(aAdvType);
@@ -416,9 +464,9 @@ extern "C" void otPlatTobleHandleAdv(otInstance *          aInstance,
     Server::sServer->OutputFormat("\r\n");
 }
 
-extern "C" void otPlatTobleHandleConnectionIsReady(otInstance *              aInstance,
-                                                   otTobleConnection *       aConn,
-                                                   otTobleConnectionLinkType aLinkType)
+extern "C" void otPlatTobleDiagHandleConnectionIsReady(otInstance *              aInstance,
+                                                       otTobleConnection *       aConn,
+                                                       otTobleConnectionLinkType aLinkType)
 {
     OT_UNUSED_VARIABLE(aInstance);
 
@@ -426,17 +474,17 @@ extern "C" void otPlatTobleHandleConnectionIsReady(otInstance *              aIn
                                   aLinkType == kConnectionLinkTypeGatt ? "Gatt" : "L2Cap");
 }
 
-extern "C" void otPlatTobleHandleC1WriteDone(otInstance *aInstance, otTobleConnection *aConn)
+extern "C" void otPlatTobleDiagHandleC1WriteDone(otInstance *aInstance, otTobleConnection *aConn)
 {
     OT_UNUSED_VARIABLE(aInstance);
 
     Server::sServer->OutputFormat("C1WriteDone : ConnId=%d\r\n", aConn);
 }
 
-extern "C" void otPlatTobleHandleC2Indication(otInstance *       aInstance,
-                                              otTobleConnection *aConn,
-                                              const uint8_t *    aBuffer,
-                                              uint16_t           aLength)
+extern "C" void otPlatTobleDiagHandleC2Indication(otInstance *       aInstance,
+                                                  otTobleConnection *aConn,
+                                                  const uint8_t *    aBuffer,
+                                                  uint16_t           aLength)
 {
     OT_UNUSED_VARIABLE(aInstance);
     OT_UNUSED_VARIABLE(aBuffer);
@@ -444,7 +492,7 @@ extern "C" void otPlatTobleHandleC2Indication(otInstance *       aInstance,
     Server::sServer->OutputFormat("C2Indication : ConnId=%d Length=%d\r\n", aConn, aLength);
 }
 
-extern "C" void otPlatTobleHandleC2Subscribed(otInstance *aInstance, otTobleConnection *aConn, bool aIsSubscribed)
+extern "C" void otPlatTobleDiagHandleC2Subscribed(otInstance *aInstance, otTobleConnection *aConn, bool aIsSubscribed)
 {
     OT_UNUSED_VARIABLE(aInstance);
 
@@ -452,17 +500,17 @@ extern "C" void otPlatTobleHandleC2Subscribed(otInstance *aInstance, otTobleConn
                                   aIsSubscribed ? "True" : "False");
 }
 
-extern "C" void otPlatTobleHandleC2IndicateDone(otInstance *aInstance, otTobleConnection *aConn)
+extern "C" void otPlatTobleDiagHandleC2IndicateDone(otInstance *aInstance, otTobleConnection *aConn)
 {
     OT_UNUSED_VARIABLE(aInstance);
 
     Server::sServer->OutputFormat("C2indicationDone : ConnId=%d \r\n", aConn);
 }
 
-extern "C" void otPlatTobleHandleC1Write(otInstance *       aInstance,
-                                         otTobleConnection *aConn,
-                                         const uint8_t *    aBuffer,
-                                         uint16_t           aLength)
+extern "C" void otPlatTobleDiagHandleC1Write(otInstance *       aInstance,
+                                             otTobleConnection *aConn,
+                                             const uint8_t *    aBuffer,
+                                             uint16_t           aLength)
 {
     OT_UNUSED_VARIABLE(aInstance);
     OT_UNUSED_VARIABLE(aBuffer);

@@ -82,7 +82,8 @@ private:
         kStateFree          = 0,
         kStateConnecting    = 1,
         kStateConnected     = 2,
-        kStateDisconnecting = 3,
+        kStateReady         = 3,
+        kStateDisconnecting = 4,
     } State;
 
     typedef struct Connection
@@ -109,8 +110,10 @@ private:
     otError ProcessScan(uint8_t aArgsLength, char *aArgs[]);
     otError ProcessConnect(uint8_t aArgsLength, char *aArgs[]);
     otError ProcessSend(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessShow(uint8_t aArgsLength, char *aArgs[]);
 
-    void ReverseBuf(uint8_t *aBuffer, uint8_t aLength);
+    void        ReverseBuf(uint8_t *aBuffer, uint8_t aLength);
+    const char *GetStateString(State aState);
 
     static const Command sCommands[];
     Interpreter &        mInterpreter;

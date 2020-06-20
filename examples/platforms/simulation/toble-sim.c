@@ -96,6 +96,8 @@ static int      sTxFd       = -1;
 static int      sRxFd       = -1;
 static uint16_t sPortOffset = 0;
 
+static bool sDiagMode = false;
+
 #if DEBUG_LOG
 static void dumpBuffer(const uint8_t *aBuffer, uint16_t aLength)
 {
@@ -107,6 +109,41 @@ static void dumpBuffer(const uint8_t *aBuffer, uint16_t aLength)
     }
 
     fprintf(stderr, "]");
+}
+
+static const char *cmdToString(uint8_t aCommand)
+{
+    const char *str = "Unknown";
+
+    switch (aCommand)
+    {
+    case TOBLE_CMD_NONE:
+        str = "None";
+        break;
+    case TOBLE_CMD_ADV:
+        str = "Adv";
+        break;
+    case TOBLE_CMD_CONNECT:
+        str = "Connect";
+        break;
+    case TOBLE_CMD_DISCONNECT:
+        str = "Disconnect";
+        break;
+    case TOBLE_CMD_WRITE_C1:
+        str = "Write_c1";
+        break;
+    case TOBLE_CMD_SUBSCRIBE_C2:
+        str = "Subscribe_c2";
+        break;
+    case TOBLE_CMD_INDICATE_C2:
+        str = "Indicate_c2";
+        break;
+    default:
+        str = "Unknown";
+        break;
+    }
+
+    return str;
 }
 #endif
 
@@ -223,43 +260,6 @@ exit:
     return conn;
 }
 
-#if DEBUG_LOG
-static const char *cmdToString(uint8_t aCommand)
-{
-    const char *str = "Unknown";
-
-    switch (aCommand)
-    {
-    case TOBLE_CMD_NONE:
-        str = "None";
-        break;
-    case TOBLE_CMD_ADV:
-        str = "Adv";
-        break;
-    case TOBLE_CMD_CONNECT:
-        str = "Connect";
-        break;
-    case TOBLE_CMD_DISCONNECT:
-        str = "Disconnect";
-        break;
-    case TOBLE_CMD_WRITE_C1:
-        str = "Write_c1";
-        break;
-    case TOBLE_CMD_SUBSCRIBE_C2:
-        str = "Subscribe_c2";
-        break;
-    case TOBLE_CMD_INDICATE_C2:
-        str = "Indicate_c2";
-        break;
-    default:
-        str = "Unknown";
-        break;
-    }
-
-    return str;
-}
-#endif
-
 void sendCommand(const uint8_t *aCommandFrame, uint16_t aLength)
 {
     ssize_t            rval;
@@ -302,9 +302,17 @@ static void handleCmdAdv(otInstance *aInstance, const uint8_t *aCommandFrame, ui
     otEXPECT(aLength >= 3); // srcNodeId, advType, data
 
     populateAddress(&srcAddr, aCommandFrame[0]);
-    otPlatTobleHandleAdv(aInstance, (otTobleAdvType)aCommandFrame[1], &srcAddr, &aCommandFrame[2], aLength - 2,
-                         TOBLE_SIM_RSSI);
 
+    if (sDiagMode)
+    {
+        otPlatTobleDiagHandleAdv(aInstance, (otTobleAdvType)aCommandFrame[1], &srcAddr, &aCommandFrame[2], aLength - 2,
+                                 TOBLE_SIM_RSSI);
+    }
+    else
+    {
+        otPlatTobleHandleAdv(aInstance, (otTobleAdvType)aCommandFrame[1], &srcAddr, &aCommandFrame[2], aLength - 2,
+                             TOBLE_SIM_RSSI);
+    }
 exit:
     return;
 }
@@ -335,7 +343,14 @@ static void handleCmdConnect(otInstance *aInstance, const uint8_t *aCommandFrame
         conn->mCentral    = centralId;
         conn->mPeripheral = peripheralId;
 
-        otPlatTobleHandleConnected(aInstance, (otTobleConnection *)conn);
+        if (sDiagMode)
+        {
+            otPlatTobleDiagHandleConnected(aInstance, (otTobleConnection *)conn);
+        }
+        else
+        {
+            otPlatTobleHandleConnected(aInstance, (otTobleConnection *)conn);
+        }
     }
     else
     {
@@ -363,7 +378,15 @@ static void handleCmdDisconnect(otInstance *aInstance, const uint8_t *aCommandFr
     conn = findConnection(centralId, peripheralId);
     otEXPECT(conn != NULL);
 
-    otPlatTobleHandleDisconnected(aInstance, (otTobleConnection *)conn);
+    if (sDiagMode)
+    {
+        otPlatTobleDiagHandleDisconnected(aInstance, (otTobleConnection *)conn);
+    }
+    else
+    {
+        otPlatTobleHandleDisconnected(aInstance, (otTobleConnection *)conn);
+    }
+
     conn->mIsInUse = false;
 
 exit:
@@ -390,7 +413,14 @@ static void handleCmdWriteC1(otInstance *aInstance, const uint8_t *aCommandFrame
 
     aLength -= 2;
 
-    otPlatTobleHandleC1Write(aInstance, (otTobleConnection *)conn, &aCommandFrame[2], aLength);
+    if (sDiagMode)
+    {
+        otPlatTobleDiagHandleC1Write(aInstance, (otTobleConnection *)conn, &aCommandFrame[2], aLength);
+    }
+    else
+    {
+        otPlatTobleHandleC1Write(aInstance, (otTobleConnection *)conn, &aCommandFrame[2], aLength);
+    }
 
 exit:
     return;
@@ -416,8 +446,14 @@ static void handleCmdSubscribeC2(otInstance *aInstance, const uint8_t *aCommandF
     conn = findConnection(centralId, peripheralId);
     otEXPECT(conn != NULL);
 
-    otPlatTobleHandleC2Subscribed(aInstance, (otTobleConnection *)conn, subscribed);
-
+    if (sDiagMode)
+    {
+        otPlatTobleDiagHandleC2Subscribed(aInstance, (otTobleConnection *)conn, subscribed);
+    }
+    else
+    {
+        otPlatTobleHandleC2Subscribed(aInstance, (otTobleConnection *)conn, subscribed);
+    }
 exit:
     return;
 }
@@ -442,8 +478,14 @@ static void handleCmdIndicateC2(otInstance *aInstance, const uint8_t *aCommandFr
 
     aLength -= 2;
 
-    otPlatTobleHandleC2Indication(aInstance, (otTobleConnection *)conn, &aCommandFrame[2], aLength);
-
+    if (sDiagMode)
+    {
+        otPlatTobleDiagHandleC2Indication(aInstance, (otTobleConnection *)conn, &aCommandFrame[2], aLength);
+    }
+    else
+    {
+        otPlatTobleHandleC2Indication(aInstance, (otTobleConnection *)conn, &aCommandFrame[2], aLength);
+    }
 exit:
     return;
 }
@@ -842,20 +884,50 @@ void platformTobleProcess(otInstance *aInstance, const fd_set *aReadFdSet, const
             break;
 
         case TOBLE_CMD_CONNECT:
-            otPlatTobleHandleConnected(aInstance, (otTobleConnection *)sTobleConn);
+            if (sDiagMode)
+            {
+                otPlatTobleDiagHandleConnected(aInstance, (otTobleConnection *)sTobleConn);
+            }
+            else
+            {
+                otPlatTobleHandleConnected(aInstance, (otTobleConnection *)sTobleConn);
+            }
 
             if (sTobleConn->mIsInUse) // TODO: check if we are peripheral?
             {
-                otPlatTobleHandleConnectionIsReady(aInstance, (otTobleConnection *)sTobleConn, kConnectionLinkTypeGatt);
+                if (sDiagMode)
+                {
+                    otPlatTobleDiagHandleConnectionIsReady(aInstance, (otTobleConnection *)sTobleConn,
+                                                           kConnectionLinkTypeGatt);
+                }
+                else
+                {
+                    otPlatTobleHandleConnectionIsReady(aInstance, (otTobleConnection *)sTobleConn,
+                                                       kConnectionLinkTypeGatt);
+                }
             }
             break;
 
         case TOBLE_CMD_WRITE_C1:
-            otPlatTobleHandleC1WriteDone(aInstance, (otTobleConnection *)sTobleConn);
+            if (sDiagMode)
+            {
+                otPlatTobleDiagHandleC1WriteDone(aInstance, (otTobleConnection *)sTobleConn);
+            }
+            else
+            {
+                otPlatTobleHandleC1WriteDone(aInstance, (otTobleConnection *)sTobleConn);
+            }
             break;
 
         case TOBLE_CMD_INDICATE_C2:
-            otPlatTobleHandleC2IndicateDone(aInstance, (otTobleConnection *)sTobleConn);
+            if (sDiagMode)
+            {
+                otPlatTobleDiagHandleC2IndicateDone(aInstance, (otTobleConnection *)sTobleConn);
+            }
+            else
+            {
+                otPlatTobleHandleC2IndicateDone(aInstance, (otTobleConnection *)sTobleConn);
+            }
             break;
 
         default:
@@ -970,6 +1042,94 @@ OT_TOOL_WEAK void otPlatTobleHandleC1Write(otInstance *       aInstance,
                                            otTobleConnection *aConn,
                                            const uint8_t *    aBuffer,
                                            uint16_t           aLength)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+    OT_UNUSED_VARIABLE(aConn);
+    OT_UNUSED_VARIABLE(aBuffer);
+    OT_UNUSED_VARIABLE(aLength);
+}
+
+bool otPlatTobleDiagModeGet(void)
+{
+    return sDiagMode;
+}
+
+void otPlatTobleDiagModeSet(otInstance *aInstance, bool aMode)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+    sDiagMode = aMode;
+}
+
+OT_TOOL_WEAK void otPlatTobleDiagHandleConnected(otInstance *aInstance, otTobleConnection *aConn)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+    OT_UNUSED_VARIABLE(aConn);
+}
+
+OT_TOOL_WEAK void otPlatTobleDiagHandleDisconnected(otInstance *aInstance, otTobleConnection *aConn)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+    OT_UNUSED_VARIABLE(aConn);
+}
+
+OT_TOOL_WEAK void otPlatTobleDiagHandleAdv(otInstance *          aInstance,
+                                           otTobleAdvType        aAdvType,
+                                           const otTobleAddress *aSource,
+                                           const uint8_t *       aData,
+                                           uint16_t              aLength,
+                                           int8_t                aRssi)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+    OT_UNUSED_VARIABLE(aAdvType);
+    OT_UNUSED_VARIABLE(aSource);
+    OT_UNUSED_VARIABLE(aData);
+    OT_UNUSED_VARIABLE(aLength);
+    OT_UNUSED_VARIABLE(aRssi);
+}
+
+OT_TOOL_WEAK void otPlatTobleDiagHandleConnectionIsReady(otInstance *              aInstance,
+                                                         otTobleConnection *       aConn,
+                                                         otTobleConnectionLinkType aLinkType)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+    OT_UNUSED_VARIABLE(aConn);
+    OT_UNUSED_VARIABLE(aLinkType);
+}
+
+OT_TOOL_WEAK void otPlatTobleDiagHandleC1WriteDone(otInstance *aInstance, otTobleConnection *aConn)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+    OT_UNUSED_VARIABLE(aConn);
+}
+
+OT_TOOL_WEAK void otPlatTobleDiagHandleC2Indication(otInstance *       aInstance,
+                                                    otTobleConnection *aConn,
+                                                    const uint8_t *    aBuffer,
+                                                    uint16_t           aLength)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+    OT_UNUSED_VARIABLE(aConn);
+    OT_UNUSED_VARIABLE(aBuffer);
+    OT_UNUSED_VARIABLE(aLength);
+}
+
+OT_TOOL_WEAK void otPlatTobleDiagHandleC2Subscribed(otInstance *aInstance, otTobleConnection *aConn, bool aIsSubscribed)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+    OT_UNUSED_VARIABLE(aConn);
+    OT_UNUSED_VARIABLE(aIsSubscribed);
+}
+
+OT_TOOL_WEAK void otPlatTobleDiagHandleC2IndicateDone(otInstance *aInstance, otTobleConnection *aConn)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+    OT_UNUSED_VARIABLE(aConn);
+}
+
+OT_TOOL_WEAK void otPlatTobleDiagHandleC1Write(otInstance *       aInstance,
+                                               otTobleConnection *aConn,
+                                               const uint8_t *    aBuffer,
+                                               uint16_t           aLength)
 {
     OT_UNUSED_VARIABLE(aInstance);
     OT_UNUSED_VARIABLE(aConn);
