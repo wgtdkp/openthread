@@ -63,6 +63,7 @@ libjlinkrtt_a_CPPFLAGS                                                          
     -I$(top_srcdir)/third_party/NordicSemiconductor/dependencies                                          \
     -I$(top_srcdir)/third_party/NordicSemiconductor/libraries/app_error                                   \
     -I$(top_srcdir)/third_party/NordicSemiconductor/nrfx/mdk                                              \
+    -I$(top_srcdir)/third_party/NordicSemiconductor/softdevice/s140/headers                               \
     $(NULL)
 endif
 
@@ -78,6 +79,7 @@ libjlinkrtt_a_CPPFLAGS                                                          
     -I$(top_srcdir)/third_party/NordicSemiconductor/dependencies                                          \
     -I$(top_srcdir)/third_party/NordicSemiconductor/libraries/app_error                                   \
     -I$(top_srcdir)/third_party/NordicSemiconductor/nrfx/mdk                                              \
+    -I$(top_srcdir)/third_party/NordicSemiconductor/softdevice/s140/headers                               \
     $(NULL)
 endif
 
@@ -93,6 +95,7 @@ libjlinkrtt_a_CPPFLAGS                                                          
     -I$(top_srcdir)/third_party/NordicSemiconductor/dependencies                                          \
     -I$(top_srcdir)/third_party/NordicSemiconductor/libraries/app_error                                   \
     -I$(top_srcdir)/third_party/NordicSemiconductor/nrfx/mdk                                              \
+    -I$(top_srcdir)/third_party/NordicSemiconductor/softdevice/s140/headers                               \
     $(NULL)
 endif
 

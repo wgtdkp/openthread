@@ -69,6 +69,7 @@ endif
 if OPENTHREAD_EXAMPLES_NRF52840
 lib_LIBRARIES                                                                                                          += \
     libnordicsemi-nrf52840-sdk.a                                                                                          \
+    libnordicsemi-nrf52840-sdk-softdevice.a                                                                               \
     $(NULL)
 endif
 
@@ -126,6 +127,8 @@ COMMONCPPFLAGS                                                                  
     -I$(top_srcdir)/third_party/NordicSemiconductor/libraries/atomic                                                      \
     -I$(top_srcdir)/third_party/NordicSemiconductor/libraries/block_dev                                                   \
     -I$(top_srcdir)/third_party/NordicSemiconductor/libraries/delay                                                       \
+    -I$(top_srcdir)/third_party/NordicSemiconductor/libraries/experimental_section_vars                                   \
+    -I$(top_srcdir)/third_party/NordicSemiconductor/libraries/strerror                                                    \
     -I$(top_srcdir)/third_party/NordicSemiconductor/libraries/usb                                                         \
     -I$(top_srcdir)/third_party/NordicSemiconductor/libraries/usb/config                                                  \
     -I$(top_srcdir)/third_party/NordicSemiconductor/libraries/usb/class/cdc                                               \
@@ -137,6 +140,7 @@ COMMONCPPFLAGS                                                                  
     -I$(top_srcdir)/third_party/NordicSemiconductor/nrfx/drivers/include                                                  \
     -I$(top_srcdir)/third_party/NordicSemiconductor/nrfx/mdk                                                              \
     -I$(top_srcdir)/third_party/NordicSemiconductor/nrfx/soc                                                              \
+    -I$(top_srcdir)/third_party/NordicSemiconductor/softdevice/common                                                     \
     -I$(top_srcdir)/third_party/NordicSemiconductor/softdevice/s140/headers                                               \
     -I$(top_srcdir)/third_party/NordicSemiconductor/softdevice/s140/headers/nrf52                                         \
     -Wno-unused-parameter                                                                                                 \
@@ -193,6 +197,14 @@ NORDICSEMI_USB_SOURCES                                                          
     libraries/usb/app_usbd_nrf_dfu_trigger.c                                                                              \
     libraries/usb/nrf_dfu_trigger_usb.c                                                                                   \
     libraries/usb/class/cdc/acm/app_usbd_cdc_acm.c                                                                        \
+    $(NULL)
+
+NORDICSEMI_SOFTDEVICE_SOURCES                                                                                           = \
+    libraries/experimental_section_vars/nrf_section_iter.c                                                                \
+    libraries/strerror/nrf_strerror.c                                                                                     \
+    softdevice/common/nrf_sdh.c                                                                                           \
+    softdevice/common/nrf_sdh_ble.c                                                                                       \
+    softdevice/common/nrf_sdh_soc.c                                                                                       \
     $(NULL)
 
 NORDICSEMI_NRF52811_SOURCES                                                                                             = \
@@ -334,6 +346,19 @@ libnordicsemi_nrf52840_sdk_a_SOURCES                                            
     $(NORDICSEMI_NRF52840_SOURCES)                                                                                        \
     $(NULL)
 
+libnordicsemi_nrf52840_sdk_softdevice_a_CPPFLAGS                                                                        = \
+    $(COMMONCPPFLAGS)                                                                                                     \
+    $(NRF52840_CPPFLAGS)                                                                                                  \
+    $(SOFTDEVICE_CPPFLAGS)                                                                                                \
+    $(NULL)
+
+libnordicsemi_nrf52840_sdk_softdevice_a_SOURCES                                                                         = \
+    $(NORDICSEMI_COMMON_SOURCES)                                                                                          \
+    $(NORDICSEMI_USB_SOURCES)                                                                                             \
+    $(NORDICSEMI_SOFTDEVICE_SOURCES)                                                                                      \
+    $(NORDICSEMI_NRF52840_SOURCES)                                                                                        \
+    $(NULL)
+
 libnordicsemi_nrf52840_radio_driver_a_CPPFLAGS                                                                          = \
     $(COMMONCPPFLAGS)                                                                                                     \
     $(NRF52840_CPPFLAGS)                                                                                                  \
@@ -375,7 +400,6 @@ noinst_HEADERS                                                                  
     $(top_srcdir)/third_party/NordicSemiconductor/dependencies/legacy/apply_old_config.h                                  \
     $(top_srcdir)/third_party/NordicSemiconductor/dependencies/nordic_common.h                                            \
     $(top_srcdir)/third_party/NordicSemiconductor/dependencies/nrf_assert.h                                               \
-    $(top_srcdir)/third_party/NordicSemiconductor/dependencies/nrf_error.h                                                \
     $(top_srcdir)/third_party/NordicSemiconductor/dependencies/nrf_log_instance.h                                         \
     $(top_srcdir)/third_party/NordicSemiconductor/dependencies/nrf_log_internal.h                                         \
     $(top_srcdir)/third_party/NordicSemiconductor/dependencies/nrf_log_types.h                                            \
@@ -515,6 +539,9 @@ noinst_HEADERS                                                                  
     $(top_srcdir)/third_party/NordicSemiconductor/nrfx/mdk/nrf52840_bitfields.h                                           \
     $(top_srcdir)/third_party/NordicSemiconductor/nrfx/mdk/nrf52840_peripherals.h                                         \
     $(top_srcdir)/third_party/NordicSemiconductor/nrfx/mdk/system_nrf52840.h                                              \
+    $(top_srcdir)/third_party/NordicSemiconductor/softdevice/common/nrf_sdh.h                                             \
+    $(top_srcdir)/third_party/NordicSemiconductor/softdevice/common/nrf_sdh_ble.h                                         \
+    $(top_srcdir)/third_party/NordicSemiconductor/softdevice/common/nrf_sdh_soc.h                                         \
     $(top_srcdir)/third_party/NordicSemiconductor/softdevice/s140/headers/ble.h                                           \
     $(top_srcdir)/third_party/NordicSemiconductor/softdevice/s140/headers/ble_err.h                                       \
     $(top_srcdir)/third_party/NordicSemiconductor/softdevice/s140/headers/ble_gap.h                                       \

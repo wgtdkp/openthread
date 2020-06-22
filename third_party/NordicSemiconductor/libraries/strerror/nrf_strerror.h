@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015 - 2020, Nordic Semiconductor ASA
+ * Copyright (c) 2017 - 2020, Nordic Semiconductor ASA
  *
  * All rights reserved.
  *
@@ -37,35 +37,53 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#ifndef NRF_SD_DEF_H__
-#define NRF_SD_DEF_H__
 
-#include <stdint.h>
-#include "nrf_soc.h"
+/**
+ * @defgroup nrf_strerror Error code to string converter
+ * @ingroup app_common
+ *
+ * @brief Module for converting error code into a printable string.
+ * @{
+ */
+#ifndef NRF_STRERROR_H__
+#define NRF_STRERROR_H__
+
+#include "sdk_errors.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/**
+ * @brief Function for getting a printable error string.
+ *
+ * @param code Error code to convert.
+ *
+ * @note This function cannot fail.
+ *       For the function that may fail with error translation, see @ref nrf_strerror_find.
+ *
+ * @return Pointer to the printable string.
+ *         If the string is not found,
+ *         it returns a simple string that says that the error is unknown.
+ */
+char const * nrf_strerror_get(ret_code_t code);
 
-#ifdef NRF_SOC_SD_PPI_CHANNELS_SD_ENABLED_MSK
-#define SD_PPI_CHANNELS_USED    NRF_SOC_SD_PPI_CHANNELS_SD_ENABLED_MSK /**< PPI channels utilized by SotfDevice (not available to the application). */
-#else
-#define SD_PPI_CHANNELS_USED    0xFFFE0000uL                           /**< PPI channels utilized by SotfDevice (not available to the application). */
-#endif // NRF_SOC_SD_PPI_CHANNELS_SD_ENABLED_MSK
+/**
+ * @brief Function for finding a printable error string.
+ *
+ * This function gets the error string in the same way as @ref nrf_strerror_get,
+ * but if the string is not found, it returns NULL.
+ *
+ * @param code  Error code to convert.
+ * @return      Pointer to the printable string.
+ *              If the string is not found, NULL is returned.
+ */
+char const * nrf_strerror_find(ret_code_t code);
 
-#ifdef NRF_SOC_SD_PPI_GROUPS_SD_ENABLED_MSK
-#define SD_PPI_GROUPS_USED      NRF_SOC_SD_PPI_GROUPS_SD_ENABLED_MSK /**< PPI groups utilized by SoftDevice (not available to the application). */
-#else
-#define SD_PPI_GROUPS_USED      0x0000000CuL                         /**< PPI groups utilized by SoftDevice (not available to the application). */
-#endif // NRF_SOC_SD_PPI_GROUPS_SD_ENABLED_MSK
-
-#define SD_TIMERS_USED          0x00000001uL /**< Timers used by SoftDevice. */
-#define SD_SWI_USED             0x00000036uL /**< Software interrupts used by SoftDevice */
-
+/** @} */
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* NRF_SD_DEF_H__ */
+#endif /* NRF_STRERROR_H__ */

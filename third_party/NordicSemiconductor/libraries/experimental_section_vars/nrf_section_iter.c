@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015 - 2020, Nordic Semiconductor ASA
+ * Copyright (c) 2016 - 2020, Nordic Semiconductor ASA
  *
  * All rights reserved.
  *
@@ -37,35 +37,89 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#ifndef NRF_SD_DEF_H__
-#define NRF_SD_DEF_H__
 
-#include <stdint.h>
-#include "nrf_soc.h"
+#include "sdk_common.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#if NRF_MODULE_ENABLED(NRF_SECTION_ITER)
+
+#include "nrf_section_iter.h"
 
 
-#ifdef NRF_SOC_SD_PPI_CHANNELS_SD_ENABLED_MSK
-#define SD_PPI_CHANNELS_USED    NRF_SOC_SD_PPI_CHANNELS_SD_ENABLED_MSK /**< PPI channels utilized by SotfDevice (not available to the application). */
-#else
-#define SD_PPI_CHANNELS_USED    0xFFFE0000uL                           /**< PPI channels utilized by SotfDevice (not available to the application). */
-#endif // NRF_SOC_SD_PPI_CHANNELS_SD_ENABLED_MSK
+#if !defined(__GNUC__)
+static void nrf_section_iter_item_set(nrf_section_iter_t * p_iter)
+{
+    ASSERT(p_iter            != NULL);
+    ASSERT(p_iter->p_set     != NULL);
+    ASSERT(p_iter->p_section != NULL);
 
-#ifdef NRF_SOC_SD_PPI_GROUPS_SD_ENABLED_MSK
-#define SD_PPI_GROUPS_USED      NRF_SOC_SD_PPI_GROUPS_SD_ENABLED_MSK /**< PPI groups utilized by SoftDevice (not available to the application). */
-#else
-#define SD_PPI_GROUPS_USED      0x0000000CuL                         /**< PPI groups utilized by SoftDevice (not available to the application). */
-#endif // NRF_SOC_SD_PPI_GROUPS_SD_ENABLED_MSK
+    while (true)
+    {
+        if (p_iter->p_section == p_iter->p_set->p_last)
+        {
+            // End of the section set.
+            p_iter->p_item = NULL;
+            return;
+        }
 
-#define SD_TIMERS_USED          0x00000001uL /**< Timers used by SoftDevice. */
-#define SD_SWI_USED             0x00000036uL /**< Software interrupts used by SoftDevice */
+        if (p_iter->p_section->p_start != p_iter->p_section->p_end)
+        {
+            // Not empty section.
+            p_iter->p_item = p_iter->p_section->p_start;
+            return;
+        }
 
-
-#ifdef __cplusplus
+        // Next section.
+        p_iter->p_section++;
+    }
 }
 #endif
 
-#endif /* NRF_SD_DEF_H__ */
+
+void nrf_section_iter_init(nrf_section_iter_t * p_iter, nrf_section_set_t const * p_set)
+{
+    ASSERT(p_iter != NULL);
+    ASSERT(p_set  != NULL);
+
+    p_iter->p_set = p_set;
+
+#if defined(__GNUC__)
+    p_iter->p_item = p_iter->p_set->section.p_start;
+    if (p_iter->p_item == p_iter->p_set->section.p_end)
+    {
+        p_iter->p_item = NULL;
+    }
+#else
+    p_iter->p_section = p_set->p_first;
+    nrf_section_iter_item_set(p_iter);
+#endif
+}
+
+void nrf_section_iter_next(nrf_section_iter_t * p_iter)
+{
+    ASSERT(p_iter        != NULL);
+    ASSERT(p_iter->p_set != NULL);
+
+    if (p_iter->p_item == NULL)
+    {
+        return;
+    }
+
+    p_iter->p_item = (void *)((size_t)(p_iter->p_item) + p_iter->p_set->item_size);
+
+#if defined(__GNUC__)
+    if (p_iter->p_item == p_iter->p_set->section.p_end)
+    {
+        p_iter->p_item = NULL;
+    }
+#else
+    ASSERT(p_iter->p_section != NULL);
+    // End of current section reached?
+    if (p_iter->p_item == p_iter->p_section->p_end)
+    {
+        p_iter->p_section++;
+        nrf_section_iter_item_set(p_iter);
+    }
+#endif
+}
+
+#endif // NRF_MODULE_ENABLED(NRF_SECTION_ITER)

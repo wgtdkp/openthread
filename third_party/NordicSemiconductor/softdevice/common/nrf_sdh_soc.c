@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015 - 2020, Nordic Semiconductor ASA
+ * Copyright (c) 2017 - 2020, Nordic Semiconductor ASA
  *
  * All rights reserved.
  *
@@ -37,35 +37,82 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#ifndef NRF_SD_DEF_H__
-#define NRF_SD_DEF_H__
 
-#include <stdint.h>
+#include "sdk_common.h"
+#if NRF_MODULE_ENABLED(NRF_SDH_SOC)
+
+#include "nrf_sdh_soc.h"
+
+#include "nrf_sdh.h"
 #include "nrf_soc.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "app_error.h"
 
 
-#ifdef NRF_SOC_SD_PPI_CHANNELS_SD_ENABLED_MSK
-#define SD_PPI_CHANNELS_USED    NRF_SOC_SD_PPI_CHANNELS_SD_ENABLED_MSK /**< PPI channels utilized by SotfDevice (not available to the application). */
+#define NRF_LOG_MODULE_NAME nrf_sdh_soc
+#if NRF_SDH_SOC_LOG_ENABLED
+    #define NRF_LOG_LEVEL       NRF_SDH_SOC_LOG_LEVEL
+    #define NRF_LOG_INFO_COLOR  NRF_SDH_SOC_INFO_COLOR
+    #define NRF_LOG_DEBUG_COLOR NRF_SDH_SOC_DEBUG_COLOR
 #else
-#define SD_PPI_CHANNELS_USED    0xFFFE0000uL                           /**< PPI channels utilized by SotfDevice (not available to the application). */
-#endif // NRF_SOC_SD_PPI_CHANNELS_SD_ENABLED_MSK
-
-#ifdef NRF_SOC_SD_PPI_GROUPS_SD_ENABLED_MSK
-#define SD_PPI_GROUPS_USED      NRF_SOC_SD_PPI_GROUPS_SD_ENABLED_MSK /**< PPI groups utilized by SoftDevice (not available to the application). */
-#else
-#define SD_PPI_GROUPS_USED      0x0000000CuL                         /**< PPI groups utilized by SoftDevice (not available to the application). */
-#endif // NRF_SOC_SD_PPI_GROUPS_SD_ENABLED_MSK
-
-#define SD_TIMERS_USED          0x00000001uL /**< Timers used by SoftDevice. */
-#define SD_SWI_USED             0x00000036uL /**< Software interrupts used by SoftDevice */
+    #define NRF_LOG_LEVEL       0
+#endif // NRF_SDH_SOC_LOG_ENABLED
+#include "nrf_log.h"
+NRF_LOG_MODULE_REGISTER();
 
 
-#ifdef __cplusplus
+// Create section set "sdh_soc_observers".
+NRF_SECTION_SET_DEF(sdh_soc_observers, nrf_sdh_soc_evt_observer_t, NRF_SDH_SOC_OBSERVER_PRIO_LEVELS);
+
+
+/**@brief   Function for polling SoC events.
+ *
+ * @param[in]   p_context   Context of the observer.
+ */
+static void nrf_sdh_soc_evts_poll(void * p_context)
+{
+    ret_code_t ret_code;
+
+    UNUSED_VARIABLE(p_context);
+
+    while (true)
+    {
+        uint32_t evt_id;
+
+        ret_code = sd_evt_get(&evt_id);
+        if (ret_code != NRF_SUCCESS)
+        {
+            break;
+        }
+
+        NRF_LOG_DEBUG("SoC event: 0x%x.", evt_id);
+
+        // Forward the event to SoC observers.
+        nrf_section_iter_t  iter;
+        for (nrf_section_iter_init(&iter, &sdh_soc_observers);
+             nrf_section_iter_get(&iter) != NULL;
+             nrf_section_iter_next(&iter))
+        {
+            nrf_sdh_soc_evt_observer_t * p_observer;
+            nrf_sdh_soc_evt_handler_t    handler;
+
+            p_observer = (nrf_sdh_soc_evt_observer_t *) nrf_section_iter_get(&iter);
+            handler    = p_observer->handler;
+
+            handler(evt_id, p_observer->p_context);
+        }
+    }
+
+    if (ret_code != NRF_ERROR_NOT_FOUND)
+    {
+        APP_ERROR_HANDLER(ret_code);
+    }
 }
-#endif
 
-#endif /* NRF_SD_DEF_H__ */
+
+NRF_SDH_STACK_OBSERVER(m_nrf_sdh_soc_evts_poll, NRF_SDH_SOC_STACK_OBSERVER_PRIO) =
+{
+    .handler   = nrf_sdh_soc_evts_poll,
+    .p_context = NULL,
+};
+
+#endif // NRF_MODULE_ENABLED(NRF_SDH_SOC)

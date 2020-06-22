@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015 - 2020, Nordic Semiconductor ASA
+ * Copyright (c) 2017 - 2020, Nordic Semiconductor ASA
  *
  * All rights reserved.
  *
@@ -37,35 +37,36 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#ifndef NRF_SD_DEF_H__
-#define NRF_SD_DEF_H__
 
-#include <stdint.h>
-#include "nrf_soc.h"
+#ifndef NRF_SDH_FREERTOS_H__
+#define NRF_SDH_FREERTOS_H__
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/**
+ * @name FreeRTOS implementation of SoftDevice Handler
+ * @{
+ * @ingroup  nrf_sdh
+ */
 
-#ifdef NRF_SOC_SD_PPI_CHANNELS_SD_ENABLED_MSK
-#define SD_PPI_CHANNELS_USED    NRF_SOC_SD_PPI_CHANNELS_SD_ENABLED_MSK /**< PPI channels utilized by SotfDevice (not available to the application). */
-#else
-#define SD_PPI_CHANNELS_USED    0xFFFE0000uL                           /**< PPI channels utilized by SotfDevice (not available to the application). */
-#endif // NRF_SOC_SD_PPI_CHANNELS_SD_ENABLED_MSK
+typedef void (*nrf_sdh_freertos_task_hook_t)(void * p_context);
 
-#ifdef NRF_SOC_SD_PPI_GROUPS_SD_ENABLED_MSK
-#define SD_PPI_GROUPS_USED      NRF_SOC_SD_PPI_GROUPS_SD_ENABLED_MSK /**< PPI groups utilized by SoftDevice (not available to the application). */
-#else
-#define SD_PPI_GROUPS_USED      0x0000000CuL                         /**< PPI groups utilized by SoftDevice (not available to the application). */
-#endif // NRF_SOC_SD_PPI_GROUPS_SD_ENABLED_MSK
+/**@brief   Function for creating a task to retrieve SoftDevice events.
+ * @param[in]   hook        Function to run in the SoftDevice FreeRTOS task,
+ *                          before entering the task loop.
+ * @param[in]   p_context   Parameter for the function @p hook.
+ */
+void nrf_sdh_freertos_init(nrf_sdh_freertos_task_hook_t hook, void * p_context);
 
-#define SD_TIMERS_USED          0x00000001uL /**< Timers used by SoftDevice. */
-#define SD_SWI_USED             0x00000036uL /**< Software interrupts used by SoftDevice */
+/**
+ * @}
+ */
 
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* NRF_SD_DEF_H__ */
+#endif /* NRF_SDH_FREERTOS_H__ */

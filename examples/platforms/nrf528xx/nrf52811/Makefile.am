@@ -99,6 +99,7 @@ COMMONCPPFLAGS                                                                  
     -I$(top_srcdir)/third_party/NordicSemiconductor/nrfx/drivers/include                                     \
     -I$(top_srcdir)/third_party/NordicSemiconductor/nrfx/mdk                                                 \
     -I$(top_srcdir)/third_party/NordicSemiconductor/nrfx/soc                                                 \
+    -I$(top_srcdir)/third_party/NordicSemiconductor/softdevice/s140/headers                                  \
     -Wno-unused-parameter                                                                                    \
     $(NULL)
 endif

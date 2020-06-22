@@ -51,6 +51,8 @@
 #ifndef APP_CONFIG_H
 #define APP_CONFIG_H
 
+#include "softdevice_config.h"
+
 #if (USB_CDC_AS_SERIAL_TRANSPORT == 1)
 
 #ifndef APP_USBD_ENABLED
