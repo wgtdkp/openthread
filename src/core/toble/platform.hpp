@@ -208,5 +208,5 @@ private:
 } // namespace Toble
 } // namespace ot
 
-#endif // OPENTHREAD_CONFIG_TOBLE_ENABLE
+#endif // #if OPENTHREAD_CONFIG_TOBLE_ENABLE
 #endif // TOBLE_PLATFORM_HPP_

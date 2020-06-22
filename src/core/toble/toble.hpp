@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2019, The OpenThread Authors.
+ *  Copyright (c) 2020, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -28,7 +28,7 @@
 
 /**
  * @file
- *   This file contains implementation of ToBLE.
+ *   This file contains the definition of ToBLE.
  */
 
 #ifndef TOBLE_HPP_
@@ -140,5 +140,5 @@ private:
 } // namespace Toble
 } // namespace ot
 
-#endif // OPENTHREAD_CONFIG_TOBLE_ENABLE
+#endif // #if OPENTHREAD_CONFIG_TOBLE_ENABLE
 #endif // TOBLE_HPP_

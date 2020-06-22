@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2019, The OpenThread Authors.
+ *  Copyright (c) 2020, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -36,10 +36,11 @@
 #include "common/code_utils.hpp"
 #include "common/locator-getters.hpp"
 
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+
 namespace ot {
 namespace Toble {
 
-#if OPENTHREAD_CONFIG_TOBLE_ENABLE
 Transport::Transport(Instance &aInstance)
     : InstanceLocator(aInstance)
     , mBtp(aInstance)
@@ -57,7 +58,7 @@ void Transport::Start(Connection &aConn)
         {
         case kUnspecified:
             // On central the `mTransport` should not be unspecified
-            assert(false);
+            OT_ASSERT(false);
             break;
 
         case kBtp:
@@ -92,7 +93,7 @@ void Transport::Stop(Connection &aConn)
         {
         case kUnspecified:
             // On central the `mTransport` should not be unspecified
-            assert(false);
+            OT_ASSERT(false);
             break;
 
         case kBtp:
@@ -128,7 +129,7 @@ void Transport::Send(Connection &aConn, const uint8_t *aBuf, uint16_t aLength)
         // An unspecified transport type is only allowed on peripheral,
         // where the send request is passed to all supported transports
         // This allows the central to decide on the transport.
-        assert(!Get<Toble>().IsCentral());
+        OT_ASSERT(!Get<Toble>().IsCentral());
         Get<Btp>().Send(aConn, aBuf, aLength);
 #if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
         Get<L2cap>().Send(aConn, aBuf, aLength);
@@ -181,7 +182,7 @@ void Transport::HandleReceiveDone(Connection &aConn, uint8_t *aFrame, uint16_t a
     }
 }
 
-#endif // #if OPENTHREAD_CONFIG_TOBLE_ENABLE
-
 } // namespace Toble
 } // namespace ot
+
+#endif // #if OPENTHREAD_CONFIG_TOBLE_ENABLE

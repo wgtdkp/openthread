@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2019, The OpenThread Authors.
+ *  Copyright (c) 2020, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -158,7 +158,7 @@ void Controller::StartRxScanning(void)
     otLogInfoBle("CentCtrl::StartRxScanning(int:%u, wind:%d)", kRxScanInterval, kRxScanWindow);
 
     error = Get<Platform>().StartScan(kRxScanInterval, kRxScanWindow);
-    assert(error == OT_ERROR_NONE);
+    OT_ASSERT(error == OT_ERROR_NONE);
 
     SetState(kStateRxScanning);
 }
@@ -201,7 +201,7 @@ exit:
 
 void Controller::StartTransmit(void)
 {
-    assert(mTxFrame != NULL);
+    OT_ASSERT(mTxFrame != NULL);
 
     if (mTxFrame->GetChannel() != Get<Mac::Mac>().GetPanChannel())
     {
@@ -293,7 +293,7 @@ void Controller::StartTransmit(void)
             // Therefore, if we are in `RxConnecting` state and
             // `mTxConn` is also in `kConnecting` we expect the
             // `mTxConn` to be same as `mRxConn`.
-            assert(mRxConn == mTxConn);
+            OT_ASSERT(mRxConn == mTxConn);
             mRxConn = NULL;
         }
         SetState(kStateTxConnecting);
@@ -338,7 +338,7 @@ void Controller::StartTxScanning(void)
     otLogInfoBle("CentCtrl::StartTxScanning(int:%u, wind:%d)", kTxScanInterval, kTxScanWindow);
 
     error = Get<Platform>().StartScan(kTxScanInterval, kTxScanWindow);
-    assert(error == OT_ERROR_NONE);
+    OT_ASSERT(error == OT_ERROR_NONE);
 
     SetState(kStateTxScanning);
 }
@@ -375,7 +375,7 @@ void Controller::HandleTxTimer(void)
         // way we can potentially have connection ready for a re-tx of
         // the frame. If the connection does not get established in
         // time, the `mConnTimer` callback will handle it.
-        assert((mTxConn != NULL) && (mRxConn == NULL));
+        OT_ASSERT((mTxConn != NULL) && (mRxConn == NULL));
         mRxConn = mTxConn;
         mTxConn = NULL;
         InvokeRadioTxDone(mTxFrame->GetAckRequest() ? OT_ERROR_NO_ACK : OT_ERROR_NONE);
@@ -386,7 +386,7 @@ void Controller::HandleTxTimer(void)
         // Timed out while sending over the connection. We let either
         // a late `TransportSendDone()` callback or the connection
         // timeout callback clear the `mTxConn->mState`.
-        assert(mTxConn != NULL);
+        OT_ASSERT(mTxConn != NULL);
         mTxConn = NULL;
         InvokeRadioTxDone(mTxFrame->GetAckRequest() ? OT_ERROR_NO_ACK : OT_ERROR_NONE);
         break;
@@ -493,7 +493,7 @@ void Controller::HandleAdv(Platform::AdvType aAdvType,
         break;
 
     default:
-        assert(false);
+        OT_ASSERT(false);
         break;
     }
 
@@ -556,7 +556,7 @@ void Controller::HandleAdv(Platform::AdvType aAdvType,
             break;
 
         default:
-            assert(false);
+            OT_ASSERT(false);
             break;
         }
 
@@ -598,7 +598,7 @@ void Controller::HandleAdv(Platform::AdvType aAdvType,
         break;
 
     default:
-        assert(false);
+        OT_ASSERT(false);
         break;
     }
 
@@ -1069,4 +1069,4 @@ const char *Controller::StateToString(State aState)
 } // namespace Toble
 } // namespace ot
 
-#endif // OPENTHREAD_CONFIG_TOBLE_ENABLE && OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
+#endif // #if OPENTHREAD_CONFIG_TOBLE_ENABLE && OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE

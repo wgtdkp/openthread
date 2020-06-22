@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2019, The OpenThread Authors.
+ *  Copyright (c) 2020, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -232,6 +232,5 @@ extern "C" void otPlatTobleHandleC2IndicateDone(otInstance *aInstance, otTobleCo
     instance.Get<ot::Toble::Platform::Callbacks>().HandleC2IndicateDone(aConn);
 }
 
-#endif // OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
-
+#endif // #if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
 #endif // OPENTHREAD_CONFIG_TOBLE_ENABLE

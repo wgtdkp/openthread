@@ -134,6 +134,10 @@ ifeq ($(BOOTLOADER),BLE)
 configure_OPTIONS += --with-custom-linker-file=$(AbsTopSourceDir)/examples/platforms/nrf528xx/nrf52840/nrf52840_bootloader_ble.ld
 endif
 
+ifeq ($(BOOTLOADER),SOFTDEVICE)
+configure_OPTIONS += --with-custom-linker-file=$(AbsTopSourceDir)/examples/platforms/nrf528xx/nrf52840/nrf52840_softdevice.ld
+endif
+
 #
 # Select transport which CLI, NCP and RCP examples will use to communicate.
 # To disable all transports use the DISABLE_TRANSPORTS switch. This will disable

@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2019, The OpenThread Authors.
+ *  Copyright (c) 2020, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -244,8 +244,8 @@ void Controller::StartTxModeAdv(void)
     Advertisement::Info info;
     Platform::AdvConfig config;
 
-    assert(mState == kStateTxAdvertising);
-    assert(mTxFrame != NULL);
+    OT_ASSERT(mState == kStateTxAdvertising);
+    OT_ASSERT(mTxFrame != NULL);
 
 #if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
     info.mL2capTransport = true;
@@ -275,7 +275,7 @@ void Controller::StartTxModeAdv(void)
     }
 
     error = mTxFrame->GetDstAddr(info.mDest);
-    assert(error == OT_ERROR_NONE);
+    OT_ASSERT(error == OT_ERROR_NONE);
 
     if (info.mDest.IsShort())
     {
@@ -401,7 +401,7 @@ void Controller::HandleConnected(Platform::Connection *aPlatConn)
         mTimer.Stop();
         Get<Platform>().StopAdv();
         mConn = Get<ConnectionTable>().GetNew();
-        assert(mConn != NULL);
+        OT_ASSERT(mConn != NULL);
         mConn->mPlatConn = aPlatConn;
         Get<Transport>().Start(*mConn);
         SetState(kStateTxSending);
@@ -567,4 +567,4 @@ const char *Controller::StateToString(State aState)
 } // namespace Toble
 } // namespace ot
 
-#endif // OPENTHREAD_CONFIG_TOBLE_ENABLE && OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+#endif // #if OPENTHREAD_CONFIG_TOBLE_ENABLE && OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE

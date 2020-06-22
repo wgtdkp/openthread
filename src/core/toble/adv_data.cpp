@@ -280,4 +280,5 @@ exit:
 }
 } // namespace Toble
 } // namespace ot
+
 #endif // OPENTHREAD_CONFIG_TOBLE_ENABLE

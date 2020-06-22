@@ -36,6 +36,7 @@
 #include "common/code_utils.hpp"
 
 #if OPENTHREAD_CONFIG_TOBLE_ENABLE
+
 namespace ot {
 namespace Toble {
 otError Ads::AppendUint8(uint8_t aMaxLength, uint8_t aValue)
@@ -57,7 +58,7 @@ otError Ads::AppendUint16(uint8_t aMaxLength, uint16_t aValue)
 
     VerifyOrExit(GetLength() + sizeof(uint16_t) <= aMaxLength, error = OT_ERROR_NO_BUFS);
 
-    *reinterpret_cast<uint16_t *>(GetValue() + GetValueLength()) = HostSwap16(aValue);
+    *reinterpret_cast<uint16_t *>(reinterpret_cast<void *>(GetValue() + GetValueLength())) = HostSwap16(aValue);
     mLength += sizeof(uint16_t);
 
 exit:
@@ -70,7 +71,7 @@ otError Ads::AppendUint32(uint8_t aMaxLength, uint32_t aValue)
 
     VerifyOrExit(GetLength() + sizeof(uint32_t) <= aMaxLength, error = OT_ERROR_NO_BUFS);
 
-    *reinterpret_cast<uint32_t *>(GetValue() + GetValueLength()) = HostSwap32(aValue);
+    *reinterpret_cast<uint32_t *>(reinterpret_cast<void *>(GetValue() + GetValueLength())) = HostSwap32(aValue);
     mLength += sizeof(uint32_t);
 
 exit:
@@ -83,7 +84,7 @@ otError Ads::AppendUint64(uint8_t aMaxLength, uint64_t aValue)
 
     VerifyOrExit(GetLength() + sizeof(uint64_t) <= aMaxLength, error = OT_ERROR_NO_BUFS);
 
-    *reinterpret_cast<uint64_t *>(GetValue() + GetValueLength()) = HostSwap64(aValue);
+    *reinterpret_cast<uint64_t *>(reinterpret_cast<void *>(GetValue() + GetValueLength())) = HostSwap64(aValue);
     mLength += sizeof(uint64_t);
 
 exit:
@@ -122,7 +123,7 @@ otError Ads::GetUint16(Iterator &aIterator, uint16_t &aValue) const
 
     VerifyOrExit(aIterator + sizeof(uint16_t) <= GetValueLength(), error = OT_ERROR_PARSE);
 
-    aValue = HostSwap16(*reinterpret_cast<const uint16_t *>(GetValue() + aIterator));
+    aValue = HostSwap16(*reinterpret_cast<const uint16_t *>(reinterpret_cast<const void *>(GetValue() + aIterator)));
     aIterator += sizeof(uint16_t);
 
 exit:
@@ -135,7 +136,7 @@ otError Ads::GetUint32(Iterator &aIterator, uint32_t &aValue) const
 
     VerifyOrExit(aIterator + sizeof(uint32_t) <= GetValueLength(), error = OT_ERROR_PARSE);
 
-    aValue = HostSwap32(*reinterpret_cast<const uint32_t *>(GetValue() + aIterator));
+    aValue = HostSwap32(*reinterpret_cast<const uint32_t *>(reinterpret_cast<const void *>(GetValue() + aIterator)));
     aIterator += sizeof(uint32_t);
 
 exit:
@@ -148,7 +149,7 @@ otError Ads::GetUint64(Iterator &aIterator, uint64_t &aValue) const
 
     VerifyOrExit(aIterator + sizeof(uint64_t) <= GetValueLength(), error = OT_ERROR_PARSE);
 
-    aValue = HostSwap32(*reinterpret_cast<const uint64_t *>(GetValue() + aIterator));
+    aValue = HostSwap32(*reinterpret_cast<const uint64_t *>(reinterpret_cast<const void *>(GetValue() + aIterator)));
     aIterator += sizeof(uint64_t);
 
 exit:
@@ -185,4 +186,5 @@ exit:
 
 } // namespace Toble
 } // namespace ot
+
 #endif // OPENTHREAD_CONFIG_TOBLE_ENABLE

@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2019, The OpenThread Authors.
+ *  Copyright (c) 2020, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -39,10 +39,10 @@
 #include "common/locator.hpp"
 #include "toble/platform.hpp"
 
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE && OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
+
 namespace ot {
 namespace Toble {
-
-#if OPENTHREAD_CONFIG_TOBLE_ENABLE && OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
 
 class Connection;
 
@@ -61,9 +61,8 @@ public:
 private:
 };
 
-#endif // #if OPENTHREAD_CONFIG_TOBLE_ENABLE & OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
-
 } // namespace Toble
 } // namespace ot
 
+#endif // #if OPENTHREAD_CONFIG_TOBLE_ENABLE & OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
 #endif // TOBLE_L2CAP_HPP_

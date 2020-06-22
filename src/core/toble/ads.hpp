@@ -41,6 +41,7 @@
 #include "mac/mac_types.hpp"
 
 #if OPENTHREAD_CONFIG_TOBLE_ENABLE
+
 namespace ot {
 namespace Toble {
 
@@ -231,7 +232,8 @@ public:
      */
     otError AppendExtAddress(uint8_t aMaxLength, const Mac::ExtAddress &aAddress)
     {
-        return AppendUint64(aMaxLength, *reinterpret_cast<const uint64_t *>(&aAddress.m8));
+        return AppendUint64(aMaxLength,
+                            *reinterpret_cast<const uint64_t *>(reinterpret_cast<const void *>(aAddress.m8)));
     }
 
     /**
@@ -350,12 +352,12 @@ public:
     otError GetTlv(Iterator aIterator, Tlv &aTlv) const;
 
 private:
-    uint8_t mLength;
     uint8_t mType;
+    uint8_t mLength;
 } OT_TOOL_PACKED_END;
 
 } // namespace Toble
 } // namespace ot
 
-#endif // OPENTHREAD_CONFIG_TOBLE_ENABLE
+#endif // #if OPENTHREAD_CONFIG_TOBLE_ENABLE
 #endif // ADS_HPP_
