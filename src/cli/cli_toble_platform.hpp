@@ -70,6 +70,21 @@ public:
     void HandleConnected(otTobleConnection *aConn);
     void HandleDisconnected(otTobleConnection *aConn);
 
+    void HandleAdvReceived(otTobleAdvType aAdvType, otTobleRadioPacket *aAdvPacket);
+    void HandleScanRespReceived(otTobleRadioPacket *aAdvPacket);
+    void HandleConnectionIsReady(otTobleConnection *aConn, otTobleConnectionLinkType aLinkType);
+
+    void HandleC1WriteDone(otTobleConnection *aConn);
+    void HandleC2Indication(otTobleConnection *aConn, const uint8_t *aBuffer, uint16_t aLength);
+    void HandleC2Subscribed(otTobleConnection *aConn, bool aIsSubscribed);
+    void HandleC2IndicateDone(otTobleConnection *aConn);
+    void HandleC1Write(otTobleConnection *aConn, const uint8_t *aBuffer, uint16_t aLength);
+
+#if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
+    void HandleL2capFrameReceived(otTobleConnection *aConn, const uint8_t *aBuffer, uint16_t aLength);
+    void HandleL2capSendDone(otTobleConnection *aConn);
+#endif
+
 private:
     struct Command
     {
@@ -100,10 +115,12 @@ private:
     };
 
     Connection *FindConnection(otTobleConnection *aConn);
-    Connection *GetNewConnection(void);
-    Connection *GetConnection(otTobleConnection *aConn);
-    Connection *GetConnection(uint8_t aConnId);
-    uint8_t     GetConnectionId(Connection *aConn);
+    Connection *GetNewConnection(void) { return FindConnection(NULL); }
+    Connection *GetConnection(otTobleConnection *aConn) { return FindConnection(aConn); }
+    Connection *GetConnection(uint8_t aConnId) { return (aConnId < kNumConnections) ? &mConns[aConnId] : NULL; }
+    uint8_t     GetConnectionId(Connection *aConn) { return static_cast<uint8_t>(aConn - &mConns[0]); }
+    uint8_t     GetConnectionId(otTobleConnection *aConn);
+    uint8_t     GetNumValidConnections(void);
 
     otError ProcessHelp(uint8_t aArgsLength, char *aArgs[]);
     otError ProcessAdv(uint8_t aArgsLength, char *aArgs[]);
@@ -111,9 +128,17 @@ private:
     otError ProcessConnect(uint8_t aArgsLength, char *aArgs[]);
     otError ProcessSend(uint8_t aArgsLength, char *aArgs[]);
     otError ProcessShow(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessRole(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessSubscribe(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessDisconnect(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessLink(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessMtu(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessDiag(uint8_t aArgsLength, char *aArgs[]);
 
-    void        ReverseBuf(uint8_t *aBuffer, uint8_t aLength);
-    const char *GetStateString(State aState);
+    const char *StateToString(State aState);
+    const char *AdvTypeToString(otTobleAdvType aType);
+    const char *LinkTypeToString(otTobleConnectionLinkType aLinkType);
+    void        PrintBytes(const uint8_t *aBuffer, uint8_t aLength);
 
     static const Command sCommands[];
     Interpreter &        mInterpreter;

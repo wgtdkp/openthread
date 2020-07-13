@@ -40,6 +40,12 @@
 #include <stdint.h>
 #include <string.h>
 
+#if SOFTDEVICE_OT_MANAGED
+#include "nrf_sdh.h"
+#include "nrf_sdh_ble.h"
+#include "nrf_sdh_soc.h"
+#endif
+
 #include "platform-nrf5.h"
 #include "platform-softdevice.h"
 #include "softdevice.h"
@@ -102,3 +108,64 @@ void otSysSoftdeviceRaalConfig(const otSysSoftdeviceRaalConfigParams *aConfig)
 
     nrf_raal_softdevice_config(&cfg);
 }
+
+#if SOFTDEVICE_OT_MANAGED
+
+#if MONITOR_MODE_DEBUG
+extern void DebugMonitor_Init(void);
+#endif
+
+void otSysSoftdeviceInit(void)
+{
+    ble_cfg_t bleCfg;
+    uint32_t  error;
+    uint32_t  ramStart = 0;
+
+#if MONITOR_MODE_DEBUG
+    NVIC_SetPriority(DebugMonitor_IRQn, APP_IRQ_PRIORITY_MID);
+    DebugMonitor_Init();
+#endif
+
+    error = nrf_sdh_enable_request();
+    assert(error == NRF_SUCCESS);
+
+    error = nrf_sdh_ble_default_cfg_set(BLE_CFG_TAG, &ramStart);
+    assert(error == NRF_SUCCESS);
+
+    // The L2CAP configuration is not handled by the @s nrf_sdh_ble_default_cfg_set.
+    memset(&bleCfg, 0, sizeof(bleCfg));
+    bleCfg.conn_cfg.conn_cfg_tag                        = BLE_CFG_TAG;
+    bleCfg.conn_cfg.params.l2cap_conn_cfg.rx_mps        = BLE_DEFAULT_L2CAP_MPS_SIZE;
+    bleCfg.conn_cfg.params.l2cap_conn_cfg.rx_queue_size = 1;
+    bleCfg.conn_cfg.params.l2cap_conn_cfg.tx_mps        = BLE_DEFAULT_L2CAP_MPS_SIZE;
+    bleCfg.conn_cfg.params.l2cap_conn_cfg.tx_queue_size = 20;
+    bleCfg.conn_cfg.params.l2cap_conn_cfg.ch_count      = NRF_SDH_BLE_CENTRAL_LINK_COUNT;
+
+    error = sd_ble_cfg_set(BLE_CONN_CFG_L2CAP, &bleCfg, ramStart);
+    assert(error == NRF_SUCCESS);
+
+    error = nrf_sdh_ble_enable(&ramStart);
+    assert(error == NRF_SUCCESS);
+}
+
+void otSysSoftdeviceProcess(void)
+{
+    nrf_sdh_evts_poll();
+}
+
+static void soc_evt_handler(uint32_t aEvtId, void *aContext)
+{
+    (void)aContext;
+
+    otSysSoftdeviceSocEvtHandler(aEvtId);
+}
+
+void SD_EVT_IRQHandler(void)
+{
+    // Empty implementation.
+}
+
+// Register a handler for SOC events.
+NRF_SDH_SOC_OBSERVER(m_ot_soc_observer, 0, soc_evt_handler, NULL);
+
+#endif // SOFTDEVICE_OT_MANAGED

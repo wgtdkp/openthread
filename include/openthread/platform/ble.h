@@ -185,8 +185,11 @@ enum
 
     /**
      * Maximum value of ATT_MTU [bytes].
+     *
+     * Optimized for 251 byte maximum PDU size used
+     * when BLE 4.2 Data Length Extensions (DLE) are enabled.
      */
-    OT_BLE_ATT_MTU_MAX = 511,
+    OT_BLE_ATT_MTU_MAX = 247,
 
     /**
      * Length of full BLE UUID in bytes.
@@ -198,10 +201,17 @@ enum
      */
     OT_BLE_UUID_CCCD = 0x2902,
 
+    /**
+     * Default PSM to use for L2CAP connection-oriented-channels.
+     */
+    OT_BLE_DEFAULT_PSM = 0x0055,
 };
 
 /// Convert the advertising interval from [ms] to [ble symbol times].
-#define OT_BLE_MS_TO_TICKS(x) (((x)*1000) / OT_BLE_ADV_INTERVAL_UNIT)
+#define OT_BLE_MS_TO_TICKS(x) (((x)*1000) / OT_BLE_TIMESLOT_UNIT)
+
+/// Convert the connection interval from [ms] to [2*ble symbol times].
+#define OT_BLE_MS_TO_CONNTICKS(x) (((x)*1000) / OT_BLE_CONN_INTERVAL_UNIT)
 
 /**
  * This enum represents BLE Device Address types.
@@ -290,6 +300,11 @@ typedef enum otPlatBleAdvMode
      * If set, advertising device will respond to scan requests.
      */
     OT_BLE_ADV_MODE_SCANNABLE = (1 << 1),
+
+    /**
+     * If set, advertising device is using directed advertising.
+     */
+    OT_BLE_ADV_MODE_DIRECTED = (1 << 2),
 } otPlatBleAdvMode;
 
 /**
@@ -613,9 +628,10 @@ otError otPlatBleGapAdvStop(otInstance *aInstance);
  *
  * @param[in]  aInstance     The OpenThread instance structure.
  * @param[in]  aConnectionId The identifier of the open connection.
+ * @param[in]  aPeerAddress  The address of the connected peer device.
  *
  */
-extern void otPlatBleGapOnConnected(otInstance *aInstance, uint16_t aConnectionId);
+extern void otPlatBleGapOnConnected(otInstance *aInstance, uint16_t aConnectionId, otPlatBleDeviceAddr *aPeerAddr);
 
 /**
  * The BLE driver calls this method to notify OpenThread that the BLE Device
@@ -687,30 +703,36 @@ extern void otPlatBleGapOnScanRespReceived(otInstance *         aInstance,
  *
  * @note This function shall be used only for BLE Central role.
  *
- * @param[in] aInstance  The OpenThread instance structure.
- * @param[in] aAddress   An address of the advertising device.
- * @param[in] aInterval  The scanning interval in OT_BLE_SCAN_INTERVAL_UNIT units. Shall be in
- *                       OT_BLE_SCAN_INTERVAL_MIN and OT_BLE_SCAN_INTERVAL_MAX range.
- * @param[in] aWindow    The scanning window in OT_BLE_SCAN_WINDOW_UNIT units. Shall be in
- *                       OT_BLE_SCAN_WINDOW_MIN and OT_BLE_SCAN_WINDOW_MAX range.
+ * @param[in] aInstance      The OpenThread instance structure.
+ * @param[in] aAddress       An address of the advertising device.
+ * @param[in] aConnInterval  The connection interval in OT_BLE_CONN_INTERVAL_UNIT units.
+ * @param[in] aScanInterval  The scanning interval in OT_BLE_SCAN_INTERVAL_UNIT units. Shall be in
+ *                           OT_BLE_SCAN_INTERVAL_MIN and OT_BLE_SCAN_INTERVAL_MAX range.
+ * @param[in] aScanWindow    The scanning window in OT_BLE_SCAN_WINDOW_UNIT units. Shall be in
+ *                           OT_BLE_SCAN_WINDOW_MIN and OT_BLE_SCAN_WINDOW_MAX range.
  *
  * @retval ::OT_ERROR_NONE           Connection procedure has been started.
  * @retval ::OT_ERROR_INVALID_STATE  BLE Device is in invalid state.
  * @retval ::OT_ERROR_INVALID_ARGS   Invalid address, interval or window value has been supplied.
  */
-otError otPlatBleGapConnect(otInstance *aInstance, otPlatBleDeviceAddr *aAddress, uint16_t aInterval, uint16_t aWindow);
+otError otPlatBleGapConnect(otInstance *         aInstance,
+                            otPlatBleDeviceAddr *aAddress,
+                            uint16_t             aConnInterval,
+                            uint16_t             aScanInterval,
+                            uint16_t             aScanWindow);
 
 /**
  * Disconnects BLE connection.
  *
  * The BLE device shall indicate the OT_BLE_HCI_REMOTE_USER_TERMINATED HCI code reason.
  *
- * @param[in] aInstance  The OpenThread instance structure.
+ * @param[in] aInstance     The OpenThread instance structure.
+ * @param[in] aConnectionId The identifier of the open connection.
  *
  * @retval ::OT_ERROR_NONE           Disconnection procedure has been started.
  * @retval ::OT_ERROR_INVALID_STATE  BLE Device is in invalid state.
  */
-otError otPlatBleGapDisconnect(otInstance *aInstance);
+otError otPlatBleGapDisconnect(otInstance *aInstance, uint16_t aConnectionId);
 
 /*******************************************************************************
  * @section Bluetooth Low Energy GATT Common.
@@ -728,13 +750,14 @@ otError otPlatBleGattVendorUuidRegister(otInstance *aInstance, const otPlatBleUu
 /**
  * Reads currently use value of ATT_MTU.
  *
- * @param[in]   aInstance  The OpenThread instance structure.
- * @param[out]  aMtu       A pointer contains current ATT_MTU value.
+ * @param[in]   aInstance     The OpenThread instance structure.
+ * @param[in]   aConnectionId The identifier of the open connection.
+ * @param[out]  aMtu          A pointer contains current ATT_MTU value.
  *
  * @retval ::OT_ERROR_NONE     ATT_MTU value has been placed in @p aMtu.
  * @retval ::OT_ERROR_FAILED   BLE Device cannot determine its ATT_MTU.
  */
-otError otPlatBleGattMtuGet(otInstance *aInstance, uint16_t *aMtu);
+otError otPlatBleGattMtuGet(otInstance *aInstance, uint16_t aConnectionId, uint16_t *aMtu);
 
 /*******************************************************************************
  * @section Bluetooth Low Energy GATT Client.
@@ -745,15 +768,16 @@ otError otPlatBleGattMtuGet(otInstance *aInstance, uint16_t *aMtu);
  *
  * @note This function shall be used only for GATT Client.
  *
- * @param[in] aInstance  The OpenThread instance structure.
- * @param[in] aHandle    The handle of the attribute to be read.
+ * @param[in] aInstance     The OpenThread instance structure.
+ * @param[in] aConnectionId The identifier of the open connection.
+ * @param[in] aHandle       The handle of the attribute to be read.
  *
  * @retval ::OT_ERROR_NONE           ATT Write Request has been sent.
  * @retval ::OT_ERROR_INVALID_STATE  BLE Device is in invalid state.
  * @retval ::OT_ERROR_INVALID_ARGS   Invalid handle value has been supplied.
  * @retval ::OT_ERROR_NO_BUFS        No available internal buffer found.
  */
-otError otPlatBleGattClientRead(otInstance *aInstance, uint16_t aHandle);
+otError otPlatBleGattClientRead(otInstance *aInstance, uint16_t aConnectionId, uint16_t aHandle);
 
 /**
  * The BLE driver calls this method to notify OpenThread that ATT Read Response
@@ -763,28 +787,33 @@ otError otPlatBleGattClientRead(otInstance *aInstance, uint16_t aHandle);
  *
  * @note This function shall be used only for GATT Client.
  *
- * @param[in] aInstance  The OpenThread instance structure.
- * @param[in] aPacket    A pointer to the packet contains read value.
+ * @param[in] aInstance     The OpenThread instance structure.
+ * @param[in] aConnectionId The identifier of the open connection.
+ * @param[in] aPacket       A pointer to the packet contains read value.
  *
  */
-extern void otPlatBleGattClientOnReadResponse(otInstance *aInstance, otBleRadioPacket *aPacket);
+extern void otPlatBleGattClientOnReadResponse(otInstance *aInstance, uint16_t aConnectionId, otBleRadioPacket *aPacket);
 
 /**
  * Sends ATT Write Request.
  *
  * @note This function shall be used only for GATT Client.
  *
- * @param[in] aInstance  The OpenThread instance structure.
- * @param[in] aHandle    The handle of the attribute to be written.
- * @param[in] aPacket    A pointer to the packet contains value to be
- *                       written to the attribute.
+ * @param[in] aInstance     The OpenThread instance structure.
+ * @param[in] aConnectionId The identifier of the open connection.
+ * @param[in] aHandle       The handle of the attribute to be written.
+ * @param[in] aPacket       A pointer to the packet contains value to be
+ *                          written to the attribute.
  *
  * @retval ::OT_ERROR_NONE           ATT Write Request has been sent.
  * @retval ::OT_ERROR_INVALID_STATE  BLE Device is in invalid state.
  * @retval ::OT_ERROR_INVALID_ARGS   Invalid handle value, data or data length has been supplied.
  * @retval ::OT_ERROR_NO_BUFS        No available internal buffer found.
  */
-otError otPlatBleGattClientWrite(otInstance *aInstance, uint16_t aHandle, otBleRadioPacket *aPacket);
+otError otPlatBleGattClientWrite(otInstance *      aInstance,
+                                 uint16_t          aConnectionId,
+                                 uint16_t          aHandle,
+                                 otBleRadioPacket *aPacket);
 
 /**
  * The BLE driver calls this method to notify OpenThread that ATT Write Response
@@ -794,27 +823,32 @@ otError otPlatBleGattClientWrite(otInstance *aInstance, uint16_t aHandle, otBleR
  *
  * @note This function shall be used only for GATT Client.
  *
- * @param[in] aInstance  The OpenThread instance structure.
- * @param[in] aHandle    The handle on which ATT Write Response has been sent.
+ * @param[in] aInstance     The OpenThread instance structure.
+ * @param[in] aConnectionId The identifier of the open connection.
+ * @param[in] aHandle       The handle on which ATT Write Response has been sent.
  *
  */
 
-extern void otPlatBleGattClientOnWriteResponse(otInstance *aInstance, uint16_t aHandle);
+extern void otPlatBleGattClientOnWriteResponse(otInstance *aInstance, uint16_t aConnectionId, uint16_t aHandle);
 /**
  * Subscribes for characteristic indications.
  *
  * @note This function shall be used only for GATT Client.
  *
- * @param[in] aInstance    The OpenThread instance structure.
- * @param[in] aHandle      The handle of the attribute to be written.
- * @param[in] aSubscribing True if subscribing, otherwise unsubscribing.
+ * @param[in] aInstance     The OpenThread instance structure.
+ * @param[in] aConnectionId The identifier of the open connection.
+ * @param[in] aHandle       The handle of the attribute to be written.
+ * @param[in] aSubscribing  True if subscribing, otherwise unsubscribing.
  *
  * @retval ::OT_ERROR_NONE           Subscription has been sent.
  * @retval ::OT_ERROR_INVALID_STATE  BLE Device is in invalid state.
  * @retval ::OT_ERROR_INVALID_ARGS   Invalid handle value, data or data length has been supplied.
  * @retval ::OT_ERROR_NO_BUFS        No available internal buffer found.
  */
-otError otPlatBleGattClientSubscribeRequest(otInstance *aInstance, uint16_t aHandle, bool aSubscribing);
+otError otPlatBleGattClientSubscribeRequest(otInstance *aInstance,
+                                            uint16_t    aConnectionId,
+                                            uint16_t    aHandle,
+                                            bool        aSubscribing);
 
 /**
  * The BLE driver calls this method to notify OpenThread that subscribe response
@@ -824,11 +858,12 @@ otError otPlatBleGattClientSubscribeRequest(otInstance *aInstance, uint16_t aHan
  *
  * @note This function shall be used only for GATT Client.
  *
- * @param[in] aInstance  The OpenThread instance structure.
- * @param[in] aHandle    The handle on which ATT Write Response has been sent.
+ * @param[in] aInstance     The OpenThread instance structure.
+ * @param[in] aConnectionId The identifier of the open connection.
+ * @param[in] aHandle       The handle on which ATT Write Response has been sent.
  *
  */
-extern void otPlatBleGattClientOnSubscribeResponse(otInstance *aInstance, uint16_t aHandle);
+extern void otPlatBleGattClientOnSubscribeResponse(otInstance *aInstance, uint16_t aConnectionId, uint16_t aHandle);
 
 /**
  * The BLE driver calls this method to notify OpenThread that an ATT Handle Value
@@ -841,36 +876,41 @@ extern void otPlatBleGattClientOnSubscribeResponse(otInstance *aInstance, uint16
  * @param[in] aPacket    A pointer to the packet contains indicated value.
  *
  */
-extern void otPlatBleGattClientOnIndication(otInstance *aInstance, uint16_t aHandle, otBleRadioPacket *aPacket);
+extern void otPlatBleGattClientOnIndication(otInstance *      aInstance,
+                                            uint16_t          aConnectionId,
+                                            uint16_t          aHandle,
+                                            otBleRadioPacket *aPacket);
 
 /**
  * Performs GATT Primary Service Discovery of all services available.
  *
  * @note This function shall be used only for GATT Client.
  *
- * @param[in] aInstance  The OpenThread instance structure.
+ * @param[in] aInstance     The OpenThread instance structure.
+ * @param[in] aConnectionId The identifier of the open connection.
  *
  * @retval ::OT_ERROR_NONE           Service Discovery procedure has been started.
  * @retval ::OT_ERROR_INVALID_STATE  BLE Device is in invalid state.
  * @retval ::OT_ERROR_INVALID_ARGS   Invalid service UUID has been provided.
  * @retval ::OT_ERROR_NO_BUFS        No available internal buffer found.
  */
-otError otPlatBleGattClientServicesDiscover(otInstance *aInstance);
+otError otPlatBleGattClientServicesDiscover(otInstance *aInstance, uint16_t aConnectionId);
 
 /**
  * Performs GATT Primary Service Discovery by UUID procedure of specific service.
  *
  * @note This function shall be used only for GATT Client.
  *
- * @param[in] aInstance  The OpenThread instance structure.
- * @param[in] aUuid      The UUID of a service to be registered.
+ * @param[in] aInstance     The OpenThread instance structure.
+ * @param[in] aConnectionId The identifier of the open connection.
+ * @param[in] aUuid         The UUID of a service to be registered.
  *
  * @retval ::OT_ERROR_NONE           Service Discovery procedure has been started.
  * @retval ::OT_ERROR_INVALID_STATE  BLE Device is in invalid state.
  * @retval ::OT_ERROR_INVALID_ARGS   Invalid service UUID has been provided.
  * @retval ::OT_ERROR_NO_BUFS        No available internal buffer found.
  */
-otError otPlatBleGattClientServiceDiscover(otInstance *aInstance, const otPlatBleUuid *aUuid);
+otError otPlatBleGattClientServiceDiscover(otInstance *aInstance, uint16_t aConnectionId, const otPlatBleUuid *aUuid);
 
 /**
  * The BLE driver calls this method to notify OpenThread that the next entry
@@ -879,6 +919,7 @@ otError otPlatBleGattClientServiceDiscover(otInstance *aInstance, const otPlatBl
  * @note This function shall be used only for GATT Client.
  *
  * @param[in] aInstance     The OpenThread instance structure.
+ * @param[in] aConnectionId The identifier of the open connection.
  * @param[in] aStartHandle  The start handle of a service.
  * @param[in] aEndHandle    The end handle of a service.
  * @param[in] aServiceUuid  The Uuid16 for the service entry.
@@ -889,6 +930,7 @@ otError otPlatBleGattClientServiceDiscover(otInstance *aInstance, const otPlatBl
  *
  */
 extern void otPlatBleGattClientOnServiceDiscovered(otInstance *aInstance,
+                                                   uint16_t    aConnectionId,
                                                    uint16_t    aStartHandle,
                                                    uint16_t    aEndHandle,
                                                    uint16_t    aServiceUuid,
@@ -900,6 +942,7 @@ extern void otPlatBleGattClientOnServiceDiscovered(otInstance *aInstance,
  * @note This function shall be used only for GATT Client.
  *
  * @param[in] aInstance     The OpenThread instance structure.
+ * @param[in] aConnectionId The identifier of the open connection.
  * @param[in] aStartHandle  The start handle of a service.
  * @param[in] aEndHandle    The end handle of a service.
  *
@@ -908,7 +951,10 @@ extern void otPlatBleGattClientOnServiceDiscovered(otInstance *aInstance,
  * @retval ::OT_ERROR_INVALID_ARGS   Invalid start or end handle has been provided.
  * @retval ::OT_ERROR_NO_BUFS        No available internal buffer found.
  */
-otError otPlatBleGattClientCharacteristicsDiscover(otInstance *aInstance, uint16_t aStartHandle, uint16_t aEndHandle);
+otError otPlatBleGattClientCharacteristicsDiscover(otInstance *aInstance,
+                                                   uint16_t    aConnectionId,
+                                                   uint16_t    aStartHandle,
+                                                   uint16_t    aEndHandle);
 
 /**
  * The BLE driver calls this method to notify OpenThread that GATT Characteristic
@@ -918,16 +964,18 @@ otError otPlatBleGattClientCharacteristicsDiscover(otInstance *aInstance, uint16
  *
  * @note This function shall be used only for GATT Client.
  *
- * @param[in] aInstance  The OpenThread instance structure.
- * @param[in] aChars     A pointer to discovered characteristic list.
- * @param[in] aCount     Number of characteristics in @p aChar list.
- * @param[in] aError     The value of OT_ERROR_NONE indicates that at least one characteristic
- *                       has been found and the total number of them is stored in @p aCount.
- *                       OT_ERROR_NOT_FOUND error should be set if no charactertistics are found.
- *                       Otherwise error indicates the reason of failure is used.
+ * @param[in] aInstance     The OpenThread instance structure.
+ * @param[in] aConnectionId The identifier of the open connection.
+ * @param[in] aChars        A pointer to discovered characteristic list.
+ * @param[in] aCount        Number of characteristics in @p aChar list.
+ * @param[in] aError        The value of OT_ERROR_NONE indicates that at least one characteristic
+ *                          has been found and the total number of them is stored in @p aCount.
+ *                          OT_ERROR_NOT_FOUND error should be set if no charactertistics are found.
+ *                          Otherwise error indicates the reason of failure is used.
  *
  */
 extern void otPlatBleGattClientOnCharacteristicsDiscoverDone(otInstance *                 aInstance,
+                                                             uint16_t                     aConnectionId,
                                                              otPlatBleGattCharacteristic *aChars,
                                                              uint16_t                     aCount,
                                                              otError                      aError);
@@ -938,6 +986,7 @@ extern void otPlatBleGattClientOnCharacteristicsDiscoverDone(otInstance *       
  * @note This function shall be used only for GATT Client.
  *
  * @param[in] aInstance     The OpenThread instance structure.
+ * @param[in] aConnectionId The identifier of the open connection.
  * @param[in] aStartHandle  The start handle.
  * @param[in] aEndHandle    The end handle.
  *
@@ -946,7 +995,10 @@ extern void otPlatBleGattClientOnCharacteristicsDiscoverDone(otInstance *       
  * @retval ::OT_ERROR_INVALID_ARGS   Invalid start or end handle has been provided.
  * @retval ::OT_ERROR_NO_BUFS        No available internal buffer found.
  */
-otError otPlatBleGattClientDescriptorsDiscover(otInstance *aInstance, uint16_t aStartHandle, uint16_t aEndHandle);
+otError otPlatBleGattClientDescriptorsDiscover(otInstance *aInstance,
+                                               uint16_t    aConnectionId,
+                                               uint16_t    aStartHandle,
+                                               uint16_t    aEndHandle);
 
 /**
  * The BLE driver calls this method to notify OpenThread that GATT Descriptor
@@ -954,16 +1006,18 @@ otError otPlatBleGattClientDescriptorsDiscover(otInstance *aInstance, uint16_t a
  *
  * @note This function shall be used only for GATT Client.
  *
- * @param[in] aInstance  The OpenThread instance structure.
- * @param[in] aDescs     A pointer to discovered descriptor list.
- * @param[in] aCount     Number of descriptors in @p aDescs list.
- * @param[in] aError     The value of OT_ERROR_NONE indicates that at least one descriptor
- *                       has been found and the total number of them is stored in @p aCount.
- *                       OT_ERROR_NOT_FOUND error should be set if no descriptors are found.
- *                       Otherwise error indicates the reason of failure is used.
+ * @param[in] aInstance     The OpenThread instance structure.
+ * @param[in] aConnectionId The identifier of the open connection.
+ * @param[in] aDescs        A pointer to discovered descriptor list.
+ * @param[in] aCount        Number of descriptors in @p aDescs list.
+ * @param[in] aError        The value of OT_ERROR_NONE indicates that at least one descriptor
+ *                          has been found and the total number of them is stored in @p aCount.
+ *                          OT_ERROR_NOT_FOUND error should be set if no descriptors are found.
+ *                          Otherwise error indicates the reason of failure is used.
  *
  */
 extern void otPlatBleGattClientOnDescriptorsDiscoverDone(otInstance *             aInstance,
+                                                         uint16_t                 aConnectionId,
                                                          otPlatBleGattDescriptor *aDescs,
                                                          uint16_t                 aCount,
                                                          otError                  aError);
@@ -973,15 +1027,16 @@ extern void otPlatBleGattClientOnDescriptorsDiscoverDone(otInstance *           
  *
  * @note This function shall be used only for GATT Client.
  *
- * @param[in] aInstance  The OpenThread instance structure.
- * @param[in] aMtu       A value of GATT Client receive MTU size.
+ * @param[in] aInstance     The OpenThread instance structure.
+ * @param[in] aConnectionId The identifier of the open connection.
+ * @param[in] aMtu          A value of GATT Client receive MTU size.
  *
  * @retval ::OT_ERROR_NONE           Exchange MTU Request has been sent.
  * @retval ::OT_ERROR_INVALID_STATE  BLE Device is in invalid state.
  * @retval ::OT_ERROR_INVALID_ARGS   Invalid aMtu has been provided.
  * @retval ::OT_ERROR_NO_BUFS        No available internal buffer found.
  */
-otError otPlatBleGattClientMtuExchangeRequest(otInstance *aInstance, uint16_t aMtu);
+otError otPlatBleGattClientMtuExchangeRequest(otInstance *aInstance, uint16_t aConnectionId, uint16_t aMtu);
 
 /**
  * The BLE driver calls this method to notify OpenThread that Exchange MTU
@@ -989,14 +1044,18 @@ otError otPlatBleGattClientMtuExchangeRequest(otInstance *aInstance, uint16_t aM
  *
  * @note This function shall be used only for GATT Client.
  *
- * @param[in] aInstance  The OpenThread instance structure.
- * @param[in] aMtu       Attribute server receive MTU size.
- * @param[in] aError     The value of OT_ERROR_NONE indicates that valid
- *                       Exchange MTU Response has been received. Otherwise error
- *                       indicates the reason of failure is used.
+ * @param[in] aInstance     The OpenThread instance structure.
+ * @param[in] aConnectionId The identifier of the open connection.
+ * @param[in] aMtu          Attribute server receive MTU size.
+ * @param[in] aError        The value of OT_ERROR_NONE indicates that valid
+ *                          Exchange MTU Response has been received. Otherwise error
+ *                          indicates the reason of failure is used.
  *
  */
-extern void otPlatBleGattClientOnMtuExchangeResponse(otInstance *aInstance, uint16_t aMtu, otError aError);
+extern void otPlatBleGattClientOnMtuExchangeResponse(otInstance *aInstance,
+                                                     uint16_t    aConnectionId,
+                                                     uint16_t    aMtu,
+                                                     otError     aError);
 
 /*******************************************************************************
  * @section Bluetooth Low Energy GATT Server.
@@ -1024,16 +1083,20 @@ otError otPlatBleGattServerServicesRegister(otInstance *aInstance, otPlatBleGatt
  *
  * @note This function shall be used only for GATT Server.
  *
- * @param[in] aInstance   The OpenThread instance structure.
- * @param[in] aHandle     The handle of the attribute to be indicated.
- * @param[in] aPacket     A pointer to the packet contains value to be indicated.
+ * @param[in] aInstance     The OpenThread instance structure.
+ * @param[in] aHandle       The handle of the attribute to be indicated.
+ * @param[in] aConnectionId The identifier of the open connection.
+ * @param[in] aPacket       A pointer to the packet contains value to be indicated.
  *
  * @retval ::OT_ERROR_NONE           ATT Handle Value Indication has been sent.
  * @retval ::OT_ERROR_INVALID_STATE  BLE Device is in invalid state.
  * @retval ::OT_ERROR_INVALID_ARGS   Invalid handle value, data or data length has been supplied.
  * @retval ::OT_ERROR_NO_BUFS        No available internal buffer found.
  */
-otError otPlatBleGattServerIndicate(otInstance *aInstance, uint16_t aHandle, otBleRadioPacket *aPacket);
+otError otPlatBleGattServerIndicate(otInstance *      aInstance,
+                                    uint16_t          aConnectionId,
+                                    uint16_t          aHandle,
+                                    otBleRadioPacket *aPacket);
 
 /**
  * The BLE driver calls this method to notify OpenThread that an ATT Handle
@@ -1043,11 +1106,14 @@ otError otPlatBleGattServerIndicate(otInstance *aInstance, uint16_t aHandle, otB
  *
  * @note This function shall be used only for GATT Server.
  *
- * @param[in] aInstance  The OpenThread instance structure.
- * @param[in] aHandle    The handle on which ATT Handle Value Confirmation has been sent.
+ * @param[in] aInstance     The OpenThread instance structure.
+ * @param[in] aConnectionId The identifier of the open connection.
+ * @param[in] aHandle       The handle on which ATT Handle Value Confirmation has been sent.
  *
  */
-extern void otPlatBleGattServerOnIndicationConfirmation(otInstance *aInstance, uint16_t aHandle);
+extern void otPlatBleGattServerOnIndicationConfirmation(otInstance *aInstance,
+                                                        uint16_t    aConnectionId,
+                                                        uint16_t    aHandle);
 
 /**
  * The BLE driver calls this method to notify OpenThread that an ATT Write Request
@@ -1055,12 +1121,16 @@ extern void otPlatBleGattServerOnIndicationConfirmation(otInstance *aInstance, u
  *
  * @note This function shall be used only for GATT Server.
  *
- * @param[in] aInstance   The OpenThread instance structure.
- * @param[in] aHandle     The handle of the attribute to be written.
- * @param[in] aPacket     A pointer to the packet contains value to be written to the attribute.
+ * @param[in] aInstance     The OpenThread instance structure.
+ * @param[in] aConnectionId The identifier of the open connection.
+ * @param[in] aHandle       The handle of the attribute to be written.
+ * @param[in] aPacket       A pointer to the packet contains value to be written to the attribute.
  *
  */
-extern void otPlatBleGattServerOnWriteRequest(otInstance *aInstance, uint16_t aHandle, otBleRadioPacket *aPacket);
+extern void otPlatBleGattServerOnWriteRequest(otInstance *      aInstance,
+                                              uint16_t          aConnectionId,
+                                              uint16_t          aHandle,
+                                              otBleRadioPacket *aPacket);
 
 /**
  * The BLE driver calls this method to notify OpenThread that an ATT Read Request
@@ -1068,12 +1138,16 @@ extern void otPlatBleGattServerOnWriteRequest(otInstance *aInstance, uint16_t aH
  *
  * @note This function shall be used only for GATT Server.
  *
- * @param[in]  aInstance  The OpenThread instance structure.
- * @param[in]  aHandle    The handle of the attribute to be read.
- * @param[out] aPacket    A pointer to the packet to be filled with pointers to attribute data to be read.
+ * @param[in]  aInstance     The OpenThread instance structure.
+ * @param[in]  aConnectionId The identifier of the open connection.
+ * @param[in]  aHandle       The handle of the attribute to be read.
+ * @param[out] aPacket       A pointer to the packet to be filled with pointers to attribute data to be read.
  *
  */
-extern void otPlatBleGattServerOnReadRequest(otInstance *aInstance, uint16_t aHandle, otBleRadioPacket *aPacket);
+extern void otPlatBleGattServerOnReadRequest(otInstance *      aInstance,
+                                             uint16_t          aConnectionId,
+                                             uint16_t          aHandle,
+                                             otBleRadioPacket *aPacket);
 
 /**
  * The BLE driver calls this method to notify OpenThread that an ATT Subscription
@@ -1081,12 +1155,16 @@ extern void otPlatBleGattServerOnReadRequest(otInstance *aInstance, uint16_t aHa
  *
  * @note This function shall be used only for GATT Server.
  *
- * @param[in] aInstance    The OpenThread instance structure.
- * @param[in] aHandle      The handle of the attribute to be written.
- * @param[in] aSubscribing True if subscribing, otherwise unsubscribing.
+ * @param[in] aInstance     The OpenThread instance structure.
+ * @param[in] aConnectionId The identifier of the open connection.
+ * @param[in] aHandle       The handle of the attribute to be written.
+ * @param[in] aSubscribing  True if subscribing, otherwise unsubscribing.
  *
  */
-extern void otPlatBleGattServerOnSubscribeRequest(otInstance *aInstance, uint16_t aHandle, bool aSubscribing);
+extern void otPlatBleGattServerOnSubscribeRequest(otInstance *aInstance,
+                                                  uint16_t    aConnectionId,
+                                                  uint16_t    aHandle,
+                                                  bool        aSubscribing);
 
 /****************************************************************************
  * @section Bluetooth Low Energy L2CAP Connection Oriented Channels.

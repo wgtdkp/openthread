@@ -182,7 +182,7 @@ void Controller::StartRxModeAdv(void)
     config.mLength   = advData.GetLength();
 
     otLogInfoBle("PeriCtrl::StartRxModeAdv(AdvInfo:[%s])", info.ToString().AsCString());
-    otLogInfoBle("PeriCtrl: AdvData: %s", advData.ToString().AsCString());
+    otLogInfoBle("PeriCtrl: AdvData: %s", info.ToString().AsCString());
 
     Get<Platform>().StartAdv(config);
 }
@@ -294,7 +294,7 @@ void Controller::StartTxModeAdv(void)
     config.mLength   = advData.GetLength();
 
     otLogInfoBle("PeriCtrl::StartTxModeAdv(AdvInfo:[%s])", info.ToString().AsCString());
-    otLogInfoBle("PeriCtrl: AdvData: %s", advData.ToString().AsCString());
+    otLogInfoBle("PeriCtrl: AdvData: %s", info.ToString().AsCString());
 
     Get<Platform>().StartAdv(config);
 

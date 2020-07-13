@@ -212,4 +212,84 @@
 #define NRF_802154_TX_STARTED_NOTIFY_ENABLED 1
 #endif
 
+/*******************************************************************************
+ * @section Bluetooth Low Energy
+ ******************************************************************************/
+
+/**
+ * @def BLE_CFG_TAG
+ *
+ * Default configuration number.
+ *
+ */
+#ifdef OPENTHREAD_CONFIG_NORDIC_BLE_CFG_TAG
+#define BLE_CFG_TAG OPENTHREAD_CONFIG_NORDIC_BLE_CFG_TAG
+#else
+#define BLE_CFG_TAG BLE_CONN_CFG_TAG_DEFAULT + 2
+#endif
+
+/**
+ * @def BLE_DEFAULT_CONNECTION_INTERVAL_MIN
+ *
+ * Default minimum connection interval in 1.25ms unit.
+ *
+ */
+#define BLE_DEFAULT_CONNECTION_INTERVAL_MIN 60
+
+/**
+ * @def BLE_DEFAULT_CONNECTION_INTERVAL_MAX
+ *
+ * Default maximum connection interval 1.25ms unit.
+ *
+ */
+#define BLE_DEFAULT_CONNECTION_INTERVAL_MAX 60
+
+/**
+ * @def BLE_DEFAULT_SLAVE_LATENCY
+ *
+ * Default slave latency in number of connection events.
+ *
+ */
+#define BLE_DEFAULT_SLAVE_LATENCY 0
+
+/**
+ * @def BLE_DEFAULT_CONNECTIION_TIMEOUT
+ *
+ * Default supervisor connection timeout in 10ms unit.
+ *
+ */
+#define BLE_DEFAULT_CONNECTIION_TIMEOUT 0xc00
+
+/**
+ * @def BLE_DEFAULT_RSSI_THRESHOLD_CHANGE
+ *
+ * Minimum change in dBm before triggering event.
+ *
+ */
+#define BLE_DEFAULT_RSSI_THRESHOLD_CHANGE 20
+
+/**
+ * @def BLE_DEFAULT_RSSI_SKIP
+ *
+ * Number of RSSI samples with a change of threshold_dbm.
+ *
+ */
+#define BLE_DEFAULT_RSSI_SKIP 1
+
+/**
+ * @def BLE_DEFAULT_L2CAP_MAX_MTU_SIZE
+ *
+ * Maximum value of L2CAP SDU supported by port.
+ *
+ */
+#define BLE_DEFAULT_L2CAP_MAX_MTU_SIZE 1536
+
+/**
+ * @def BLE_DEFAULT_L2CAP_MPS_SIZE
+ *
+ * Maximum value of L2CAP PDU.
+ *
+ */
+#define BLE_DEFAULT_L2CAP_MPS_SIZE 247
+
 #endif // PLATFORM_CONFIG_H_

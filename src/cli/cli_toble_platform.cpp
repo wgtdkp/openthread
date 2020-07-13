@@ -45,106 +45,20 @@ namespace ot {
 namespace Cli {
 
 const struct ToblePlatform::Command ToblePlatform::sCommands[] = {
-    {"help", &ToblePlatform::ProcessHelp},       {"adv", &ToblePlatform::ProcessAdv},
-    {"connect", &ToblePlatform::ProcessConnect}, {"scan", &ToblePlatform::ProcessScan},
-    {"send", &ToblePlatform::ProcessSend},       {"show", &ToblePlatform::ProcessSend}};
+    {"help", &ToblePlatform::ProcessHelp},       {"diag", &ToblePlatform::ProcessDiag},
+    {"adv", &ToblePlatform::ProcessAdv},         {"scan", &ToblePlatform::ProcessScan},
+    {"connect", &ToblePlatform::ProcessConnect}, {"disconnect", &ToblePlatform::ProcessDisconnect},
+    {"mtu", &ToblePlatform::ProcessMtu},         {"subscribe", &ToblePlatform::ProcessSubscribe},
+    {"send", &ToblePlatform::ProcessSend},       {"role", &ToblePlatform::ProcessRole},
+    {"link", &ToblePlatform::ProcessLink},       {"show", &ToblePlatform::ProcessShow}};
 
 ToblePlatform::ToblePlatform(Interpreter &aInterpreter)
     : mInterpreter(aInterpreter)
     , mLinkType(kConnectionLinkTypeGatt)
+    , mRole(OT_TOBLE_ROLE_PERIPHERAL)
 {
     memset(mConns, 0, sizeof(mConns));
     otPlatTobleInit(mInterpreter.mInstance);
-}
-
-otError ToblePlatform::ProcessHelp(uint8_t aArgsLength, char *aArgs[])
-{
-    OT_UNUSED_VARIABLE(aArgsLength);
-    OT_UNUSED_VARIABLE(aArgs);
-
-    for (size_t i = 0; i < OT_ARRAY_LENGTH(sCommands); i++)
-    {
-        mInterpreter.mServer->OutputFormat("%s\r\n", sCommands[i].mName);
-    }
-
-    return OT_ERROR_NONE;
-}
-
-otError ToblePlatform::ProcessAdv(uint8_t aArgsLength, char *aArgs[])
-{
-    otError          error = OT_ERROR_INVALID_ARGS;
-    long             value;
-    otTobleAdvConfig config;
-    uint8_t          advData[OT_TOBLE_ADV_DATA_MAX_LENGTH];
-    int              advDataLength;
-
-    VerifyOrExit(aArgsLength >= 1, error = OT_ERROR_INVALID_ARGS);
-
-    if ((strcmp(aArgs[0], "start") == 0) && (aArgsLength == 3))
-    {
-        SuccessOrExit(error = Interpreter::ParseLong(aArgs[1], value));
-        VerifyOrExit((advDataLength = Interpreter::Hex2Bin(aArgs[2], advData, sizeof(advData))) > 0,
-                     error = OT_ERROR_INVALID_ARGS);
-
-        config.mType     = OT_TOBLE_ADV_IND;
-        config.mInterval = static_cast<uint16_t>(value);
-        config.mData     = advData;
-        config.mLength   = static_cast<uint16_t>(advDataLength);
-
-        SuccessOrExit(error = otPlatTobleAdvStart(mInterpreter.mInstance, &config));
-        mRole = OT_TOBLE_ROLE_PERIPHERAL;
-    }
-    else if (strcmp(aArgs[0], "stop") == 0)
-    {
-        error = otPlatTobleAdvStop(mInterpreter.mInstance);
-    }
-
-exit:
-    return error;
-}
-
-otError ToblePlatform::ProcessScan(uint8_t aArgsLength, char *aArgs[])
-{
-    otError  error = OT_ERROR_INVALID_ARGS;
-    long     value;
-    uint16_t interval;
-    uint16_t window;
-
-    VerifyOrExit(aArgsLength >= 1, error = OT_ERROR_INVALID_ARGS);
-
-    if ((strcmp(aArgs[0], "start") == 0) && (aArgsLength == 3))
-    {
-        SuccessOrExit(error = Interpreter::ParseLong(aArgs[1], value));
-        interval = static_cast<uint16_t>(value);
-        SuccessOrExit(error = Interpreter::ParseLong(aArgs[2], value));
-        window = static_cast<uint16_t>(value);
-
-        SuccessOrExit(error = otPlatTobleScanStart(mInterpreter.mInstance, interval, window));
-        mRole = OT_TOBLE_ROLE_CENTRAL;
-
-        mInterpreter.mServer->OutputFormat(
-            "\r\n| advType | addrType |   address    | rssi | AD or Scan Rsp Data |\r\n");
-        mInterpreter.mServer->OutputFormat("+---------+----------+--------------+------+---------------------|\r\n");
-    }
-    else if (strcmp(aArgs[0], "stop") == 0)
-    {
-        error = otPlatTobleScanStop(mInterpreter.mInstance);
-    }
-
-exit:
-    return error;
-}
-
-void ToblePlatform::ReverseBuf(uint8_t *aBuffer, uint8_t aLength)
-{
-    uint8_t temp;
-
-    for (uint8_t i = 0; i < aLength / 2; i++)
-    {
-        temp                     = aBuffer[i];
-        aBuffer[i]               = aBuffer[aLength - 1 - i];
-        aBuffer[aLength - 1 - i] = temp;
-    }
 }
 
 ToblePlatform::Connection *ToblePlatform::FindConnection(otTobleConnection *aConn)
@@ -163,24 +77,262 @@ ToblePlatform::Connection *ToblePlatform::FindConnection(otTobleConnection *aCon
     return conn;
 }
 
-ToblePlatform::Connection *ToblePlatform::GetNewConnection(void)
+uint8_t ToblePlatform::GetConnectionId(otTobleConnection *aConn)
 {
-    return FindConnection(NULL);
+    uint8_t index = 0xff;
+
+    Connection *connSession = GetConnection(aConn);
+
+    if (connSession != NULL)
+    {
+        index = GetConnectionId(connSession);
+    }
+
+    return index;
 }
 
-ToblePlatform::Connection *ToblePlatform::GetConnection(otTobleConnection *aConn)
+uint8_t ToblePlatform::GetNumValidConnections(void)
 {
-    return FindConnection(aConn);
+    uint8_t count = 0;
+
+    for (Connection *conn = &mConns[0]; conn < OT_ARRAY_END(mConns); conn++)
+    {
+        if (conn->mPlatConn != NULL)
+        {
+            count++;
+        }
+    }
+
+    return count;
 }
 
-ToblePlatform::Connection *ToblePlatform::GetConnection(uint8_t aConnId)
+const char *ToblePlatform::StateToString(State aState)
 {
-    return (aConnId < kNumConnections) ? &mConns[aConnId] : NULL;
+    const char *string = "Unknown";
+
+    switch (aState)
+    {
+    case kStateFree:
+        string = "Free";
+        break;
+
+    case kStateConnecting:
+        string = "Connecting";
+        break;
+
+    case kStateConnected:
+        string = "Connected";
+        break;
+
+    case kStateReady:
+        string = "Ready";
+        break;
+
+    case kStateDisconnecting:
+        string = "Disconnesting";
+        break;
+
+    default:
+        break;
+    }
+
+    return string;
 }
 
-uint8_t ToblePlatform::GetConnectionId(Connection *aConn)
+const char *ToblePlatform::LinkTypeToString(otTobleConnectionLinkType aLinkType)
 {
-    return static_cast<uint8_t>(aConn - &mConns[0]);
+    const char *string = "Unknown";
+
+    if (aLinkType == kConnectionLinkTypeGatt)
+    {
+        string = "gatt";
+    }
+    else if (aLinkType == kConnectionLinkTypeL2Cap)
+    {
+        string = "l2cap";
+    }
+
+    return string;
+}
+
+otError ToblePlatform::ProcessHelp(uint8_t aArgsLength, char *aArgs[])
+{
+    OT_UNUSED_VARIABLE(aArgsLength);
+    OT_UNUSED_VARIABLE(aArgs);
+
+    for (size_t i = 0; i < OT_ARRAY_LENGTH(sCommands); i++)
+    {
+        mInterpreter.mServer->OutputFormat("%s\r\n", sCommands[i].mName);
+    }
+
+    return OT_ERROR_NONE;
+}
+
+otError ToblePlatform::ProcessDiag(uint8_t aArgsLength, char *aArgs[])
+{
+    otError error = OT_ERROR_NONE;
+
+    VerifyOrExit(aArgsLength == 1, error = OT_ERROR_INVALID_ARGS);
+
+    if (strcmp(aArgs[0], "start") == 0)
+    {
+        otPlatTobleDiagModeSet(mInterpreter.mInstance, true);
+    }
+    else if (strcmp(aArgs[0], "stop") == 0)
+    {
+        otPlatTobleDiagModeSet(mInterpreter.mInstance, false);
+    }
+    else
+    {
+        error = OT_ERROR_INVALID_ARGS;
+    }
+
+exit:
+    return error;
+}
+
+otError ToblePlatform::ProcessAdv(uint8_t aArgsLength, char *aArgs[])
+{
+    otError error = OT_ERROR_INVALID_ARGS;
+    long    value;
+
+    VerifyOrExit(aArgsLength >= 1, error = OT_ERROR_INVALID_ARGS);
+
+    if ((strcmp(aArgs[0], "start") == 0) && (aArgsLength == 2))
+    {
+        const uint8_t advData[] = {0x02, 0x01, 0x06, 0x12, 0x16, 0xfb, 0xff, 0x30, 0x00, 0x00, 0x01,
+                                   0x00, 0x02, 0xfc, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
+        const uint8_t scanRsp[] = {0x0c, 0x16, 0xfb, 0xff, 0x31, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
+
+        SuccessOrExit(error = Interpreter::ParseLong(aArgs[1], value));
+
+        SuccessOrExit(error = otPlatTobleGapAdvDataSet(mInterpreter.mInstance, advData, sizeof(advData)));
+        SuccessOrExit(error = otPlatTobleGapScanResponseSet(mInterpreter.mInstance, scanRsp, sizeof(scanRsp)));
+
+        SuccessOrExit(
+            error = otPlatTobleGapAdvStart(mInterpreter.mInstance, OT_TOBLE_ADV_IND, static_cast<uint16_t>(value)));
+    }
+    else if (strcmp(aArgs[0], "stop") == 0)
+    {
+        error = otPlatTobleGapAdvStop(mInterpreter.mInstance);
+    }
+
+exit:
+    return error;
+}
+
+otError ToblePlatform::ProcessScan(uint8_t aArgsLength, char *aArgs[])
+{
+    otError  error = OT_ERROR_INVALID_ARGS;
+    long     value;
+    uint16_t interval;
+    uint16_t window;
+    bool     active;
+
+    VerifyOrExit(aArgsLength >= 1, error = OT_ERROR_INVALID_ARGS);
+
+    if ((strcmp(aArgs[0], "start") == 0) && (aArgsLength == 4))
+    {
+        SuccessOrExit(error = Interpreter::ParseLong(aArgs[1], value));
+        interval = static_cast<uint16_t>(value);
+        SuccessOrExit(error = Interpreter::ParseLong(aArgs[2], value));
+        window = static_cast<uint16_t>(value);
+        SuccessOrExit(error = Interpreter::ParseLong(aArgs[3], value));
+        active = (static_cast<uint16_t>(value) > 0);
+
+        SuccessOrExit(error = otPlatTobleGapScanStart(mInterpreter.mInstance, interval, window, active));
+        mRole = OT_TOBLE_ROLE_CENTRAL;
+
+        mInterpreter.mServer->OutputFormat(
+            "\r\n|     advType     | addrType |   address    | rssi | AD or Scan Rsp Data |\r\n");
+        mInterpreter.mServer->OutputFormat(
+            "+-----------------+----------+--------------+------+---------------------|\r\n");
+    }
+    else if (strcmp(aArgs[0], "stop") == 0)
+    {
+        error = otPlatTobleGapScanStop(mInterpreter.mInstance);
+    }
+
+exit:
+    return error;
+}
+
+otError ToblePlatform::ProcessRole(uint8_t aArgsLength, char *aArgs[])
+{
+    otError error = OT_ERROR_NONE;
+
+    VerifyOrExit(aArgsLength == 1, error = OT_ERROR_INVALID_ARGS);
+
+    if (strcmp(aArgs[0], "peripheral") == 0)
+    {
+        mRole = OT_TOBLE_ROLE_PERIPHERAL;
+    }
+    else if (strcmp(aArgs[0], "central") == 0)
+    {
+        mRole = OT_TOBLE_ROLE_CENTRAL;
+    }
+    else
+    {
+        mInterpreter.mServer->OutputFormat("%s", mRole == OT_TOBLE_ROLE_CENTRAL ? "peripheral" : "central");
+    }
+
+exit:
+    return error;
+}
+
+otError ToblePlatform::ProcessLink(uint8_t aArgsLength, char *aArgs[])
+{
+    otError error = OT_ERROR_NONE;
+
+    VerifyOrExit(aArgsLength <= 1, error = OT_ERROR_INVALID_ARGS);
+
+    if (aArgsLength == 0)
+    {
+        mInterpreter.mServer->OutputFormat("%s\r\n", LinkTypeToString(mLinkType));
+    }
+    else
+    {
+        if (GetNumValidConnections() != 0)
+        {
+            mInterpreter.mServer->OutputFormat("Please disconnect all connection first.");
+            ExitNow();
+        }
+
+        if (strcmp(aArgs[0], "gatt") == 0)
+        {
+            mLinkType = kConnectionLinkTypeGatt;
+        }
+#if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
+        else if (strcmp(aArgs[0], "l2cap") == 0)
+        {
+            mLinkType = kConnectionLinkTypeL2Cap;
+        }
+#endif
+        else
+        {
+            error = OT_ERROR_INVALID_ARGS;
+        }
+    }
+
+exit:
+    return error;
+}
+
+otError ToblePlatform::ProcessMtu(uint8_t aArgsLength, char *aArgs[])
+{
+    otError     error = OT_ERROR_NONE;
+    long        value;
+    Connection *connSession;
+
+    VerifyOrExit(aArgsLength == 1, error = OT_ERROR_INVALID_ARGS);
+
+    SuccessOrExit(error = Interpreter::ParseLong(aArgs[0], value));
+    VerifyOrExit((connSession = GetConnection(static_cast<uint8_t>(value))) != NULL, error = OT_ERROR_NOT_FOUND);
+
+    mInterpreter.mServer->OutputFormat("%d\r\n", otPlatTobleGetMtu(mInterpreter.mInstance, connSession->mPlatConn));
+
+exit:
+    return error;
 }
 
 otError ToblePlatform::ProcessConnect(uint8_t aArgsLength, char *aArgs[])
@@ -204,31 +356,29 @@ otError ToblePlatform::ProcessConnect(uint8_t aArgsLength, char *aArgs[])
 
         VerifyOrExit(Interpreter::Hex2Bin(aArgs[2], address.mAddress, OT_TOBLE_ADDRESS_SIZE) == OT_TOBLE_ADDRESS_SIZE,
                      error = OT_ERROR_INVALID_ARGS);
-        ReverseBuf(address.mAddress, OT_TOBLE_ADDRESS_SIZE);
 
         config.mInterval     = 200;
         config.mScanInterval = 200;
         config.mScanWindow   = 50;
-        config.mLinkType     = kConnectionLinkTypeGatt;
+        config.mPsm          = 0x80;
+        config.mL2capMtu     = 500;
+        config.mLinkType     = mLinkType;
 
-        conn = otPlatTobleCreateConnection(mInterpreter.mInstance, &address, &config);
-        VerifyOrExit(conn != NULL, OT_NOOP);
+        VerifyOrExit((conn = otPlatTobleCreateConnection(mInterpreter.mInstance, &address, &config)) != NULL,
+                     error = OT_ERROR_FAILED);
 
         VerifyOrExit((connSession = GetNewConnection()) != NULL, error = OT_ERROR_NO_BUFS);
+
         connSession->mState    = kStateConnecting;
         connSession->mPlatConn = conn;
         memcpy(&connSession->mAddress, &address, sizeof(address));
-
-        mInterpreter.mServer->OutputFormat("ConnId=%d\r\n", GetConnectionId(connSession));
-        mRole = OT_TOBLE_ROLE_CENTRAL;
     }
     else if ((strcmp(aArgs[0], "stop") == 0) && (aArgsLength >= 2))
     {
         Connection *connSession;
 
         SuccessOrExit(error = Interpreter::ParseLong(aArgs[1], value));
-        connSession = GetConnection(static_cast<uint8_t>(value));
-        VerifyOrExit(connSession != NULL, error = OT_ERROR_NOT_FOUND);
+        VerifyOrExit((connSession = GetConnection(static_cast<uint8_t>(value))) != NULL, error = OT_ERROR_NOT_FOUND);
 
         otPlatTobleDisconnect(mInterpreter.mInstance, connSession->mPlatConn);
         connSession->mState = kStateDisconnecting;
@@ -242,25 +392,62 @@ exit:
     return error;
 }
 
-otError ToblePlatform::ProcessSend(uint8_t aArgsLength, char *aArgs[])
+otError ToblePlatform::ProcessDisconnect(uint8_t aArgsLength, char *aArgs[])
 {
     otError     error = OT_ERROR_NONE;
     long        value;
-    uint8_t     buffer[200];
-    uint16_t    length;
-    uint8_t     id;
+    Connection *connSession;
+
+    VerifyOrExit(aArgsLength == 1, error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = Interpreter::ParseLong(aArgs[0], value));
+    VerifyOrExit((connSession = GetConnection(static_cast<uint8_t>(value))) != NULL, error = OT_ERROR_NOT_FOUND);
+
+    otPlatTobleDisconnect(mInterpreter.mInstance, connSession->mPlatConn);
+
+exit:
+    return error;
+}
+
+otError ToblePlatform::ProcessSubscribe(uint8_t aArgsLength, char *aArgs[])
+{
+    otError     error = OT_ERROR_NONE;
+    long        value;
+    uint8_t     index;
     Connection *connSession;
 
     VerifyOrExit(aArgsLength == 2, error = OT_ERROR_INVALID_ARGS);
 
     SuccessOrExit(error = Interpreter::ParseLong(aArgs[0], value));
-    id = static_cast<uint8_t>(value);
+
+    index       = static_cast<uint8_t>(value);
+    connSession = GetConnection(index);
+    VerifyOrExit(connSession != NULL, error = OT_ERROR_NOT_FOUND);
+
+    SuccessOrExit(error = Interpreter::ParseLong(aArgs[1], value));
+    otPlatTobleC2Subscribe(mInterpreter.mInstance, connSession->mPlatConn, value >= 1);
+
+exit:
+    return error;
+}
+
+otError ToblePlatform::ProcessSend(uint8_t aArgsLength, char *aArgs[])
+{
+    otError     error = OT_ERROR_NONE;
+    long        value;
+    uint8_t     buffer[256];
+    uint16_t    length;
+    Connection *connSession;
+
+    VerifyOrExit(aArgsLength == 2, error = OT_ERROR_INVALID_ARGS);
+
+    SuccessOrExit(error = Interpreter::ParseLong(aArgs[0], value));
+    VerifyOrExit((connSession = GetConnection(static_cast<uint8_t>(value))) != NULL, error = OT_ERROR_NOT_FOUND);
 
     SuccessOrExit(error = Interpreter::ParseLong(aArgs[1], value));
     length = static_cast<uint16_t>(value);
     VerifyOrExit(length <= sizeof(buffer), error = OT_ERROR_INVALID_ARGS);
-    connSession = GetConnection(id);
-    VerifyOrExit(connSession != NULL, error = OT_ERROR_NOT_FOUND);
+    VerifyOrExit(length <= otPlatTobleGetMtu(mInterpreter.mInstance, connSession->mPlatConn),
+                 error = OT_ERROR_INVALID_ARGS);
 
     for (uint16_t i = 0; i < length; i++)
     {
@@ -285,6 +472,7 @@ otError ToblePlatform::ProcessSend(uint8_t aArgsLength, char *aArgs[])
 #if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
     else if (mLinkType == kConnectionLinkTypeL2Cap)
     {
+        mInterpreter.mServer->OutputFormat("kConnectionLinkTypeL2Cap\r\n");
         otPlatTobleL2capSend(mInterpreter.mInstance, connSession->mPlatConn, buffer, length);
     }
 #endif
@@ -297,39 +485,13 @@ exit:
     return error;
 }
 
-const char *ToblePlatform::GetStateString(State aState)
-{
-    const char *string = "Unknown";
-
-    switch (aState)
-    {
-    case kStateFree:
-        string = "Free";
-        break;
-    case kStateConnecting:
-        string = "Connecting";
-        break;
-    case kStateConnected:
-        string = "Connected";
-        break;
-    case kStateReady:
-        string = "Ready";
-        break;
-    case kStateDisconnecting:
-        string = "Disconnesting";
-        break;
-    }
-
-    return string;
-}
-
 otError ToblePlatform::ProcessShow(uint8_t aArgsLength, char *aArgs[])
 {
     OT_UNUSED_VARIABLE(aArgsLength);
     OT_UNUSED_VARIABLE(aArgs);
 
-    mInterpreter.mServer->OutputFormat("\r\n| ConnectionId | State |   Address |\r\n");
-    mInterpreter.mServer->OutputFormat("+---------+----------+--------------+------+---------------------|\r\n");
+    mInterpreter.mServer->OutputFormat("\r\n| Index |     State     |   Address    |  PlatConn  |\r\n");
+    mInterpreter.mServer->OutputFormat("+-------+---------------+--------------|------------|\r\n");
 
     for (uint8_t i = 0; i < OT_ARRAY_LENGTH(mConns); i++)
     {
@@ -337,9 +499,9 @@ otError ToblePlatform::ProcessShow(uint8_t aArgsLength, char *aArgs[])
         {
             uint8_t *address = mConns[i].mAddress.mAddress;
 
-            mInterpreter.mServer->OutputFormat("| %d  |   %s |  %02x%02x%02x%02x%02x%02x \r\n", i,
-                                               GetStateString(mConns[i].mState), address[0], address[1], address[2],
-                                               address[3], address[4], address[5]);
+            mInterpreter.mServer->OutputFormat("| %-5d | %-13s | %02x%02x%02x%02x%02x%02x | 0x%08x |\r\n", i,
+                                               StateToString(mConns[i].mState), address[0], address[1], address[2],
+                                               address[3], address[4], address[5], (uint32_t)mConns[i].mPlatConn);
         }
     }
 
@@ -369,56 +531,9 @@ otError ToblePlatform::Process(uint8_t aArgsLength, char *aArgs[])
     return error;
 }
 
-void ToblePlatform::HandleConnected(otTobleConnection *aConn)
+const char *ToblePlatform::AdvTypeToString(otTobleAdvType aType)
 {
-    Connection *connSession = GetConnection(aConn);
-
-    VerifyOrExit(connSession != NULL, OT_NOOP);
-    connSession->mState = kStateConnected;
-
-    mInterpreter.mServer->OutputFormat("Connected : ConnId=%d\r\n", GetConnectionId(connSession));
-
-exit:
-    return;
-}
-
-void ToblePlatform::HandleDisconnected(otTobleConnection *aConn)
-{
-    Connection *connSession = GetConnection(aConn);
-
-    VerifyOrExit(connSession != NULL, OT_NOOP);
-
-    mInterpreter.mServer->OutputFormat("Disconnected : ConnId=%d\r\n", GetConnectionId(connSession));
-    connSession->mState    = kStateFree;
-    connSession->mPlatConn = NULL;
-
-exit:
-    return;
-}
-
-void PrintBytes(const uint8_t *aBuffer, uint8_t aLength)
-{
-    for (uint8_t i = 0; i < aLength; i++)
-    {
-        Server::sServer->OutputFormat("%02x", aBuffer[i]);
-    }
-}
-
-extern "C" void otPlatTobleDiagHandleConnected(otInstance *aInstance, otTobleConnection *aConn)
-{
-    OT_UNUSED_VARIABLE(aInstance);
-    Server::sServer->GetInterpreter().GetToblePlatform().HandleConnected(aConn);
-}
-
-extern "C" void otPlatTobleDiagHandleDisconnected(otInstance *aInstance, otTobleConnection *aConn)
-{
-    OT_UNUSED_VARIABLE(aInstance);
-    Server::sServer->GetInterpreter().GetToblePlatform().HandleDisconnected(aConn);
-}
-
-const char *GetTobleAdvTypeString(otTobleAdvType aType)
-{
-    const char *string;
+    const char *string = "Unknown";
 
     switch (aType)
     {
@@ -439,12 +554,150 @@ const char *GetTobleAdvTypeString(otTobleAdvType aType)
         break;
 
     default:
-        string = "unknown";
         break;
     }
 
     return string;
 }
+
+void ToblePlatform::PrintBytes(const uint8_t *aBuffer, uint8_t aLength)
+{
+    for (uint8_t i = 0; i < aLength; i++)
+    {
+        mInterpreter.mServer->OutputFormat("%02x", aBuffer[i]);
+    }
+}
+
+//------------------------------------------------------------------------------------
+
+void ToblePlatform::HandleAdvReceived(otTobleAdvType aAdvType, otTobleRadioPacket *aAdvPacket)
+{
+    otTobleAddress *srcAddress = &aAdvPacket->mSrcAddress;
+
+    mInterpreter.mServer->OutputFormat("| %-15s |    %d     | %02x%02x%02x%02x%02x%02x | %3d  | ",
+                                       AdvTypeToString(aAdvType), srcAddress->mType, srcAddress->mAddress[0],
+                                       srcAddress->mAddress[1], srcAddress->mAddress[2], srcAddress->mAddress[3],
+                                       srcAddress->mAddress[4], srcAddress->mAddress[5], aAdvPacket->mRssi);
+    PrintBytes(aAdvPacket->mData, aAdvPacket->mLength);
+    mInterpreter.mServer->OutputFormat("\r\n");
+}
+
+void ToblePlatform::HandleScanRespReceived(otTobleRadioPacket *aAdvPacket)
+{
+    otTobleAddress *srcAddress = &aAdvPacket->mSrcAddress;
+
+    mInterpreter.mServer->OutputFormat("| SCAN_RSP        |    %d     | %02x%02x%02x%02x%02x%02x | %3d  | ",
+                                       srcAddress->mType, srcAddress->mAddress[0], srcAddress->mAddress[1],
+                                       srcAddress->mAddress[2], srcAddress->mAddress[3], srcAddress->mAddress[4],
+                                       srcAddress->mAddress[5], aAdvPacket->mRssi);
+    PrintBytes(aAdvPacket->mData, aAdvPacket->mLength);
+    mInterpreter.mServer->OutputFormat("\r\n");
+}
+
+void ToblePlatform::HandleConnected(otTobleConnection *aConn)
+{
+    Connection *connSession = GetConnection(aConn);
+
+    if (connSession != NULL)
+    {
+        connSession->mState = kStateConnected;
+    }
+    else
+    {
+        VerifyOrExit((connSession = GetNewConnection()) != NULL, OT_NOOP);
+        connSession->mState    = kStateConnected;
+        connSession->mPlatConn = aConn;
+        memset(&connSession->mAddress, 0, sizeof(otTobleAddress));
+    }
+
+    mInterpreter.mServer->OutputFormat("HandleConnected: index=%d, platConn=0x%08x\r\n", GetConnectionId(connSession),
+                                       (uint32_t)aConn);
+
+exit:
+    return;
+}
+
+void ToblePlatform::HandleDisconnected(otTobleConnection *aConn)
+{
+    Connection *connSession = GetConnection(aConn);
+
+    mInterpreter.mServer->OutputFormat("HandleDisconnected: platConn=0x%08x\r\n", (uint32_t)aConn);
+
+    VerifyOrExit(connSession != NULL, OT_NOOP);
+
+    mInterpreter.mServer->OutputFormat("HandleDisconnected: index=%d, platConn=0x%08x\r\n",
+                                       GetConnectionId(connSession), (uint32_t)aConn);
+    connSession->mState    = kStateFree;
+    connSession->mPlatConn = NULL;
+
+exit:
+    return;
+}
+
+void ToblePlatform::HandleConnectionIsReady(otTobleConnection *aConn, otTobleConnectionLinkType aLinkType)
+{
+    Connection *connSession = GetConnection(aConn);
+
+    VerifyOrExit(connSession != NULL, OT_NOOP);
+
+    mInterpreter.mServer->OutputFormat("HandleConnectionIsReady: index=%d, linkType=%s \r\n",
+                                       GetConnectionId(connSession), LinkTypeToString(aLinkType));
+    connSession->mState = kStateReady;
+
+exit:
+    return;
+}
+
+void ToblePlatform::HandleC1WriteDone(otTobleConnection *aConn)
+{
+    OT_UNUSED_VARIABLE(aConn);
+    mInterpreter.mServer->OutputFormat("HandleC1WriteDone: index=%d\r\n", GetConnectionId(aConn));
+}
+
+void ToblePlatform::HandleC2Indication(otTobleConnection *aConn, const uint8_t *aBuffer, uint16_t aLength)
+{
+    OT_UNUSED_VARIABLE(aConn);
+    OT_UNUSED_VARIABLE(aBuffer);
+    mInterpreter.mServer->OutputFormat("HandleC2Indication: index=%d, length=%d\r\n", GetConnectionId(aConn), aLength);
+}
+
+void ToblePlatform::HandleC2Subscribed(otTobleConnection *aConn, bool aIsSubscribed)
+{
+    OT_UNUSED_VARIABLE(aConn);
+    mInterpreter.mServer->OutputFormat("HandleC2Subscribed: index=%d, isSubscribed=%s\r\n", GetConnectionId(aConn),
+                                       aIsSubscribed ? "True" : "False");
+}
+
+void ToblePlatform::HandleC2IndicateDone(otTobleConnection *aConn)
+{
+    OT_UNUSED_VARIABLE(aConn);
+    mInterpreter.mServer->OutputFormat("HandleC2IndicateDone: index=%d\r\n", GetConnectionId(aConn));
+}
+
+void ToblePlatform::HandleC1Write(otTobleConnection *aConn, const uint8_t *aBuffer, uint16_t aLength)
+{
+    OT_UNUSED_VARIABLE(aConn);
+    OT_UNUSED_VARIABLE(aBuffer);
+    mInterpreter.mServer->OutputFormat("HandleC1Write: index=%d, length=%d\r\n", GetConnectionId(aConn), aLength);
+}
+
+#if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
+void ToblePlatform::HandleL2capFrameReceived(otTobleConnection *aConn, const uint8_t *aBuffer, uint16_t aLength)
+{
+    OT_UNUSED_VARIABLE(aConn);
+    OT_UNUSED_VARIABLE(aBuffer);
+    mInterpreter.mServer->OutputFormat("HandleL2capFrameReceived: index=%d, length=%d\r\n", GetConnectionId(aConn),
+                                       aLength);
+}
+
+void ToblePlatform::HandleL2capSendDone(otTobleConnection *aConn)
+{
+    OT_UNUSED_VARIABLE(aConn);
+    mInterpreter.mServer->OutputFormat("HandleL2capSendDone: index=%d\r\n", GetConnectionId(aConn));
+}
+#endif
+
+//------------------------------------------------------------------------------------
 
 extern "C" void otPlatTobleDiagHandleAdv(otInstance *          aInstance,
                                          otTobleAdvType        aAdvType,
@@ -455,13 +708,36 @@ extern "C" void otPlatTobleDiagHandleAdv(otInstance *          aInstance,
 {
     OT_UNUSED_VARIABLE(aInstance);
     OT_UNUSED_VARIABLE(aAdvType);
+    OT_UNUSED_VARIABLE(aSource);
+    OT_UNUSED_VARIABLE(aData);
+    OT_UNUSED_VARIABLE(aLength);
+    OT_UNUSED_VARIABLE(aRssi);
+}
 
-    Server::sServer->OutputFormat("| %-8s|    %d     | %02x%02x%02x%02x%02x%02x | %3d  | ",
-                                  GetTobleAdvTypeString(aAdvType), aSource->mType, aSource->mAddress[5],
-                                  aSource->mAddress[4], aSource->mAddress[3], aSource->mAddress[2],
-                                  aSource->mAddress[1], aSource->mAddress[0], aRssi);
-    PrintBytes(aData, aLength);
-    Server::sServer->OutputFormat("\r\n");
+extern "C" void otPlatTobleDiagGapOnAdvReceived(otInstance *        aInstance,
+                                                otTobleAdvType      aAdvType,
+                                                otTobleRadioPacket *aAdvPacket)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+    Server::sServer->GetInterpreter().GetToblePlatform().HandleAdvReceived(aAdvType, aAdvPacket);
+}
+
+extern "C" void otPlatTobleDiagGapOnScanRespReceived(otInstance *aInstance, otTobleRadioPacket *aAdvPacket)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+    Server::sServer->GetInterpreter().GetToblePlatform().HandleScanRespReceived(aAdvPacket);
+}
+
+extern "C" void otPlatTobleDiagHandleConnected(otInstance *aInstance, otTobleConnection *aConn)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+    Server::sServer->GetInterpreter().GetToblePlatform().HandleConnected(aConn);
+}
+
+extern "C" void otPlatTobleDiagHandleDisconnected(otInstance *aInstance, otTobleConnection *aConn)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+    Server::sServer->GetInterpreter().GetToblePlatform().HandleDisconnected(aConn);
 }
 
 extern "C" void otPlatTobleDiagHandleConnectionIsReady(otInstance *              aInstance,
@@ -469,16 +745,13 @@ extern "C" void otPlatTobleDiagHandleConnectionIsReady(otInstance *             
                                                        otTobleConnectionLinkType aLinkType)
 {
     OT_UNUSED_VARIABLE(aInstance);
-
-    Server::sServer->OutputFormat("TobleConnectionIsReady : ConnId=%d LinkType=%s\r\n", aConn,
-                                  aLinkType == kConnectionLinkTypeGatt ? "Gatt" : "L2Cap");
+    Server::sServer->GetInterpreter().GetToblePlatform().HandleConnectionIsReady(aConn, aLinkType);
 }
 
 extern "C" void otPlatTobleDiagHandleC1WriteDone(otInstance *aInstance, otTobleConnection *aConn)
 {
     OT_UNUSED_VARIABLE(aInstance);
-
-    Server::sServer->OutputFormat("C1WriteDone : ConnId=%d\r\n", aConn);
+    Server::sServer->GetInterpreter().GetToblePlatform().HandleC1WriteDone(aConn);
 }
 
 extern "C" void otPlatTobleDiagHandleC2Indication(otInstance *       aInstance,
@@ -487,24 +760,19 @@ extern "C" void otPlatTobleDiagHandleC2Indication(otInstance *       aInstance,
                                                   uint16_t           aLength)
 {
     OT_UNUSED_VARIABLE(aInstance);
-    OT_UNUSED_VARIABLE(aBuffer);
-
-    Server::sServer->OutputFormat("C2Indication : ConnId=%d Length=%d\r\n", aConn, aLength);
+    Server::sServer->GetInterpreter().GetToblePlatform().HandleC2Indication(aConn, aBuffer, aLength);
 }
 
 extern "C" void otPlatTobleDiagHandleC2Subscribed(otInstance *aInstance, otTobleConnection *aConn, bool aIsSubscribed)
 {
     OT_UNUSED_VARIABLE(aInstance);
-
-    Server::sServer->OutputFormat("C2Subscribed : ConnId=%d IsSubscribed=%s\r\n", aConn,
-                                  aIsSubscribed ? "True" : "False");
+    Server::sServer->GetInterpreter().GetToblePlatform().HandleC2Subscribed(aConn, aIsSubscribed);
 }
 
 extern "C" void otPlatTobleDiagHandleC2IndicateDone(otInstance *aInstance, otTobleConnection *aConn)
 {
     OT_UNUSED_VARIABLE(aInstance);
-
-    Server::sServer->OutputFormat("C2indicationDone : ConnId=%d \r\n", aConn);
+    Server::sServer->GetInterpreter().GetToblePlatform().HandleC2IndicateDone(aConn);
 }
 
 extern "C" void otPlatTobleDiagHandleC1Write(otInstance *       aInstance,
@@ -513,10 +781,34 @@ extern "C" void otPlatTobleDiagHandleC1Write(otInstance *       aInstance,
                                              uint16_t           aLength)
 {
     OT_UNUSED_VARIABLE(aInstance);
-    OT_UNUSED_VARIABLE(aBuffer);
-
-    Server::sServer->OutputFormat("C1Write : ConnId=%d Length=%d\r\n", aConn, aLength);
+    Server::sServer->GetInterpreter().GetToblePlatform().HandleC1Write(aConn, aBuffer, aLength);
 }
+
+extern "C" void otPlatTobleDiagL2capSendDone(otInstance *aInstance, otTobleConnection *aConn)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+#if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
+    Server::sServer->GetInterpreter().GetToblePlatform().HandleL2capSendDone(aConn);
+#else
+    OT_UNUSED_VARIABLE(aConn);
+#endif
+}
+
+extern "C" void otPlatTobleDiagL2CapFrameReceived(otInstance *       aInstance,
+                                                  otTobleConnection *aConn,
+                                                  const uint8_t *    aBuffer,
+                                                  uint16_t           aLength)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+#if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
+    Server::sServer->GetInterpreter().GetToblePlatform().HandleL2capFrameReceived(aConn, aBuffer, aLength);
+#else
+    OT_UNUSED_VARIABLE(aConn);
+    OT_UNUSED_VARIABLE(aBuffer);
+    OT_UNUSED_VARIABLE(aLength);
+#endif
+}
+
 } // namespace Cli
 } // namespace ot
 

@@ -307,7 +307,7 @@ LOG_FLAGS += -DOPENTHREAD_CONFIG_LOG_PREPEND_REGION=1
 endif
 
 ifeq ($(TOBLE),1)
-COMMONCFLAGS                   += -DOPENTHREAD_CONFIG_TOBLE_ENABLE=1
+configure_OPTIONS              += --enable-toble=yes
 endif
 
 ifeq ($(L2CAP),1)

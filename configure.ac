@@ -448,6 +448,37 @@ AC_MSG_RESULT(${enable_builtin_mbedtls})
 AM_CONDITIONAL([OPENTHREAD_ENABLE_BUILTIN_MBEDTLS], [test "${enable_builtin_mbedtls}" = "yes"])
 
 #
+# ToBLE
+#
+
+AC_MSG_CHECKING([whether to enable ToBLE])
+AC_ARG_ENABLE(toble,
+    [AS_HELP_STRING([--enable-toble], [Enable ToBLE@<:@default=no@:>@.])],
+    [
+        case "${enableval}" in
+
+        no|yes)
+            enable_toble=${enableval}
+            ;;
+
+        *)
+            AC_MSG_ERROR([Invalid value ${enable_toble} for --enable-toble])
+            ;;
+        esac
+    ],
+    [enable_toble=no])
+
+if test "$enable_toble" = "yes"; then
+    CPPFLAGS="${CPPFLAGS} -DOPENTHREAD_CONFIG_TOBLE_ENABLE=1"
+else
+    CPPFLAGS="${CPPFLAGS} -DOPENTHREAD_CONFIG_TOBLE_ENABLE=0"
+fi
+
+AC_MSG_RESULT(${enable_toble})
+AM_CONDITIONAL([OPENTHREAD_CONFIG_TOBLE_ENABLE], [test "${enable_toble}" = "yes"])
+
+
+#
 # POSIX Daemon
 #
 

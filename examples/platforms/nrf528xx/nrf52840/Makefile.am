@@ -31,6 +31,7 @@ include $(abs_top_nlbuild_autotools_dir)/automake/pre.am
 lib_LIBRARIES                                                                                              = \
     libopenthread-nrf52840.a                                                                                 \
     libopenthread-nrf52840-sdk.a                                                                             \
+    libopenthread-nrf52840-softdevice.a                                                                      \
     libopenthread-nrf52840-softdevice-sdk.a                                                                  \
     libopenthread-nrf52840-transport.a                                                                       \
     $(NULL)
@@ -95,6 +96,7 @@ COMMONCPPFLAGS                                                                  
     -I$(top_srcdir)/third_party/NordicSemiconductor/libraries/atomic                                         \
     -I$(top_srcdir)/third_party/NordicSemiconductor/libraries/block_dev                                      \
     -I$(top_srcdir)/third_party/NordicSemiconductor/libraries/delay                                          \
+    -I$(top_srcdir)/third_party/NordicSemiconductor/libraries/experimental_section_vars                      \
     -I$(top_srcdir)/third_party/NordicSemiconductor/libraries/usb                                            \
     -I$(top_srcdir)/third_party/NordicSemiconductor/libraries/usb/config                                     \
     -I$(top_srcdir)/third_party/NordicSemiconductor/libraries/usb/class/cdc                                  \
@@ -106,6 +108,7 @@ COMMONCPPFLAGS                                                                  
     -I$(top_srcdir)/third_party/NordicSemiconductor/nrfx/drivers/include                                     \
     -I$(top_srcdir)/third_party/NordicSemiconductor/nrfx/mdk                                                 \
     -I$(top_srcdir)/third_party/NordicSemiconductor/nrfx/soc                                                 \
+    -I$(top_srcdir)/third_party/NordicSemiconductor/softdevice/common                                        \
     -I$(top_srcdir)/third_party/NordicSemiconductor/softdevice/s140/headers                                  \
     -I$(top_srcdir)/third_party/NordicSemiconductor/softdevice/s140/headers/nrf52                            \
     -Wno-unused-parameter                                                                                    \
@@ -123,6 +126,7 @@ PLATFORM_COMMON_SOURCES                                                         
     src/radio.c                                                                                              \
     src/system.c                                                                                             \
     src/temp.c                                                                                               \
+    src/toble.c                                                                                              \
     $(NULL)
 
 TRANSPORT_SOURCES                                                                                          = \
@@ -162,6 +166,18 @@ libopenthread_nrf52840_a_SOURCES                                                
     $(SINGLEPHY_SOURCES)                                                                                     \
     $(NULL)
 
+libopenthread_nrf52840_softdevice_a_CPPFLAGS                                                               = \
+    $(COMMONCPPFLAGS)                                                                                        \
+    $(SOFTDEVICE_CPPFLAGS)                                                                                   \
+    -DSOFTDEVICE_OT_MANAGED                                                                                  \
+    $(NULL)
+
+libopenthread_nrf52840_softdevice_a_SOURCES                                                                = \
+    $(PLATFORM_SOURCES)                                                                                      \
+    $(SOFTDEVICE_SOURCES)                                                                                    \
+    $(HWCRYPTO_SOURCES)                                                                                      \
+    $(NULL)
+
 libopenthread_nrf52840_sdk_a_CPPFLAGS                                                                      = \
     $(COMMONCPPFLAGS)                                                                                        \
     $(SINGLEPHY_CPPFLAGS)                                                                                    \
@@ -193,6 +209,10 @@ libopenthread_nrf52840_transport_a_SOURCES                                      
 Dash                                                                                                       = -
 
 libopenthread_nrf52840_a_LIBADD                                                                            = \
+    $(shell find $(top_builddir)/examples/platforms/utils $(Dash)type f $(Dash)name "*.o")                   \
+    $(shell find $(top_builddir)/third_party/jlink/SEGGER_RTT_V640/RTT $(Dash)type f $(Dash)name "*.o")
+
+libopenthread_nrf52840_softdevice_a_LIBADD                                                                 = \
     $(shell find $(top_builddir)/examples/platforms/utils $(Dash)type f $(Dash)name "*.o")                   \
     $(shell find $(top_builddir)/third_party/jlink/SEGGER_RTT_V640/RTT $(Dash)type f $(Dash)name "*.o")
 

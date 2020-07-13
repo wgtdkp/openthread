@@ -37,7 +37,7 @@ GROUP(-lgcc -lc -lnosys)
 MEMORY
 {
     FLASH (rx) : ORIGIN = 0x27000, LENGTH = 0xd9000
-    RAM (rwx) :  ORIGIN = 0x20002a38, LENGTH = 0x3d5c8
+    RAM (rwx) :  ORIGIN = 0x20010000, LENGTH = 0x30000
 }
 
 OUTPUT_FORMAT ("elf32-littlearm", "elf32-bigarm", "elf32-littlearm")

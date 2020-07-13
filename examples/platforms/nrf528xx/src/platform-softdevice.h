@@ -71,4 +71,20 @@ void otSysSoftdeviceSocEvtHandler(uint32_t aEvtId);
  */
 void otSysSoftdeviceRaalConfig(const otSysSoftdeviceRaalConfigParams *aConfig);
 
+#if SOFTDEVICE_OT_MANAGED
+
+/**
+ * Function used to initialize the Softdevice.
+ *
+ */
+void otSysSoftdeviceInit(void);
+
+/**
+ * Function for processing SoftDevice events.
+ *
+ */
+void otSysSoftdeviceProcess(void);
+
+#endif // SOFTDEVICE_OT_MANAGED
+
 #endif // PLATFORM_SOFTDEVICE_H_

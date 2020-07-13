@@ -29,7 +29,7 @@
 /**
  * @file
  * @brief
- *   This file defines a TOBLE (Thread over BLE) platform APIs.
+ *   This file defines a ToBLE (Thread over BLE) platform APIs.
  *
  */
 
@@ -142,6 +142,8 @@ typedef struct otTobleConnectionConfig
     uint16_t mInterval;     ///< Connection interval (in ms).
     uint16_t mScanInterval; ///< Scan interval while connecting (in ms).
     uint16_t mScanWindow;   ///< Scan window while connection (in ms).
+    uint16_t mPsm;          ///< L2CAP Protocol Service Mulitplexer.
+    uint16_t mL2capMtu;     ///< L2CAP MTU.
 
     otTobleConnectionLinkType mLinkType; ///< Which link type should be used for this connection.
 } otTobleConnectionConfig;
@@ -278,7 +280,7 @@ extern void otPlatTobleHandleAdv(otInstance *          aInstance,
  * @param[in] aPeerAddress   The peer to connect to.
  * @param[in] aConfig        The connection configuration.
  *
- * @returns On success an identifier for the created connection, or OT_TOBLE_CONNECTION_ID_INVALID on failure.
+ * @returns On success an identifier for the created connection, or NULL on failure.
  *
  */
 otTobleConnection *otPlatTobleCreateConnection(otInstance *             aInstance,
@@ -340,7 +342,7 @@ extern void otPlatTobleHandleC1WriteDone(otInstance *aInstance, otTobleConnectio
  *
  * @param[in] aInstance    A pointer to OpenThread instance.
  * @param[in] aConn        A pointer to a BLE connection..
- * @param[in] aSubscrive   TRUE to subscribe, FALSE to un-subscribe.
+ * @param[in] aSubscribe   TRUE to subscribe, FALSE to un-subscribe.
  *
  */
 void otPlatTobleC2Subscribe(otInstance *aInstance, otTobleConnection *aConn, bool aSubscribe);
@@ -475,10 +477,10 @@ otTobleConnectionLinkType otPlatTobleGetConnectionLinkType(const otTobleConnecti
  * @param[in] aLength     Length of buffer (number of bytes).
  *
  */
-void otPlatTobleL2CapFrameReceived(otInstance *       aInstance,
-                                   otTobleConnection *aConn,
-                                   const uint8_t *    aBuffer,
-                                   uint16_t           aLength);
+extern void otPlatTobleL2CapFrameReceived(otInstance *       aInstance,
+                                          otTobleConnection *aConn,
+                                          const uint8_t *    aBuffer,
+                                          uint16_t           aLength);
 
 /**
  * This function sends a packet through L2Cap link layer.
@@ -500,14 +502,48 @@ void otPlatTobleL2CapFrameReceived(otInstance *       aInstance,
  * @retval OT_ERROR_NO_BUFS         No available internal buffer found.
  *
  */
-extern otError otPlatTobleL2capSend(otInstance *       aInstance,
-                                    otTobleConnection *aConn,
-                                    const uint8_t *    aBuffer,
-                                    uint16_t           aLength);
+otError otPlatTobleL2capSend(otInstance *aInstance, otTobleConnection *aConn, const uint8_t *aBuffer, uint16_t aLength);
+extern void otPlatTobleL2capSendDone(otInstance *aInstance, otTobleConnection *aConn);
 
-bool otPlatTobleDiagModeGet();
+//----new toble API----
+
+/**
+ * This structure represents an BLE packet.
+ *
+ */
+typedef struct otTobleRadioPacket
+{
+    otTobleAddress mSrcAddress; ///< The advertisement source address.
+    uint8_t *      mData;       ///< The advertisement data - sequence of "<len, type, data>" structures.
+    uint16_t       mLength;     ///< The advertisement data length.
+    int8_t         mRssi;       ///< The RSSI of the received advertisement (or 127 if not available).
+} otTobleRadioPacket;
+
+otError otPlatTobleGapAdvDataSet(otInstance *aInstance, const uint8_t *aAdvData, uint8_t aAdvDataLength);
+otError otPlatTobleGapScanResponseSet(otInstance *aInstance, const uint8_t *aScanResponse, uint8_t aScanResponseLength);
+
+otError otPlatTobleGapAdvStart(otInstance *aInstance, otTobleAdvType aType, uint16_t aInterval);
+
+otError otPlatTobleGapAdvStop(otInstance *aInstance);
+
+otError otPlatTobleGapScanStart(otInstance *aInstance, uint16_t aInterval, uint16_t aWindow, bool aActive);
+otError otPlatTobleGapScanStop(otInstance *aInstance);
+
+extern void otPlatTobleGapOnAdvReceived(otInstance *aInstance, otTobleAdvType aAdvType, otTobleRadioPacket *aAdvPacket);
+extern void otPlatTobleGapOnScanRespReceived(otInstance *aInstance, otTobleRadioPacket *aAdvPacket);
+
+//----toble diag API---
+
+extern void otPlatTobleDiagL2capSendDone(otInstance *aInstance, otTobleConnection *aConn);
+
+bool otPlatTobleDiagModeGet(void);
 void otPlatTobleDiagModeSet(otInstance *aInstance, bool aMode);
 
+extern void otPlatTobleDiagGapOnAdvReceived(otInstance *        aInstance,
+                                            otTobleAdvType      aAdvType,
+                                            otTobleRadioPacket *aAdvPacket);
+
+extern void otPlatTobleDiagGapOnScanRespReceived(otInstance *aInstance, otTobleRadioPacket *aAdvPacket);
 extern void otPlatTobleDiagHandleConnected(otInstance *aInstance, otTobleConnection *aConn);
 extern void otPlatTobleDiagHandleDisconnected(otInstance *aInstance, otTobleConnection *aConn);
 extern void otPlatTobleDiagHandleAdv(otInstance *          aInstance,
@@ -531,10 +567,10 @@ extern void otPlatTobleDiagHandleC1Write(otInstance *       aInstance,
                                          const uint8_t *    aBuffer,
                                          uint16_t           aLength);
 
-extern otError otPlatTobleDiagL2capSend(otInstance *       aInstance,
-                                        otTobleConnection *aConn,
-                                        const uint8_t *    aBuffer,
-                                        uint16_t           aLength);
+extern void otPlatTobleDiagL2CapFrameReceived(otInstance *       aInstance,
+                                              otTobleConnection *aConn,
+                                              const uint8_t *    aBuffer,
+                                              uint16_t           aLength);
 
 #ifdef __cplusplus
 } // extern "C"

@@ -30,12 +30,21 @@
 # nrf52840 platform-specific Makefile
 #
 
+if OPENTHREAD_CONFIG_TOBLE_ENABLE
+LDADD_COMMON                                                                                       += \
+    $(top_builddir)/examples/platforms/nrf528xx/libopenthread-nrf52840-softdevice.a                   \
+    $(top_builddir)/examples/platforms/nrf528xx/libopenthread-nrf52840-transport.a                    \
+    $(top_builddir)/third_party/NordicSemiconductor/libnordicsemi-nrf52840-sdk-softdevice.a           \
+    $(top_builddir)/third_party/NordicSemiconductor/libnordicsemi-nrf52840-radio-driver-softdevice.a  \
+    $(NULL)
+else
 LDADD_COMMON                                                                           += \
     $(top_builddir)/examples/platforms/nrf528xx/libopenthread-nrf52840.a                  \
     $(top_builddir)/examples/platforms/nrf528xx/libopenthread-nrf52840-transport.a        \
     $(top_builddir)/third_party/NordicSemiconductor/libnordicsemi-nrf52840-sdk.a          \
     $(top_builddir)/third_party/NordicSemiconductor/libnordicsemi-nrf52840-radio-driver.a \
     $(NULL)
+endif
 
 if !OPENTHREAD_ENABLE_BUILTIN_MBEDTLS
 LDADD_COMMON                                                                                              += \

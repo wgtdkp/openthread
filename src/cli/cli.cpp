@@ -239,7 +239,7 @@ const struct Command Interpreter::sCommands[] = {
     {"state", &Interpreter::ProcessState},
     {"thread", &Interpreter::ProcessThread},
 #if OPENTHREAD_CONFIG_TOBLE_ENABLE
-    {"toble", &Interpreter::ProcessToblePlatform},
+    {"tobleplat", &Interpreter::ProcessToblePlatform},
 #endif
     {"txpower", &Interpreter::ProcessTxPower},
     {"udp", &Interpreter::ProcessUdp},
