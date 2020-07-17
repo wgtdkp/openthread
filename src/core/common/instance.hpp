@@ -791,14 +791,9 @@ template <> inline Toble::ConnectionTable &Instance::Get(void)
     return mToble.mConnTable;
 }
 
-template <> inline Toble::Transport &Instance::Get(void)
-{
-    return mToble.mTransport;
-}
-
 template <> inline Toble::Btp &Instance::Get(void)
 {
-    return mToble.mTransport.mBtp;
+    return mToble.mBtp;
 }
 
 #endif // OPENTHREAD_CONFIG_TOBLE_ENABLE

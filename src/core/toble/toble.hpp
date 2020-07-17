@@ -47,7 +47,6 @@
 #include "toble/controller_central.hpp"
 #include "toble/controller_peripheral.hpp"
 #include "toble/platform.hpp"
-#include "toble/transport.hpp"
 
 #if OPENTHREAD_CONFIG_TOBLE_ENABLE
 
@@ -128,7 +127,7 @@ private:
 
     Platform        mPlatform;
     ConnectionTable mConnTable;
-    Transport       mTransport;
+    Btp             mBtp;
 
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
     Central::Controller mCentralController;

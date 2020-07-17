@@ -129,14 +129,7 @@ exit:
 Connection *ConnectionTable::GetNew(void)
 {
     // Find an element with `mPlatConn` being NULL.
-    Connection *conn = Find(NULL);
-
-    if (conn != NULL)
-    {
-        conn->mTransport = Transport::kUnspecified;
-    }
-
-    return conn;
+    return Find(NULL);
 }
 
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE

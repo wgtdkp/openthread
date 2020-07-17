@@ -565,8 +565,6 @@ void Controller::HandleAdv(Platform::AdvType aAdvType, Platform::AdvPacket &aAdv
     conn->mRssi      = aAdvPacket.mRssi;
     conn->mState     = Connection::kConnecting;
 
-    conn->mTransport = Transport::kBtp;
-
     switch (mState)
     {
     case kStateRxScanning:

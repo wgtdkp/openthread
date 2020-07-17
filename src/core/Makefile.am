@@ -250,7 +250,6 @@ SOURCES_COMMON                             = \
     toble/controller_peripheral.cpp          \
     toble/platform.cpp                       \
     toble/toble.cpp                          \
-    toble/transport.cpp                      \
     utils/channel_manager.cpp                \
     utils/channel_monitor.cpp                \
     utils/child_supervision.cpp              \
@@ -471,7 +470,6 @@ HEADERS_COMMON                             = \
     toble/controller_peripheral.hpp          \
     toble/platform.hpp                       \
     toble/toble.hpp                          \
-    toble/transport.hpp                      \
     utils/channel_manager.hpp                \
     utils/channel_monitor.hpp                \
     utils/child_supervision.hpp              \

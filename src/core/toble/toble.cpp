@@ -53,7 +53,7 @@ Toble::Toble(ot::Instance &aInstance)
     , mTxFrame()
     , mPlatform(aInstance)
     , mConnTable()
-    , mTransport(aInstance)
+    , mBtp(aInstance)
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
     , mCentralController(aInstance)
 #endif

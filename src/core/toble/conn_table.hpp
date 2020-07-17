@@ -37,8 +37,8 @@
 #include "openthread-core-config.h"
 
 #include "mac/mac_frame.hpp"
+#include "toble/btp.hpp"
 #include "toble/platform.hpp"
-#include "toble/transport.hpp"
 
 #if OPENTHREAD_CONFIG_TOBLE_ENABLE
 
@@ -51,7 +51,6 @@ public:
     bool IsInUse(void) const { return (mPlatConn != NULL); }
 
     Platform::Connection *mPlatConn;
-    Transport::Type       mTransport;
 
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
     enum
