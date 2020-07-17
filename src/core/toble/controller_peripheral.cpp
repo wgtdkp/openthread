@@ -64,7 +64,7 @@ void Controller::SetState(State aState)
 {
     if (aState != mState)
     {
-        otLogNoteBle("PeriCtrl::State: %s -> %s", StateToString(mState), StateToString(aState));
+        otLogInfoBle("PeriCtrl::State: %s -> %s", StateToString(mState), StateToString(aState));
         mState = aState;
     }
 }
@@ -185,7 +185,6 @@ void Controller::StartRxModeAdv(void)
 
     otLogDebgBle("PeriCtrl::StartRxModeAdv(AdvInfo:[%s])", info.ToString().AsCString());
 
-    Get<Platform>().StopAdv();
     Get<Platform>().StartAdv(config);
 }
 
@@ -235,7 +234,6 @@ otError Controller::Transmit(Mac::TxFrame &aFrame)
 
         // All ToBLE transports strip MAC FCS.
         Get<Btp>().Send(*mConn, mTxFrame->GetPsdu(), mTxFrame->GetPsduLength() - Mac::Frame::GetFcsSize());
-        // Get<Btp>().Send(*mConn, mTxFrame->GetPsdu(), mTxFrame->GetPsduLength());
     }
 
 exit:
@@ -262,11 +260,8 @@ void Controller::StartTxModeAdv(void)
     info.mSrcShort    = Get<Mac::Mac>().GetShortAddress();
     info.mSrcExtended = Get<Mac::Mac>().GetExtAddress();
 
-    // Get PanId and destination from the current tx frame
-
-    error = mTxFrame->GetDstPanId(info.mPanId);
-
-    if (error != OT_ERROR_NONE)
+    // Get PanId from the current tx frame
+    if (mTxFrame->GetDstPanId(info.mPanId) != OT_ERROR_NONE)
     {
         info.mPanId = Get<Mac::Mac>().GetPanId();
     }
@@ -279,17 +274,9 @@ void Controller::StartTxModeAdv(void)
         ExitNow();
     }
 
-    error = mTxFrame->GetDstAddr(info.mDest);
-    OT_ASSERT(error == OT_ERROR_NONE);
-
-    if (info.mDest.IsShort())
-    {
-        info.mLinkState = Advertisement::kTxReadyToShort;
-    }
-    else
-    {
-        info.mLinkState = Advertisement::kTxReadyToExtended;
-    }
+    // Get destination from the current tx frame
+    OT_ASSERT((error = mTxFrame->GetDstAddr(info.mDest)) == OT_ERROR_NONE);
+    info.mLinkState = info.mDest.IsShort() ? Advertisement::kTxReadyToShort : Advertisement::kTxReadyToExtended;
 
     advData.Populate(info);
 
@@ -302,7 +289,6 @@ void Controller::StartTxModeAdv(void)
 
     otLogInfoBle("PeriCtrl::StartTxModeAdv(AdvInfo:[%s])", info.ToString().AsCString());
 
-    Get<Platform>().StopAdv();
     Get<Platform>().StartAdv(config);
 
 exit:
@@ -393,6 +379,7 @@ void Controller::HandleConnected(Platform::Connection *aPlatConn)
         Get<Platform>().StopAdv();
         mConn = Get<ConnectionTable>().GetNew();
         VerifyOrExit(mConn != NULL, StartRxModeAdv());
+
         mConn->mPlatConn = aPlatConn;
         Get<Btp>().Start(*mConn);
         mTimer.Start(kTransportStartTimeout + kRxModeConnTimeout);
@@ -450,7 +437,7 @@ void Controller::HandleDisconnected(Platform::Connection *aPlatConn)
         break;
 
     case kStateTxAdvertising:
-        // Cannot happen (ignore).
+        OT_ASSERT(false); // Cannot happen.
         break;
     }
 

@@ -83,7 +83,7 @@ exit:
 
 void Btp::Stop(Connection &aConn)
 {
-    otLogDebgBle("Btp::Stop");
+    otLogNoteBle("Btp::Stop");
 
     // Optional future enhancement: On central we can consider
     // unsubscribe from C2.

@@ -65,7 +65,7 @@ void Controller::SetState(State aState)
 {
     if (aState != mState)
     {
-        otLogNoteBle("CentCtrl::State %s -> %s", StateToString(mState), StateToString(aState));
+        otLogInfoBle("CentCtrl::State %s -> %s", StateToString(mState), StateToString(aState));
         mState = aState;
     }
 }
@@ -399,8 +399,6 @@ void Controller::HandleScanResponse(Platform::AdvPacket &aAdvPacket)
 
 void Controller::HandleAdv(Platform::AdvType aAdvType, Platform::AdvPacket &aAdvPacket)
 {
-    Address aSource = *static_cast<Address *>(&aAdvPacket.mSrcAddress);
-
     Advertisement              advData(const_cast<uint8_t *>(aAdvPacket.mData), aAdvPacket.mLength);
     Advertisement::Info        advInfo;
     Mac::Address               srcAddr;
@@ -434,7 +432,6 @@ void Controller::HandleAdv(Platform::AdvType aAdvType, Platform::AdvPacket &aAdv
 
     // Decide based on the current state and the received adv info
     // whether to establish a connection with the peer or not.
-
     VerifyOrExit(advInfo.mPanId == Get<Mac::Mac>().GetPanId(), OT_NOOP);
 
     switch (mState)
@@ -534,7 +531,7 @@ void Controller::HandleAdv(Platform::AdvType aAdvType, Platform::AdvPacket &aAdv
     config.mLinkType     = kConnectionLinkTypeGatt;
 
     Get<Platform>().StopScan();
-    conn->mPlatConn = Get<Platform>().CreateConnection(aSource, config);
+    conn->mPlatConn = Get<Platform>().CreateConnection(*static_cast<const Address *>(&aAdvPacket.mSrcAddress), config);
 
     if (conn->mPlatConn == NULL)
     {
@@ -577,7 +574,6 @@ void Controller::HandleAdv(Platform::AdvType aAdvType, Platform::AdvPacket &aAdv
         conn->mDisconnectTime = TimerMilli::GetNow() + kTxWaitToConnectTimeout;
         SetState(kStateTxConnecting);
         mTxConn = conn;
-
         break;
 
     default:

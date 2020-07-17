@@ -118,7 +118,7 @@ void Btp::HandleHandshake(Connection &aConn, const HandshakeResponse &aResponse)
     session.mRxSeqnoAcked   = 255;
     session.mRxWindow       = kWindowSize;
 
-    otLogDebgBle("BTP connected: MTU=%d, TxWindow = %d", session.mMtu, session.mTxWindow);
+    otLogNoteBle("BTP connected: MTU=%d, TxWindow = %d", session.mMtu, session.mTxWindow);
 
     if ((session.mSendOffset != session.mSendLength) || session.GetRxWindowRemaining() <= 1)
     {

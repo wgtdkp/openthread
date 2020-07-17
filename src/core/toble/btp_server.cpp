@@ -54,7 +54,6 @@ void Btp::HandleC2Subscribed(Platform::Connection *aPlatConn, bool aIsSubscribed
     {
         VerifyOrExit(conn->mSession.mState == kStateHandshake, OT_NOOP);
         otLogDebgBle("Btp::HandleC2Subscribed(subscribed)");
-        otLogDebgBle("Btp::IndicateC2(mResponse)");
         Get<Platform>().IndicateC2(aPlatConn, &conn->mSession.mResponse, sizeof(HandshakeResponse));
     }
     else
@@ -87,6 +86,7 @@ void Btp::HandleC2IndicateDone(Platform::Connection *aPlatConn)
         break;
     case kStateHandshake:
         conn->mSession.mState = kStateConnected;
+        otLogNoteBle("BTP connected: MTU=%d, TxWindow = %d", conn->mSession.mMtu, conn->mSession.mTxWindow);
 
         if ((conn->mSession.mSendOffset != conn->mSession.mSendLength) || conn->mSession.GetRxWindowRemaining() <= 1)
         {
