@@ -112,25 +112,17 @@ typedef void otTobleConnection; ///< A type representing a ToBLE connection.
 #define OT_TOBLE_ADV_DATA_MAX_LENGTH 31 ///< Maximum length of advertising data [bytes].
 
 /**
- * This enumeration represents the ToBLE link mode.
- *
- */
-typedef enum otTobleLinkMode
-{
-    OT_TOBLE_LINK_MODE_PERIPHERAL = 0, ///< ToBLE link is in peripheral mode.
-    OT_TOBLE_LINK_MODE_CENTRAL    = 1, ///< ToBLE link is in central mode.
-} otTobleLinkMode;
-
-/**
  * This type represents advertisement configuration.
  *
  */
 typedef struct otTobleAdvConfig
 {
-    otTobleAdvType mType;     ///< Advertisement type.
-    uint16_t       mInterval; ///< Advertisement interval (in ms).
-    const uint8_t *mData;     ///< Advertisement data - Formatted as sequence of "<len, type, data>" structures.
-    uint16_t       mLength;   ///< Advertisement data length (number of bytes).
+    otTobleAdvType mType;        ///< Advertisement type.
+    uint16_t       mInterval;    ///< Advertisement interval (in ms).
+    const uint8_t *mData;        ///< Advertisement data - Formatted as sequence of "<len, type, data>" structures.
+    uint16_t       mLength;      ///< Advertisement data length (number of bytes).
+    const uint8_t *mScanRspData; ///< Scan reesponse - Formatted as sequence of "<len, type, data>" structures.
+    uint16_t       mScanRspDataLength; ///< Scan response data length (number of bytes).
 } otTobleAdvConfig;
 
 /**
@@ -231,7 +223,7 @@ uint16_t otPlatTobleGetMtu(otInstance *aInstance, otTobleConnection *aConn);
  * @retval OT_ERROR_INVALID_STATE   Scan could not start (in middle of connecting).
  *
  */
-otError otPlatTobleScanStart(otInstance *aInstance, uint16_t aInterval, uint16_t aWindow);
+otError otPlatTobleScanStart(otInstance *aInstance, uint16_t aInterval, uint16_t aWindow, bool aActive);
 
 /**
  * This function request scanning to be stopped.
@@ -511,26 +503,16 @@ extern void otPlatTobleL2capSendDone(otInstance *aInstance, otTobleConnection *a
  * This structure represents an BLE packet.
  *
  */
-typedef struct otTobleRadioPacket
+typedef struct otTobleAdvPacket
 {
     otTobleAddress mSrcAddress; ///< The advertisement source address.
     uint8_t *      mData;       ///< The advertisement data - sequence of "<len, type, data>" structures.
     uint16_t       mLength;     ///< The advertisement data length.
     int8_t         mRssi;       ///< The RSSI of the received advertisement (or 127 if not available).
-} otTobleRadioPacket;
+} otTobleAdvPacket;
 
-otError otPlatTobleGapAdvDataSet(otInstance *aInstance, const uint8_t *aAdvData, uint8_t aAdvDataLength);
-otError otPlatTobleGapScanResponseSet(otInstance *aInstance, const uint8_t *aScanResponse, uint8_t aScanResponseLength);
-
-otError otPlatTobleGapAdvStart(otInstance *aInstance, otTobleAdvType aType, uint16_t aInterval);
-
-otError otPlatTobleGapAdvStop(otInstance *aInstance);
-
-otError otPlatTobleGapScanStart(otInstance *aInstance, uint16_t aInterval, uint16_t aWindow, bool aActive);
-otError otPlatTobleGapScanStop(otInstance *aInstance);
-
-extern void otPlatTobleGapOnAdvReceived(otInstance *aInstance, otTobleAdvType aAdvType, otTobleRadioPacket *aAdvPacket);
-extern void otPlatTobleGapOnScanRespReceived(otInstance *aInstance, otTobleRadioPacket *aAdvPacket);
+extern void otPlatTobleGapOnAdvReceived(otInstance *aInstance, otTobleAdvType aAdvType, otTobleAdvPacket *aAdvPacket);
+extern void otPlatTobleGapOnScanRespReceived(otInstance *aInstance, otTobleAdvPacket *aAdvPacket);
 
 //----toble diag API---
 
@@ -539,11 +521,11 @@ extern void otPlatTobleDiagL2capSendDone(otInstance *aInstance, otTobleConnectio
 bool otPlatTobleDiagModeGet(void);
 void otPlatTobleDiagModeSet(otInstance *aInstance, bool aMode);
 
-extern void otPlatTobleDiagGapOnAdvReceived(otInstance *        aInstance,
-                                            otTobleAdvType      aAdvType,
-                                            otTobleRadioPacket *aAdvPacket);
+extern void otPlatTobleDiagGapOnAdvReceived(otInstance *      aInstance,
+                                            otTobleAdvType    aAdvType,
+                                            otTobleAdvPacket *aAdvPacket);
 
-extern void otPlatTobleDiagGapOnScanRespReceived(otInstance *aInstance, otTobleRadioPacket *aAdvPacket);
+extern void otPlatTobleDiagGapOnScanRespReceived(otInstance *aInstance, otTobleAdvPacket *aAdvPacket);
 extern void otPlatTobleDiagHandleConnected(otInstance *aInstance, otTobleConnection *aConn);
 extern void otPlatTobleDiagHandleDisconnected(otInstance *aInstance, otTobleConnection *aConn);
 extern void otPlatTobleDiagHandleAdv(otInstance *          aInstance,

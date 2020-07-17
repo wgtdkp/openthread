@@ -5,7 +5,7 @@ The OpenThread ToBLE Platform APIs will be invoked via the OpenThread CLI.
 ## Quick Start
 ### Build
 ```
-make -f ./examples/Makefile-nrf52840 BOOTLOADER=SOFTDEVICE TOBLE=1
+make -f ./examples/Makefile-nrf52840 TOBLE=1 DISABLE_BUILTIN_MBEDTLS=0
 ```
 
 ### Donwload nRF5 SDK

@@ -85,26 +85,37 @@ private:
 
     enum
     {
-        kRxScanInterval = 40, // Scan interval while in rx mode (msec, same as kConnectionInterval).
-        kRxScanWindow   = 30, // Scan window while in rx mode (msec, larger than peripheral's kTxModeAdvInterval).
+        kRxScanInterval = OPENTHREAD_CONFIG_TOBLE_SCAN_INTERVAL, // Scan interval while in rx mode (msec, same as
+                                                                 // kConnectionInterval).
+        kRxScanWindow = OPENTHREAD_CONFIG_TOBLE_SCAN_WINDOW,     // Scan window while in rx mode (msec, larger than
+                                                                 // peripheral's kTxModeAdvInterval).
 
-        kTxScanInterval = 40, // Scan interval while in tx mode (msec, same as kConnectionInterval).
-        kTxScanWindow   = 30, // Scan window while in tx mode (msec, larger than peripheral's kRxModeAdvInterval).
+        kTxScanInterval = OPENTHREAD_CONFIG_TOBLE_SCAN_INTERVAL, // Scan interval while in tx mode (msec, same as
+                                                                 // kConnectionInterval).
+        kTxScanWindow = OPENTHREAD_CONFIG_TOBLE_SCAN_WINDOW,     // Scan window while in tx mode (msec, larger than
+                                                                 // peripheral's kRxModeAdvInterval).
 
-        kRxWaitToConnectTimeout = 1600, // Wait time to establish a connection for rx.
-        kTxWaitToConnectTimeout = 1600, // Wait time to establish a connection for tx.
+        kRxWaitToConnectTimeout =
+            OPENTHREAD_CONFIG_TOBLE_WAIT_TO_CONNECTION_TIMEOUT, // Wait time to establish a connection for rx.
+        kTxWaitToConnectTimeout =
+            OPENTHREAD_CONFIG_TOBLE_WAIT_TO_CONNECTION_TIMEOUT, // Wait time to establish a connection for tx.
 
-        kTxTimeout = 1000, // Tx timeout interval (max time waiting for entire tx operation to finish.
+        kTxTimeout = OPENTHREAD_CONFIG_TOBLE_TRANSMIT_TIMEOUT, // Tx timeout interval (max time waiting for entire tx
+                                                               // operation to finish.
 
-        kRxDisconnectTimeout      = 5000, // Timeout to disconnect from an idle connected connection.
-        kTxDisconnectTimeout      = 5000, // Timeout to disconnect from a connection in sending/tx state.
-        kTxErrorDisconnectTimeout = 5,    // Timeout to disconnect after a tx error happens.
+        kRxDisconnectTimeout =
+            OPENTHREAD_CONFIG_TOBLE_DISCONNECT_TIMEOUT, // Timeout to disconnect from an idle connected connection.
+        kTxDisconnectTimeout =
+            OPENTHREAD_CONFIG_TOBLE_DISCONNECT_TIMEOUT, // Timeout to disconnect from a connection in sending/tx state.
+        kTxErrorDisconnectTimeout = 5,                  // Timeout to disconnect after a tx error happens.
 
-        kConnectionInterval     = 40, // The connection data interval (msec).
-        kConnectionScanInterval = 40, // Scan interval when trying to establish a connection (msec, same as
-                                      // kConnectionInterval).
-        kConnectionScanWindow = 30,   // Scan window when trying to establish a connection (msec, larger than
-                                      // peripheral's kTxModeAdvInterval).
+        kConnectionInterval = OPENTHREAD_CONFIG_TOBLE_CONNECTION_INTERVAL, // The connection data interval (msec).
+        kConnectionScanInterval =
+            OPENTHREAD_CONFIG_TOBLE_CONNECTION_SCAN_INTERVAL, // Scan interval when trying to establish a connection
+                                                              // (msec, same as kConnectionInterval).
+        kConnectionScanWindow =
+            OPENTHREAD_CONFIG_TOBLE_CONNECTION_SCAN_WINDOW, // Scan window when trying to establish a connection (msec,
+                                                            // larger than peripheral's kTxModeAdvInterval).
 
         kAckFrameLength = 5,
     };
@@ -117,11 +128,8 @@ private:
 
     void UpdateConnTimer(void);
 
-    void HandleAdv(Platform::AdvType aAdvType,
-                   const Address &   aSource,
-                   const uint8_t *   aData,
-                   uint16_t          aLength,
-                   int8_t            aRssi);
+    void HandleAdv(Platform::AdvType aAdvType, Platform::AdvPacket &aAdvPacket);
+    void HandleScanResponse(Platform::AdvPacket &aAdvPacket);
 
     void HandleConnected(Platform::Connection *aPlatConn);
     void HandleDisconnected(Platform::Connection *aPlatConn);

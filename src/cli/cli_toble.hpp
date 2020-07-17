@@ -26,30 +26,66 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "radio.hpp"
+/**
+ * @file
+ *   This file contains definitions for a simple CLI for the ToBLE.
+ */
 
-#include "common/locator-getters.hpp"
-#include "utils/otns.hpp"
+#ifndef CLI_TOBLE_HPP_
+#define CLI_TOBLE_HPP_
+
+#include "openthread-core-config.h"
+
+#include <openthread/toble.h>
+
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
 
 namespace ot {
+namespace Cli {
 
-#if !OPENTHREAD_CONFIG_TOBLE_ENABLE
-void Radio::SetExtendedAddress(const Mac::ExtAddress &aExtAddress)
+class Interpreter;
+
+/**
+ * This class implements a CLI for ToBLE API.
+ *
+ */
+class Toble
 {
-    otPlatRadioSetExtendedAddress(GetInstance(), &aExtAddress);
+public:
+    /**
+     * Constructor
+     *
+     * @param[in]  aInterpreter  The CLI interpreter.
+     *
+     */
+    explicit Toble(Interpreter &aInterpreter);
 
-#if (OPENTHREAD_MTD || OPENTHREAD_FTD) && OPENTHREAD_CONFIG_OTNS_ENABLE
-    Get<Utils::Otns>().EmitExtendedAddress(aExtAddress);
-#endif
-}
+    /**
+     * This method interprets a list of CLI arguments.
+     *
+     * @param[in]  aArgsLength  The number of elements in @p aArgs.
+     * @param[in]  aArgs        An array of command line arguments.
+     *
+     */
+    otError Process(uint8_t aArgsLength, char *aArgs[]);
 
-void Radio::SetShortAddress(Mac::ShortAddress aShortAddress)
-{
-    otPlatRadioSetShortAddress(GetInstance(), aShortAddress);
+private:
+    struct Command
+    {
+        const char *mName;
+        otError (Toble::*mCommand)(uint8_t aArgsLength, char *aArgs[]);
+    };
 
-#if (OPENTHREAD_MTD || OPENTHREAD_FTD) && OPENTHREAD_CONFIG_OTNS_ENABLE
-    Get<Utils::Otns>().EmitShortAddress(aShortAddress);
-#endif
-}
-#endif
+    otError ProcessHelp(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessLinkMode(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessTest(uint8_t aArgsLength, char *aArgs[]);
+
+    static const Command sCommands[];
+    Interpreter &        mInterpreter;
+};
+
+} // namespace Cli
 } // namespace ot
+
+#endif // OPENTHREAD_CONFIG_TOBLE_ENABLE
+#endif // CLI_TOBLE_HPP_

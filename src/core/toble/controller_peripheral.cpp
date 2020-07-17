@@ -161,6 +161,12 @@ void Controller::StartRxModeAdv(void)
     Advertisement::Info info;
     Platform::AdvConfig config;
 
+    info.mL2capTransport     = false;
+    info.mJoiningPermitted   = false;
+    info.mDtcEnabled         = false;
+    info.mBorderAgentEnabled = false;
+    info.mTobleRole          = AdvData::kBedPeripheral;
+
 #if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
     info.mL2capTransport = true;
     info.mL2capPsm       = Get<Platform>().GetL2capPsm();
@@ -176,14 +182,16 @@ void Controller::StartRxModeAdv(void)
 
     advData.Populate(info);
 
-    config.mType     = OT_TOBLE_ADV_NONCONN_IND;
-    config.mInterval = kRxModeAdvInterval;
-    config.mData     = advData.GetData();
-    config.mLength   = advData.GetLength();
+    config.mType              = OT_TOBLE_ADV_IND;
+    config.mInterval          = kRxModeAdvInterval;
+    config.mData              = advData.GetData();
+    config.mLength            = advData.GetLength();
+    config.mScanRspData       = NULL;
+    config.mScanRspDataLength = 0;
 
-    otLogInfoBle("PeriCtrl::StartRxModeAdv(AdvInfo:[%s])", info.ToString().AsCString());
-    otLogInfoBle("PeriCtrl: AdvData: %s", info.ToString().AsCString());
+    otLogDebgBle("PeriCtrl::StartRxModeAdv(AdvInfo:[%s])", info.ToString().AsCString());
 
+    Get<Platform>().StopAdv();
     Get<Platform>().StartAdv(config);
 }
 
@@ -247,6 +255,12 @@ void Controller::StartTxModeAdv(void)
     OT_ASSERT(mState == kStateTxAdvertising);
     OT_ASSERT(mTxFrame != NULL);
 
+    info.mL2capTransport     = false;
+    info.mJoiningPermitted   = false;
+    info.mDtcEnabled         = false;
+    info.mBorderAgentEnabled = false;
+    info.mTobleRole          = AdvData::kBedPeripheral;
+
 #if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
     info.mL2capTransport = true;
     info.mL2capPsm       = Get<Platform>().GetL2capPsm();
@@ -288,14 +302,16 @@ void Controller::StartTxModeAdv(void)
 
     advData.Populate(info);
 
-    config.mType     = OT_TOBLE_ADV_NONCONN_IND;
-    config.mInterval = kTxModeAdvInterval;
-    config.mData     = advData.GetData();
-    config.mLength   = advData.GetLength();
+    config.mType              = OT_TOBLE_ADV_IND;
+    config.mInterval          = kTxModeAdvInterval;
+    config.mData              = advData.GetData();
+    config.mLength            = advData.GetLength();
+    config.mScanRspData       = NULL;
+    config.mScanRspDataLength = 0;
 
     otLogInfoBle("PeriCtrl::StartTxModeAdv(AdvInfo:[%s])", info.ToString().AsCString());
-    otLogInfoBle("PeriCtrl: AdvData: %s", info.ToString().AsCString());
 
+    Get<Platform>().StopAdv();
     Get<Platform>().StartAdv(config);
 
 exit:

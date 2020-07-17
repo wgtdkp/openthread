@@ -38,6 +38,8 @@
 
 #include <openthread/platform/toble.h>
 
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+
 namespace ot {
 namespace Cli {
 
@@ -70,8 +72,8 @@ public:
     void HandleConnected(otTobleConnection *aConn);
     void HandleDisconnected(otTobleConnection *aConn);
 
-    void HandleAdvReceived(otTobleAdvType aAdvType, otTobleRadioPacket *aAdvPacket);
-    void HandleScanRespReceived(otTobleRadioPacket *aAdvPacket);
+    void HandleAdvReceived(otTobleAdvType aAdvType, otTobleAdvPacket *aAdvPacket);
+    void HandleScanRespReceived(otTobleAdvPacket *aAdvPacket);
     void HandleConnectionIsReady(otTobleConnection *aConn, otTobleConnectionLinkType aLinkType);
 
     void HandleC1WriteDone(otTobleConnection *aConn);
@@ -151,4 +153,5 @@ private:
 } // namespace Cli
 } // namespace ot
 
+#endif // OPENTHREAD_CONFIG_TOBLE_ENABLE
 #endif // CLI_TOBLE_PLATFORM_HPP_

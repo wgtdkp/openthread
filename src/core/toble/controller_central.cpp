@@ -45,8 +45,6 @@
 
 #if OPENTHREAD_CONFIG_TOBLE_ENABLE && OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
 
-#define DEBUG_SHOW_ALL_ADVERTISEMENTS 0
-
 namespace ot {
 namespace Toble {
 namespace Central {
@@ -393,24 +391,22 @@ void Controller::HandleTxTimer(void)
     }
 }
 
-void Controller::HandleAdv(Platform::AdvType aAdvType,
-                           const Address &   aSource,
-                           const uint8_t *   aData,
-                           uint16_t          aLength,
-                           int8_t            aRssi)
+void Controller::HandleScanResponse(Platform::AdvPacket &aAdvPacket)
 {
-    Advertisement              advData(const_cast<uint8_t *>(aData), aLength);
+    OT_UNUSED_VARIABLE(aAdvPacket);
+}
+
+void Controller::HandleAdv(Platform::AdvType aAdvType, Platform::AdvPacket &aAdvPacket)
+{
+    Address aSource = *static_cast<Address *>(&aAdvPacket.mSrcAddress);
+
+    Advertisement              advData(const_cast<uint8_t *>(aAdvPacket.mData), aAdvPacket.mLength);
     Advertisement::Info        advInfo;
     Mac::Address               srcAddr;
     Connection *               conn;
     Platform::ConnectionConfig config;
 
     VerifyOrExit((aAdvType == OT_TOBLE_ADV_IND) || (aAdvType == OT_TOBLE_ADV_DIRECT_IND), OT_NOOP);
-
-#if DEBUG_SHOW_ALL_ADVERTISEMENTS
-    otLogNoteBle("CentCtrl::HandleAdv(src:%s, rssi:%d, data:%s)", aSource.ToString().AsCString(), aRssi,
-                 advData.ToString().AsCString());
-#endif // DEBUG_SHOW_ALL_ADVERTISEMENTS
 
     switch (mState)
     {
@@ -433,7 +429,7 @@ void Controller::HandleAdv(Platform::AdvType aAdvType,
 
     SuccessOrExit(advData.Parse(advInfo));
 
-    otLogNoteBle("CentCtrl::HandleAdv(AdvInfo:[%s])", advInfo.ToString().AsCString());
+    otLogDebgBle("CentCtrl::HandleAdv(AdvInfo:[%s])", advInfo.ToString().AsCString());
 
     // Decide based on the current state and the received adv info
     // whether to establish a connection with the peer or not.
@@ -448,7 +444,6 @@ void Controller::HandleAdv(Platform::AdvType aAdvType,
         // peer is trying to transmit), and that the destination from adv data
         // matches our address or is broadcast.
 
-        // VerifyOrExit(advInfo.mFramePending, OT_NOOP);
         VerifyOrExit((advInfo.mLinkState == Advertisement::kTxReadyToShort) ||
                          (advInfo.mLinkState == Advertisement::kTxReadyToExtended),
                      OT_NOOP);
@@ -535,6 +530,7 @@ void Controller::HandleAdv(Platform::AdvType aAdvType,
     config.mInterval     = kConnectionInterval;
     config.mScanInterval = kConnectionScanInterval;
     config.mScanWindow   = kConnectionScanWindow;
+    config.mLinkType     = kConnectionLinkTypeGatt;
 
     Get<Platform>().StopScan();
     conn->mPlatConn = Get<Platform>().CreateConnection(aSource, config);
@@ -565,7 +561,7 @@ void Controller::HandleAdv(Platform::AdvType aAdvType,
 
     conn->mExtAddr   = advInfo.mSrcExtended;
     conn->mShortAddr = advInfo.mSrcShort;
-    conn->mRssi      = aRssi;
+    conn->mRssi      = aAdvPacket.mRssi;
     conn->mState     = Connection::kConnecting;
 
 #if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE

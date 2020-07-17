@@ -144,6 +144,7 @@ SOURCES_COMMON                             = \
     api/thread_api.cpp                       \
     api/thread_ftd_api.cpp                   \
     api/udp_api.cpp                          \
+    api/toble_api.cpp                        \
     backbone_router/leader.cpp               \
     backbone_router/local.cpp                \
     coap/coap.cpp                            \
@@ -210,6 +211,7 @@ SOURCES_COMMON                             = \
     radio/radio.cpp                          \
     radio/radio_callbacks.cpp                \
     radio/radio_platform.cpp                 \
+    radio/radio_toble.cpp                    \
     thread/address_resolver.cpp              \
     thread/announce_begin_server.cpp         \
     thread/announce_sender.cpp               \
@@ -290,6 +292,7 @@ libopenthread_radio_a_SOURCES              = \
     radio/radio.cpp                          \
     radio/radio_callbacks.cpp                \
     radio/radio_platform.cpp                 \
+    radio/radio_toble.cpp                    \
     thread/link_quality.cpp                  \
     utils/parse_cmdline.cpp                  \
     $(NULL)
@@ -482,17 +485,6 @@ HEADERS_COMMON                             = \
     utils/slaac_address.hpp                  \
     utils/static_assert.hpp                  \
     $(NULL)
-
-#    toble/btp.hpp                            \
-#    toble/btp_frame.hpp                      \
-#    toble/conn_table.hpp                     \
-#    toble/controller_central.hpp             \
-#    toble/controller_peripheral.hpp          \
-#    toble/l2cap.hpp                          \
-#    toble/platform.hpp                       \
-#    toble/toble.hpp                          \
-#    toble/transport.hpp                      \
-#
 
 noinst_HEADERS                             = \
     $(HEADERS_COMMON)                        \

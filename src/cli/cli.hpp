@@ -58,6 +58,7 @@
 #endif
 
 #if OPENTHREAD_CONFIG_TOBLE_ENABLE
+#include "cli/cli_toble.hpp"
 #include "cli/cli_toble_platform.hpp"
 #endif
 
@@ -104,6 +105,7 @@ class Interpreter
     friend class Commissioner;
     friend class Dataset;
     friend class Joiner;
+    friend class Toble;
     friend class ToblePlatform;
     friend class UdpExample;
 
@@ -274,6 +276,7 @@ private:
     otError ProcessIpMulticastAddrDel(uint8_t aArgsLength, char *aArgs[]);
     otError ProcessMulticastPromiscuous(uint8_t aArgsLength, char *aArgs[]);
 #if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    void ProcessToble(uint8_t aArgsLength, char *aArgs[]);
     void ProcessToblePlatform(uint8_t aArgsLength, char *aArgs[]);
 #endif
 #if OPENTHREAD_CONFIG_JOINER_ENABLE
@@ -462,6 +465,7 @@ private:
 #endif
 
 #if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    Toble         mToble;
     ToblePlatform mToblePlatform;
 #endif
 

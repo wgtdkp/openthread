@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2020, The OpenThread Authors.
+ *  Copyright (c) 2019, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -26,30 +26,54 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "radio.hpp"
+/**
+ * @file
+ *   This file implements the OpenThread ToBLE APIs
+ */
+
+#include "openthread-core-config.h"
+
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+
+#include <openthread/toble.h>
 
 #include "common/locator-getters.hpp"
-#include "utils/otns.hpp"
+#include "toble/toble.hpp"
 
-namespace ot {
+using namespace ot;
 
-#if !OPENTHREAD_CONFIG_TOBLE_ENABLE
-void Radio::SetExtendedAddress(const Mac::ExtAddress &aExtAddress)
-{
-    otPlatRadioSetExtendedAddress(GetInstance(), &aExtAddress);
-
-#if (OPENTHREAD_MTD || OPENTHREAD_FTD) && OPENTHREAD_CONFIG_OTNS_ENABLE
-    Get<Utils::Otns>().EmitExtendedAddress(aExtAddress);
+#if !OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE && !OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+#error "ToBLE config error - enable either CONFIG_TOBLE_CENTRAL_ENABLE or CONFIG_TOBLE_PERIPHERAL_ENABLE (or both)."
 #endif
+
+#if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE && OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+otError otTobleSetLinkMode(otInstance *aInstance, otTobleLinkMode aLinkMode)
+{
+    Instance &instance = *static_cast<Instance *>(aInstance);
+
+    return instance.Get<Toble::Toble>().SetMode(aLinkMode);
+}
+#endif // OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE && OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+
+otTobleLinkMode otTobleGetLinkMode(otInstance *aInstance)
+{
+    otTobleLinkMode mode;
+
+    OT_UNUSED_VARIABLE(aInstance);
+
+#if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE && OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+    mode = static_cast<Instance *>(aInstance)->Get<Toble::Toble>().GetMode();
+#elif OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
+    mode = OT_TOBLE_LINK_MODE_CENTRAL;
+#else
+    mode = OT_TOBLE_LINK_MODE_PERIPHERAL;
+#endif
+
+    return mode;
 }
 
-void Radio::SetShortAddress(Mac::ShortAddress aShortAddress)
+void otTobleTest(otInstance *aInstance)
 {
-    otPlatRadioSetShortAddress(GetInstance(), aShortAddress);
-
-#if (OPENTHREAD_MTD || OPENTHREAD_FTD) && OPENTHREAD_CONFIG_OTNS_ENABLE
-    Get<Utils::Otns>().EmitShortAddress(aShortAddress);
-#endif
+    static_cast<Instance *>(aInstance)->Get<Toble::Toble>().Test();
 }
-#endif
-} // namespace ot
+#endif // #if OPENTHREAD_CONFIG_TOBLE_ENABLE

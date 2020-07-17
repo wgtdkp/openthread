@@ -240,11 +240,11 @@ public:
         kActiveBlerPeripheral   = 3, ///< BLER-P (Active).
     } TobleRole;
 
-    struct Info
+    typedef struct Info
     {
         enum
         {
-            kInfoStringSize = 100, ///< Recommended buffer size to use with `ToString()`.
+            kInfoStringSize = 200, ///< Recommended buffer size to use with `ToString()`.
         };
 
         /**
@@ -276,7 +276,28 @@ public:
 
         MeshCoP::NetworkNameTlv  mNetworkName;  ///< Network Name TLV.
         MeshCoP::SteeringDataTlv mSteeringData; ///< Steering Data TLV.
+    } Info;
+
+    enum
+    {
+        kStringSize = 120, ///< Recommended buffer size to use with `ToString()`.
     };
+
+    typedef String<kStringSize> HexString;
+
+    HexString ToString(void) const
+    {
+        HexString str;
+        uint8_t   i;
+
+        for (i = 0; i < mLength; i++)
+        {
+            SuccessOrExit(str.Append("%02X", mData[i]));
+        }
+
+    exit:
+        return str;
+    }
 
     /**
      * This constructor initializes the advertising data.

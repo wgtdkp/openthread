@@ -137,12 +137,11 @@ typedef struct
  */
 typedef struct
 {
-    bool     mIsUsed;           ///< Indicate if this structure is used.
-    bool     mIsPeripheral;     ///< Indicate if the peer is a peripheral.
-    uint16_t mConnHandle;       ///< BLE GAP connection handle.
-    uint16_t mAttMtu;           ///< Attribute MTU size.
-    uint16_t mIndicationHandle; ///< Gatt indication handle.
-    uint16_t mLocalCid;         ///< L2cap local CID.
+    bool     mIsUsed;       ///< Indicate if this structure is used.
+    bool     mIsPeripheral; ///< Indicate if the peer is a peripheral.
+    uint16_t mConnHandle;   ///< BLE GAP connection handle.
+    uint16_t mAttMtu;       ///< Attribute MTU size.
+    uint16_t mLocalCid;     ///< L2cap local CID.
 
     otTobleConnectionLinkType mLinkType; ///< Toble Link type.
 } BlePeer;
@@ -182,23 +181,25 @@ uint8_t sBtpUuidC2[] = {OT_PLAT_TOBLE_UUID_C2};
 
 otPlatBleGattService sBtpServices[] = {
     {.mUuid   = {.mType = OT_BLE_UUID_TYPE_16, .mValue.mUuid16 = OT_PLAT_TOBLE_UUID_THREAD_GROUP},
-     .mHandle = 0, ///< Set by otPlatBleGattServerServicesRegister
+     .mHandle = 0, ///< Set by bleGattServerServicesRegister
      .mCharacteristics =
          (otPlatBleGattCharacteristic[]){
              {.mUuid        = {.mType = OT_BLE_UUID_TYPE_128, .mValue.mUuid128 = sBtpUuidC1},
-              .mHandleValue = 0, ///< Set by otPlatBleGattServerServicesRegister
+              .mHandleValue = 0, ///< Set by bleGattServerServicesRegister
               .mProperties  = OT_BLE_CHAR_PROP_WRITE | OT_BLE_CHAR_PROP_WRITE_NO_RESPONSE},
              {.mUuid        = {.mType = OT_BLE_UUID_TYPE_128, .mValue.mUuid128 = sBtpUuidC2},
-              .mHandleValue = 0, ///< Set by otPlatBleGattServerServicesRegister
+              .mHandleValue = 0, ///< Set by bleGattServerServicesRegister
               .mProperties  = OT_BLE_CHAR_PROP_INDICATE | OT_BLE_CHAR_PROP_NOTIFY | OT_BLE_CHAR_PROP_READ},
              {
-                 {0},               /* No more characteristics in this service */
-                 .mHandleValue = 0, ///< Set by otPlatBleGattServerServicesRegister
+                 {0},               ///< No more characteristics in this service
+                 .mHandleValue = 0, ///< Set by bleGattServerServicesRegister
              }}},
     {
-        {0}, /* No more services. */
+        {0}, // No more services.
         .mHandle = 0,
     }};
+
+static otError bleGattServerServicesRegister(otInstance *aInstance, otPlatBleGattService *aServices);
 
 static void peerInit(BlePeer *aPeer)
 {
@@ -375,7 +376,13 @@ void otPlatTobleInit(otInstance *aInstance)
     sInstance = aInstance;
 
     initState();
-    otPlatBleGattServerServicesRegister(sInstance, sBtpServices);
+    bleGattServerServicesRegister(sInstance, sBtpServices);
+
+#if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+    sBle.mC1Handle     = sBtpServices[0].mCharacteristics[0].mHandleValue;
+    sBle.mC2Handle     = sBtpServices[0].mCharacteristics[1].mHandleValue;
+    sBle.mC2CccdHandle = sBtpServices[0].mCharacteristics[1].mHandleCccd;
+#endif
 
 exit:
     return;
@@ -408,36 +415,10 @@ void otPlatTobleDiagModeSet(otInstance *aInstance, bool aMode)
  * @section Bluetooth Low Energy GAP.
  *******************************************************************************/
 
-otError otPlatTobleGapAdvDataSet(otInstance *aInstance, const uint8_t *aAdvData, uint8_t aAdvDataLength)
-{
-    OT_UNUSED_VARIABLE(aInstance);
-
-    memcpy(sBle.mAdvData, aAdvData, aAdvDataLength);
-
-    sBle.mAdvDataInfo.adv_data.p_data = sBle.mAdvData;
-    sBle.mAdvDataInfo.adv_data.len    = aAdvDataLength;
-
-    return OT_ERROR_NONE;
-}
-
-otError otPlatTobleGapScanResponseSet(otInstance *aInstance, const uint8_t *aScanResponse, uint8_t aScanResponseLength)
-{
-    OT_UNUSED_VARIABLE(aInstance);
-
-    memcpy(sBle.mScanRspData, aScanResponse, aScanResponseLength);
-
-    sBle.mAdvDataInfo.scan_rsp_data.p_data = sBle.mScanRspData;
-    sBle.mAdvDataInfo.scan_rsp_data.len    = aScanResponseLength;
-
-    return OT_ERROR_NONE;
-}
-
-otError otPlatTobleGapAdvStart(otInstance *aInstance, otTobleAdvType aType, uint16_t aInterval)
+otError bleGapAdvStart(otTobleAdvType aType, uint16_t aInterval)
 {
     uint32_t             retval;
     ble_gap_adv_params_t params;
-
-    OT_UNUSED_VARIABLE(aInstance);
 
     memset(&params, 0, sizeof(ble_gap_adv_params_t));
 
@@ -478,7 +459,30 @@ exit:
     return nrf5SdErrorToOtError(retval);
 }
 
-otError otPlatTobleGapAdvStop(otInstance *aInstance)
+otError otPlatTobleAdvStart(otInstance *aInstance, const otTobleAdvConfig *aConfig)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+
+    if (aConfig->mData != NULL)
+    {
+        memcpy(sBle.mAdvData, aConfig->mData, aConfig->mLength);
+
+        sBle.mAdvDataInfo.adv_data.p_data = sBle.mAdvData;
+        sBle.mAdvDataInfo.adv_data.len    = aConfig->mLength;
+    }
+
+    if (aConfig->mScanRspData != NULL)
+    {
+        memcpy(sBle.mScanRspData, aConfig->mScanRspData, aConfig->mScanRspDataLength);
+
+        sBle.mAdvDataInfo.scan_rsp_data.p_data = sBle.mScanRspData;
+        sBle.mAdvDataInfo.scan_rsp_data.len    = aConfig->mScanRspDataLength;
+    }
+
+    return bleGapAdvStart(aConfig->mType, aConfig->mInterval);
+}
+
+otError otPlatTobleAdvStop(otInstance *aInstance)
 {
     uint32_t retval;
 
@@ -491,7 +495,7 @@ exit:
     return nrf5SdErrorToOtError(retval);
 }
 
-otError otPlatTobleGapScanStart(otInstance *aInstance, uint16_t aInterval, uint16_t aWindow, bool aActive)
+otError otPlatTobleScanStart(otInstance *aInstance, uint16_t aInterval, uint16_t aWindow, bool aActive)
 {
     uint32_t              retval;
     ble_gap_scan_params_t params;
@@ -518,7 +522,7 @@ otError otPlatTobleGapScanStart(otInstance *aInstance, uint16_t aInterval, uint1
     return nrf5SdErrorToOtError(retval);
 }
 
-otError otPlatTobleGapScanStop(otInstance *aInstance)
+otError otPlatTobleScanStop(otInstance *aInstance)
 {
     uint32_t retval;
 
@@ -793,7 +797,7 @@ exit:
     return nrf5SdErrorToOtError(retval);
 }
 
-otError otPlatBleGattServerServicesRegister(otInstance *aInstance, otPlatBleGattService *aServices)
+static otError bleGattServerServicesRegister(otInstance *aInstance, otPlatBleGattService *aServices)
 {
     (void)aInstance;
 
@@ -833,7 +837,7 @@ void otPlatTobleC2Indicate(otInstance *aInstance, otTobleConnection *aConn, cons
     // TODO: Gatt Server should also take the connection id.
 
     memset(&params, 0, sizeof(ble_gatts_hvx_params_t));
-    params.handle = peer->mIndicationHandle;
+    params.handle = sBle.mC2Handle;
     params.p_data = aBuffer;
     params.p_len  = &aLength;
     params.type   = BLE_GATT_HVX_INDICATION;
@@ -1117,8 +1121,8 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
     {
         ble_gap_evt_adv_report_t *advReport = &evt->evt.gap_evt.params.adv_report;
 
-        otTobleRadioPacket packet;
-        ble_data_t         advData;
+        otTobleAdvPacket packet;
+        ble_data_t       advData;
 
         packet.mRssi   = advReport->rssi;
         packet.mData   = advReport->data.p_data;
@@ -1171,7 +1175,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
     case BLE_GAP_EVT_TIMEOUT:
         if (sBle.mState == kStateAdvertising)
         {
-            otPlatTobleGapAdvStart(sInstance, sBle.mAdvType, sBle.mAdvInterval);
+            bleGapAdvStart(sBle.mAdvType, sBle.mAdvInterval);
         }
 
         break;
@@ -1253,9 +1257,6 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
             {
                 uint16_t cccd = packet.mValue[0] | (packet.mValue[1] << 8);
 
-                otLogInfoPlat("BLE_GATTS_EVT_WRITE: connectionId=%d handle=%d", connectionId, evtWrite->handle);
-
-                peer->mIndicationHandle = evtWrite->handle;
                 if (sDiagMode)
                 {
                     otPlatTobleDiagHandleC2Subscribed(sInstance, (otTobleConnection *)peer,
@@ -1604,49 +1605,17 @@ NRF_SDH_BLE_OBSERVER(m_ot_ble_observer, 0, ble_evt_handler, NULL);
 /*******************************************************************************
  * @section Definition of weak ToBLE platform functions.
  *******************************************************************************/
-otError otPlatTobleScanStart(otInstance *aInstance, uint16_t aInterval, uint16_t aWindow)
-{
-    OT_UNUSED_VARIABLE(aInstance);
-    OT_UNUSED_VARIABLE(aInterval);
-    OT_UNUSED_VARIABLE(aWindow);
 
-    return OT_ERROR_NONE;
-}
-
-otError otPlatTobleScanStop(otInstance *aInstance)
-{
-    OT_UNUSED_VARIABLE(aInstance);
-
-    return OT_ERROR_NONE;
-}
-
-otError otPlatTobleAdvStart(otInstance *aInstance, const otTobleAdvConfig *aConfig)
-{
-    OT_UNUSED_VARIABLE(aInstance);
-    OT_UNUSED_VARIABLE(aConfig);
-
-    return OT_ERROR_NONE;
-}
-
-otError otPlatTobleAdvStop(otInstance *aInstance)
-{
-    OT_UNUSED_VARIABLE(aInstance);
-
-    return OT_ERROR_NONE;
-}
-
-//-------------------------------------
-
-OT_TOOL_WEAK void otPlatTobleGapOnAdvReceived(otInstance *        aInstance,
-                                              otTobleAdvType      aAdvType,
-                                              otTobleRadioPacket *aAdvPacket)
+OT_TOOL_WEAK void otPlatTobleGapOnAdvReceived(otInstance *      aInstance,
+                                              otTobleAdvType    aAdvType,
+                                              otTobleAdvPacket *aAdvPacket)
 {
     OT_UNUSED_VARIABLE(aInstance);
     OT_UNUSED_VARIABLE(aAdvType);
     OT_UNUSED_VARIABLE(aAdvPacket);
 }
 
-OT_TOOL_WEAK void otPlatTobleGapOnScanRespReceived(otInstance *aInstance, otTobleRadioPacket *aAdvPacket)
+OT_TOOL_WEAK void otPlatTobleGapOnScanRespReceived(otInstance *aInstance, otTobleAdvPacket *aAdvPacket)
 {
     OT_UNUSED_VARIABLE(aInstance);
     OT_UNUSED_VARIABLE(aAdvPacket);
@@ -1748,15 +1717,15 @@ OT_TOOL_WEAK void otPlatTobleL2CapFrameReceived(otInstance *       aInstance,
 
 //---------------------------
 
-OT_TOOL_WEAK void otPlatTobleDiagGapOnAdvReceived(otInstance *        aInstance,
-                                                  otTobleAdvType      aAdvType,
-                                                  otTobleRadioPacket *aAdvPacket)
+OT_TOOL_WEAK void otPlatTobleDiagGapOnAdvReceived(otInstance *      aInstance,
+                                                  otTobleAdvType    aAdvType,
+                                                  otTobleAdvPacket *aAdvPacket)
 {
     OT_UNUSED_VARIABLE(aInstance);
     OT_UNUSED_VARIABLE(aAdvPacket);
 }
 
-OT_TOOL_WEAK void otPlatTobleDiagGapOnScanRespReceived(otInstance *aInstance, otTobleRadioPacket *aAdvPacket)
+OT_TOOL_WEAK void otPlatTobleDiagGapOnScanRespReceived(otInstance *aInstance, otTobleAdvPacket *aAdvPacket)
 {
     OT_UNUSED_VARIABLE(aInstance);
     OT_UNUSED_VARIABLE(aAdvPacket);

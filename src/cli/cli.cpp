@@ -239,6 +239,7 @@ const struct Command Interpreter::sCommands[] = {
     {"state", &Interpreter::ProcessState},
     {"thread", &Interpreter::ProcessThread},
 #if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    {"toble", &Interpreter::ProcessToble},
     {"tobleplat", &Interpreter::ProcessToblePlatform},
 #endif
     {"txpower", &Interpreter::ProcessTxPower},
@@ -275,6 +276,7 @@ Interpreter::Interpreter(Instance *aInstance)
     , mCommissioner(*this)
 #endif
 #if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    , mToble(*this)
     , mToblePlatform(*this)
 #endif
 #if OPENTHREAD_CONFIG_JOINER_ENABLE
@@ -3524,6 +3526,12 @@ void Interpreter::ProcessCommissioner(uint8_t aArgsLength, char *aArgs[])
 #endif
 
 #if OPENTHREAD_CONFIG_TOBLE_ENABLE
+void Interpreter::ProcessToble(uint8_t aArgsLength, char *aArgs[])
+{
+    otError error;
+    error = mToble.Process(aArgsLength, aArgs);
+    AppendResult(error);
+}
 
 void Interpreter::ProcessToblePlatform(uint8_t aArgsLength, char *aArgs[])
 {
@@ -4385,13 +4393,17 @@ extern "C" void otCliAppendResult(otError aError)
     Server::sServer->GetInterpreter().AppendResult(aError);
 }
 
+#include <openthread/platform/alarm-milli.h>
 extern "C" void otCliPlatLogv(otLogLevel aLogLevel, otLogRegion aLogRegion, const char *aFormat, va_list aArgs)
 {
+    uint32_t now;
     OT_UNUSED_VARIABLE(aLogLevel);
     OT_UNUSED_VARIABLE(aLogRegion);
-
     VerifyOrExit(Server::sServer != NULL, OT_NOOP);
 
+    now = otPlatAlarmMilliGetNow();
+
+    Server::sServer->OutputFormat("%d:%03d ", now / 1000, now % 1000);
     Server::sServer->OutputFormatV(aFormat, aArgs);
     Server::sServer->OutputFormat("\r\n");
 

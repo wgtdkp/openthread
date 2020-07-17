@@ -43,9 +43,6 @@
 namespace ot {
 namespace Toble {
 
-//---------------------------------------------------------------------------------------------------------------------
-// Address
-
 bool Address::operator==(const Address &aOther) const
 {
     return (mType == aOther.mType) && (memcmp(mAddress, aOther.mAddress, OT_TOBLE_ADDRESS_SIZE) == 0);
@@ -93,14 +90,39 @@ void Platform::Callbacks::HandleDisconnected(Connection *aConn)
 }
 
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
-
-void Platform::Callbacks::HandleAdv(AdvType        aAdvType,
-                                    const Address &aSource,
-                                    const uint8_t *aData,
-                                    uint16_t       aLength,
-                                    int8_t         aRssi)
+otError Platform::StartScan(uint16_t aInterval, uint16_t aWindow)
 {
-    Get<Central::Controller>().HandleAdv(aAdvType, aSource, aData, aLength, aRssi);
+    return otPlatTobleScanStart(GetInstance(), aInterval, aWindow, false);
+}
+
+otError Platform::StopScan(void)
+{
+    return otPlatTobleScanStop(GetInstance());
+}
+
+Platform::Connection *Platform::CreateConnection(const Address &aPeerAddress, ConnectionConfig &aConfig)
+{
+    return otPlatTobleCreateConnection(GetInstance(), &aPeerAddress, &aConfig);
+}
+
+void Platform::WriteC1(Connection *aConn, const void *aBuf, uint16_t aLength)
+{
+    otPlatTobleC1Write(GetInstance(), aConn, aBuf, aLength);
+}
+
+void Platform::SubscribeC2(Connection *aConn, bool aSubscribe)
+{
+    return otPlatTobleC2Subscribe(GetInstance(), aConn, aSubscribe);
+}
+
+void Platform::Callbacks::HandleAdv(AdvType aAdvType, AdvPacket &aAdvPacket)
+{
+    Get<Central::Controller>().HandleAdv(aAdvType, aAdvPacket);
+}
+
+void Platform::Callbacks::HandleScanResponse(AdvPacket &aAdvPacket)
+{
+    Get<Central::Controller>().HandleScanResponse(aAdvPacket);
 }
 
 void Platform::Callbacks::HandleConnectionReady(Connection *aConn, otTobleConnectionLinkType aLinkType)
@@ -129,6 +151,20 @@ void Platform::Callbacks::HandleC2Indication(Connection *aConn, const uint8_t *a
 #endif // OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
 
 #if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+otError Platform::StartAdv(const AdvConfig &aConfig)
+{
+    return otPlatTobleAdvStart(GetInstance(), &aConfig);
+}
+
+otError Platform::StopAdv(void)
+{
+    return otPlatTobleAdvStop(GetInstance());
+}
+
+void Platform::IndicateC2(Connection *aConn, const void *aFrame, uint16_t aLength)
+{
+    otPlatTobleC2Indicate(GetInstance(), aConn, aFrame, aLength);
+}
 
 void Platform::Callbacks::HandleC2Subscribed(Connection *aConn, bool aIsSubscribed)
 {
@@ -146,7 +182,6 @@ void Platform::Callbacks::HandleC1Write(Connection *aConn, const uint8_t *aFrame
 }
 
 #endif // OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
-
 } // namespace Toble
 } // namespace ot
 
@@ -166,17 +201,20 @@ extern "C" void otPlatTobleHandleDisconnected(otInstance *aInstance, otTobleConn
 
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
 
-extern "C" void otPlatTobleHandleAdv(otInstance *          aInstance,
-                                     otTobleAdvType        aAdvType,
-                                     const otTobleAddress *aSource,
-                                     const uint8_t *       aData,
-                                     uint16_t              aLength,
-                                     int8_t                aRssi)
+extern "C" void otPlatTobleGapOnAdvReceived(otInstance *      aInstance,
+                                            otTobleAdvType    aAdvType,
+                                            otTobleAdvPacket *aAdvPacket)
 {
     ot::Instance &instance = *static_cast<ot::Instance *>(aInstance);
 
-    instance.Get<ot::Toble::Platform::Callbacks>().HandleAdv(
-        aAdvType, *static_cast<const ot::Toble::Address *>(aSource), aData, aLength, aRssi);
+    instance.Get<ot::Toble::Platform::Callbacks>().HandleAdv(aAdvType, *aAdvPacket);
+}
+
+extern "C" void otPlatTobleGapOnScanRespReceived(otInstance *aInstance, otTobleAdvPacket *aAdvPacket)
+{
+    ot::Instance &instance = *static_cast<ot::Instance *>(aInstance);
+
+    instance.Get<ot::Toble::Platform::Callbacks>().HandleScanResponse(*aAdvPacket);
 }
 
 extern "C" void otPlatTobleHandleConnectionIsReady(otInstance *              aInstance,

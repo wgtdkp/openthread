@@ -65,7 +65,13 @@ LDFLAGS_COMMON                                                                  
     -T $(OPENTHREAD_CUSTOM_LINKER_FILE)                                                         \
     $(NULL)
 else
+if OPENTHREAD_CONFIG_TOBLE_ENABLE
+LDFLAGS_COMMON                                                                               += \
+    -T $(top_srcdir)/examples/platforms/nrf528xx/nrf52840/nrf52840_softdevice.ld                \
+    $(NULL)
+else
 LDFLAGS_COMMON                                                                               += \
     -T $(top_srcdir)/examples/platforms/nrf528xx/nrf52840/nrf52840.ld                           \
     $(NULL)
+endif
 endif

@@ -58,6 +58,7 @@ void Btp::HandleC1WriteDone(Platform::Connection *aPlatConn)
         break;
 
     case kStateHandshake:
+        otLogDebgBle("Btp::SubscribeC2");
         Get<Platform>().SubscribeC2(aPlatConn, true);
         break;
 
@@ -103,7 +104,7 @@ void Btp::HandleHandshake(Connection &aConn, const HandshakeResponse &aResponse)
 
     VerifyOrExit(session.mState == kStateHandshake, OT_NOOP);
 
-    otLogDebgBle("BTP handshake receive");
+    otLogDebgBle("Btp::HandleHandshake");
 
     session.mState = kStateConnected;
 

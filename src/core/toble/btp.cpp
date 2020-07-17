@@ -166,6 +166,7 @@ void Btp::SendData(Connection &aConn)
         {
             session.mTxBuf[0] |= Frame::kEndFlag;
             otLogDebgBle("  end");
+            otLogDebgBle("BTP::Send Done %d", session.mSendLength);
         }
     }
 

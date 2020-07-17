@@ -36,6 +36,7 @@
 
 #include "openthread-core-config.h"
 
+#include <openthread/toble.h>
 #include <openthread/platform/radio.h>
 #include <openthread/platform/toble.h>
 
@@ -74,6 +75,7 @@ public:
 #else
     bool IsCentral(void) const { return OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE; }
 #endif
+    void Test(void);
 
 private:
     enum
@@ -84,43 +86,46 @@ private:
     otInstance *GetInstancePtr(void) { return reinterpret_cast<otInstance *>(&GetInstance()); }
 
     // Radio APIs
-    otError     Sleep(void);
-    otError     Receive(uint8_t aChannel);
-    otError     Transmit(Mac::TxFrame &aFrame);
-    otError     Enable(void) { return (mEnabled = true, OT_ERROR_NONE); }
-    otError     Disable(void) { return (mEnabled = false, OT_ERROR_NONE); }
-    bool        IsEnabled(void) { return mEnabled; }
-    otRadioCaps GetCaps(void) { return (otRadioCaps)(OT_RADIO_CAPS_ACK_TIMEOUT | OT_RADIO_CAPS_CSMA_BACKOFF); }
-    const char *GetVersionString(void) { return otPlatRadioGetVersionString(GetInstancePtr()); }
-    int8_t      GetReceiveSensitivity(void) { return kDefaulteceiveSensitivity; }
-    void        GetIeeeEui64(Mac::ExtAddress &aIeeeEui64) { otPlatRadioGetIeeeEui64(GetInstancePtr(), aIeeeEui64.m8); }
-    void        SetPanId(Mac::PanId) {}
-    void        SetExtendedAddress(const Mac::ExtAddress &) {}
-    void        SetShortAddress(Mac::ShortAddress) {}
-    otError     GetTransmitPower(int8_t &) { return OT_ERROR_NOT_IMPLEMENTED; }
-    otError     SetTransmitPower(int8_t) { return OT_ERROR_NOT_IMPLEMENTED; }
-    bool        GetPromiscuous(void) { return false; }
-    void        SetPromiscuous(bool) {}
-    Mac::Frame &GetTransmitBuffer(void) { return mTxFrame; }
-    int8_t      GetRssi(void) { return OT_RADIO_RSSI_INVALID; }
-    otError     EnergyScan(uint8_t, uint16_t) { return OT_ERROR_NOT_IMPLEMENTED; }
-    void        EnableSrcMatch(bool) {}
-    otError     AddSrcMatchShortEntry(Mac::ShortAddress) { return OT_ERROR_NONE; }
-    otError     AddSrcMatchExtEntry(const Mac::ExtAddress &) { return OT_ERROR_NONE; }
-    otError     ClearSrcMatchShortEntry(Mac::ShortAddress) { return OT_ERROR_NONE; }
-    otError     ClearSrcMatchExtEntry(const Mac::ExtAddress &) { return OT_ERROR_NONE; }
-    void        ClearSrcMatchShortEntries(void) {}
-    void        ClearSrcMatchExtEntries(void) {}
-    uint32_t    GetSupportedChannelMask(void) { return OT_RADIO_2P4GHZ_OQPSK_CHANNEL_MASK; }
-    uint32_t    GetPreferredChannelMask(void) { return OT_RADIO_2P4GHZ_OQPSK_CHANNEL_MASK; }
+    otError      Sleep(void);
+    otError      Receive(uint8_t aChannel);
+    otError      Transmit(Mac::TxFrame &aFrame);
+    otError      Enable(void) { return (mEnabled = true, OT_ERROR_NONE); }
+    otError      Disable(void) { return (mEnabled = false, OT_ERROR_NONE); }
+    bool         IsEnabled(void) { return mEnabled; }
+    otRadioState GetState(void) { return OT_RADIO_STATE_SLEEP; }
+    otRadioCaps  GetCaps(void) { return (otRadioCaps)(OT_RADIO_CAPS_ACK_TIMEOUT | OT_RADIO_CAPS_CSMA_BACKOFF); }
+    const char * GetVersionString(void) { return otPlatRadioGetVersionString(GetInstancePtr()); }
+    int8_t       GetReceiveSensitivity(void) { return kDefaulteceiveSensitivity; }
+    void         GetIeeeEui64(Mac::ExtAddress &aIeeeEui64) { otPlatRadioGetIeeeEui64(GetInstancePtr(), aIeeeEui64.m8); }
+    void         SetPanId(Mac::PanId) {}
+    void         SetExtendedAddress(const Mac::ExtAddress &) {}
+    void         SetShortAddress(Mac::ShortAddress) {}
+    otError      GetTransmitPower(int8_t &) { return OT_ERROR_NOT_IMPLEMENTED; }
+    otError      SetTransmitPower(int8_t) { return OT_ERROR_NOT_IMPLEMENTED; }
+    bool         GetPromiscuous(void) { return false; }
+    void         SetPromiscuous(bool) {}
+    Mac::TxFrame &GetTransmitBuffer(void) { return mTxFrame; }
+    int8_t        GetRssi(void) { return OT_RADIO_RSSI_INVALID; }
+    otError       EnergyScan(uint8_t, uint16_t) { return OT_ERROR_NOT_IMPLEMENTED; }
+    void          EnableSrcMatch(bool) {}
+    otError       AddSrcMatchShortEntry(Mac::ShortAddress) { return OT_ERROR_NONE; }
+    otError       AddSrcMatchExtEntry(const Mac::ExtAddress &) { return OT_ERROR_NONE; }
+    otError       ClearSrcMatchShortEntry(Mac::ShortAddress) { return OT_ERROR_NONE; }
+    otError       ClearSrcMatchExtEntry(const Mac::ExtAddress &) { return OT_ERROR_NONE; }
+    void          ClearSrcMatchShortEntries(void) {}
+    void          ClearSrcMatchExtEntries(void) {}
+    uint32_t      GetSupportedChannelMask(void) { return OT_RADIO_2P4GHZ_OQPSK_CHANNEL_MASK; }
+    uint32_t      GetPreferredChannelMask(void) { return OT_RADIO_2P4GHZ_OQPSK_CHANNEL_MASK; }
+    void          SetMacKey(uint8_t, uint8_t, const Mac::Key &, const Mac::Key &, const Mac::Key &) {}
+    void          PrintHex(const char *aName, const uint8_t *aData, uint8_t aLength);
 
     // Callbacks from Toble::Platform
     void HandleConnected(Platform::Connection *aPlatConn);
     void HandleDisconnected(Platform::Connection *aPlatConn);
 
-    bool       mEnabled;
-    Mac::Frame mTxFrame;
-    uint8_t    mTxPsdu[OT_RADIO_TOBLE_FRAME_MAX_SIZE];
+    bool         mEnabled;
+    Mac::TxFrame mTxFrame;
+    uint8_t      mTxPsdu[OT_RADIO_TOBLE_FRAME_MAX_SIZE];
 
     Platform        mPlatform;
     ConnectionTable mConnTable;

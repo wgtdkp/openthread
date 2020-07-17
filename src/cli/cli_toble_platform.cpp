@@ -39,8 +39,6 @@
 
 #if OPENTHREAD_CONFIG_TOBLE_ENABLE
 
-using ot::Encoding::BigEndian::HostSwap16;
-
 namespace ot {
 namespace Cli {
 
@@ -200,21 +198,26 @@ otError ToblePlatform::ProcessAdv(uint8_t aArgsLength, char *aArgs[])
 
     if ((strcmp(aArgs[0], "start") == 0) && (aArgsLength == 2))
     {
-        const uint8_t advData[] = {0x02, 0x01, 0x06, 0x12, 0x16, 0xfb, 0xff, 0x30, 0x00, 0x00, 0x01,
-                                   0x00, 0x02, 0xfc, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
-        const uint8_t scanRsp[] = {0x0c, 0x16, 0xfb, 0xff, 0x31, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
+        otTobleAdvConfig config;
+
+        const uint8_t advData[] = {0x02, 0x01, 0x06, 0x12, 0x16, 0xFF, 0xFB, 0x30, 0x00, 0x21, 0x00,
+                                   0x01, 0xAA, 0xBB, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
+        const uint8_t scanRsp[] = {0x16, 0x16, 0xFF, 0xFB, 0x31, 0x08, 0x10, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+                                   0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
         SuccessOrExit(error = Interpreter::ParseLong(aArgs[1], value));
+        config.mType              = OT_TOBLE_ADV_IND;
+        config.mInterval          = static_cast<uint16_t>(value);
+        config.mData              = advData;
+        config.mLength            = sizeof(advData);
+        config.mScanRspData       = scanRsp;
+        config.mScanRspDataLength = sizeof(scanRsp);
 
-        SuccessOrExit(error = otPlatTobleGapAdvDataSet(mInterpreter.mInstance, advData, sizeof(advData)));
-        SuccessOrExit(error = otPlatTobleGapScanResponseSet(mInterpreter.mInstance, scanRsp, sizeof(scanRsp)));
-
-        SuccessOrExit(
-            error = otPlatTobleGapAdvStart(mInterpreter.mInstance, OT_TOBLE_ADV_IND, static_cast<uint16_t>(value)));
+        SuccessOrExit(error = otPlatTobleAdvStart(mInterpreter.mInstance, &config));
     }
     else if (strcmp(aArgs[0], "stop") == 0)
     {
-        error = otPlatTobleGapAdvStop(mInterpreter.mInstance);
+        error = otPlatTobleAdvStop(mInterpreter.mInstance);
     }
 
 exit:
@@ -240,7 +243,7 @@ otError ToblePlatform::ProcessScan(uint8_t aArgsLength, char *aArgs[])
         SuccessOrExit(error = Interpreter::ParseLong(aArgs[3], value));
         active = (static_cast<uint16_t>(value) > 0);
 
-        SuccessOrExit(error = otPlatTobleGapScanStart(mInterpreter.mInstance, interval, window, active));
+        SuccessOrExit(error = otPlatTobleScanStart(mInterpreter.mInstance, interval, window, active));
         mRole = OT_TOBLE_ROLE_CENTRAL;
 
         mInterpreter.mServer->OutputFormat(
@@ -250,7 +253,7 @@ otError ToblePlatform::ProcessScan(uint8_t aArgsLength, char *aArgs[])
     }
     else if (strcmp(aArgs[0], "stop") == 0)
     {
-        error = otPlatTobleGapScanStop(mInterpreter.mInstance);
+        error = otPlatTobleScanStop(mInterpreter.mInstance);
     }
 
 exit:
@@ -261,13 +264,13 @@ otError ToblePlatform::ProcessRole(uint8_t aArgsLength, char *aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
-    VerifyOrExit(aArgsLength == 1, error = OT_ERROR_INVALID_ARGS);
+    VerifyOrExit(aArgsLength <= 1, error = OT_ERROR_INVALID_ARGS);
 
-    if (strcmp(aArgs[0], "peripheral") == 0)
+    if ((aArgsLength == 1) && (strcmp(aArgs[0], "peripheral") == 0))
     {
         mRole = OT_TOBLE_ROLE_PERIPHERAL;
     }
-    else if (strcmp(aArgs[0], "central") == 0)
+    else if ((aArgsLength == 1) && (strcmp(aArgs[0], "central") == 0))
     {
         mRole = OT_TOBLE_ROLE_CENTRAL;
     }
@@ -570,7 +573,7 @@ void ToblePlatform::PrintBytes(const uint8_t *aBuffer, uint8_t aLength)
 
 //------------------------------------------------------------------------------------
 
-void ToblePlatform::HandleAdvReceived(otTobleAdvType aAdvType, otTobleRadioPacket *aAdvPacket)
+void ToblePlatform::HandleAdvReceived(otTobleAdvType aAdvType, otTobleAdvPacket *aAdvPacket)
 {
     otTobleAddress *srcAddress = &aAdvPacket->mSrcAddress;
 
@@ -582,7 +585,7 @@ void ToblePlatform::HandleAdvReceived(otTobleAdvType aAdvType, otTobleRadioPacke
     mInterpreter.mServer->OutputFormat("\r\n");
 }
 
-void ToblePlatform::HandleScanRespReceived(otTobleRadioPacket *aAdvPacket)
+void ToblePlatform::HandleScanRespReceived(otTobleAdvPacket *aAdvPacket)
 {
     otTobleAddress *srcAddress = &aAdvPacket->mSrcAddress;
 
@@ -714,15 +717,15 @@ extern "C" void otPlatTobleDiagHandleAdv(otInstance *          aInstance,
     OT_UNUSED_VARIABLE(aRssi);
 }
 
-extern "C" void otPlatTobleDiagGapOnAdvReceived(otInstance *        aInstance,
-                                                otTobleAdvType      aAdvType,
-                                                otTobleRadioPacket *aAdvPacket)
+extern "C" void otPlatTobleDiagGapOnAdvReceived(otInstance *      aInstance,
+                                                otTobleAdvType    aAdvType,
+                                                otTobleAdvPacket *aAdvPacket)
 {
     OT_UNUSED_VARIABLE(aInstance);
     Server::sServer->GetInterpreter().GetToblePlatform().HandleAdvReceived(aAdvType, aAdvPacket);
 }
 
-extern "C" void otPlatTobleDiagGapOnScanRespReceived(otInstance *aInstance, otTobleRadioPacket *aAdvPacket)
+extern "C" void otPlatTobleDiagGapOnScanRespReceived(otInstance *aInstance, otTobleAdvPacket *aAdvPacket)
 {
     OT_UNUSED_VARIABLE(aInstance);
     Server::sServer->GetInterpreter().GetToblePlatform().HandleScanRespReceived(aAdvPacket);

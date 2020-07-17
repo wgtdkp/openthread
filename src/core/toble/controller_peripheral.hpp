@@ -82,14 +82,14 @@ private:
     enum
     {
         kSleepDisconnectTimeout = 90,   // Time to wait after `Sleep() to disconnect if already connected
-        kTransportStartTimeout  = 3000, // Maximum time waiting for transport to be setup.
+        kTransportStartTimeout  = 6000, // 3000, // Maximum time waiting for transport to be setup.
         kRxModeAdvInterval      = 20,   // Adv interval during Rx Mode
         kRxModeAdvStartDelay    = 2,    // Delay when entering receive before starting BLE advertisements.
-        kRxModeConnTimeout      = 2000, // Timeout keeping connection open while in rx mode (kicked on recvd frame).
-        kTxConnectTimeout       = 1000, // Maximum time waiting for connection to be established while in tx mode.
-        kTxTimeout              = 1000, // Tx timeout interval (max time waiting for tx to finish).
-        kTxModeAdvInterval      = 20,   // Adv interval during Tx Mode
-        kAckFrameLength         = 5,
+        kRxModeConnTimeout = 5000, // 2000, // Timeout keeping connection open while in rx mode (kicked on recvd frame).
+        kTxConnectTimeout  = 5000, // 1000, // Maximum time waiting for connection to be established while in tx mode.
+        kTxTimeout         = 5000, // 1000, // Tx timeout interval (max time waiting for tx to finish).
+        kTxModeAdvInterval = 20,   // Adv interval during Tx Mode
+        kAckFrameLength    = 5,
     };
 
     void SetState(State aState);

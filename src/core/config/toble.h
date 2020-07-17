@@ -114,4 +114,98 @@
 #define OPENTHREAD_CONFIG_TOBLE_BTP_MAX_SEGMENT_SIZE 256
 #endif
 
+/**
+ * @def OPENTHREAD_CONFIG_TOBLE_MULTI_RADIO_ENABLE
+ *
+ * Enables dual radio attach support when ToBLE feature is enabled.
+ *
+ * When enabled, while device is detached it will try to attach (sequentially) on either IEEE802.15.4 link or ToBLE
+ * link.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_TOBLE_MULTI_RADIO_ENABLE
+#define OPENTHREAD_CONFIG_TOBLE_MULTI_RADIO_ENABLE 0
+#endif
+
+
+/**
+ * @def OPENTHREAD_CONFIG_TOBLE_CONNECTION_INTERVAL
+ *
+ * Specifies the BLE connection interval, in millisecond.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_TOBLE_CONNECTION_INTERVAL
+#define OPENTHREAD_CONFIG_TOBLE_CONNECTION_INTERVAL 40
+#endif
+
+/**
+ * @def OPENTHREAD_CONFIG_TOBLE_CONNECTION_SCAN_INTERVAL
+ *
+ * Specifies the BLE connection scan interval, in millisecond.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_TOBLE_CONNECTION_SCAN_INTERVAL
+#define OPENTHREAD_CONFIG_TOBLE_CONNECTION_SCAN_INTERVAL 40
+#endif
+
+/**
+ * @def OPENTHREAD_CONFIG_TOBLE_CONNECTION_SCAN_WINDOW
+ *
+ * Specifies the BLE connection scan window, in millisecond.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_TOBLE_CONNECTION_SCAN_WINDOW
+#define OPENTHREAD_CONFIG_TOBLE_CONNECTION_SCAN_WINDOW 30
+#endif
+
+/**
+ * @def OPENTHREAD_CONFIG_TOBLE_SCAN_INTERVAL
+ *
+ * Specifies the BLE scan interval, in millisecond.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_TOBLE_SCAN_INTERVAL
+#define OPENTHREAD_CONFIG_TOBLE_SCAN_INTERVAL 40
+#endif
+
+/**
+ * @def OPENTHREAD_CONFIG_TOBLE_SCAN_WINDOW
+ *
+ * Specifies the BLE scan window, in millisecond.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_TOBLE_SCAN_WINDOW
+#define OPENTHREAD_CONFIG_TOBLE_SCAN_WINDOW 30
+#endif
+
+/**
+ * @def OPENTHREAD_CONFIG_TOBLE_WAIT_TO_CONNECTION_TIMEOUT
+ *
+ * Specifies the wait time to establish a ToBLE connection, in millisecond.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_TOBLE_WAIT_TO_CONNECTION_TIMEOUT
+#define OPENTHREAD_CONFIG_TOBLE_WAIT_TO_CONNECTION_TIMEOUT 1600
+#endif
+
+/**
+ * @def OPENTHREAD_CONFIG_TOBLE_DISCONNECT_TIMEOUT
+ *
+ * Specifies the timeout to disconnect the ToBLE connection, in millisecond.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_TOBLE_DISCONNECT_TIMEOUT
+#define OPENTHREAD_CONFIG_TOBLE_DISCONNECT_TIMEOUT 5000
+#endif
+
+/**
+ * @def OPENTHREAD_CONFIG_TOBLE_DISCONNECT_TIMEOUT
+ *
+ * Specifies the timeout for entire transmit operation to finish, in millisecond.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_TOBLE_TRANSMIT_TIMEOUT
+#define OPENTHREAD_CONFIG_TOBLE_TRANSMIT_TIMEOUT 1000
+#endif
+
 #endif // CONFIG_TOBLE_H_

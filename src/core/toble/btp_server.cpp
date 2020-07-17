@@ -53,13 +53,14 @@ void Btp::HandleC2Subscribed(Platform::Connection *aPlatConn, bool aIsSubscribed
     if (aIsSubscribed)
     {
         VerifyOrExit(conn->mSession.mState == kStateHandshake, OT_NOOP);
-        otLogDebgBle("BTP subscribed");
+        otLogDebgBle("Btp::HandleC2Subscribed(subscribed)");
+        otLogDebgBle("Btp::IndicateC2(mResponse)");
         Get<Platform>().IndicateC2(aPlatConn, &conn->mSession.mResponse, sizeof(HandshakeResponse));
     }
     else
     {
         VerifyOrExit(conn->mSession.mState != kStateIdle, OT_NOOP);
-        otLogDebgBle("BTP unsubscribed");
+        otLogDebgBle("Btp::HandleC2Subscribed(unsubscribed)");
 
         // Optional future enhancement: Trigger a BLE disconnect on un-subscribe.
 
@@ -138,7 +139,7 @@ void Btp::HandleHandshake(Connection &aConn, const HandshakeRequest &aRequest)
 
     VerifyOrExit(session.mState == kStateIdle, OT_NOOP);
 
-    otLogDebgBle("BTP handshake receive");
+    otLogDebgBle("Btp::HandleHandshake");
 
     session.mMtu = aRequest.GetMtu();
 

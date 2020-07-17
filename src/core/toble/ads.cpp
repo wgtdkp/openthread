@@ -78,14 +78,14 @@ exit:
     return error;
 }
 
-otError Ads::AppendUint64(uint8_t aMaxLength, uint64_t aValue)
+otError Ads::AppendExtAddress(uint8_t aMaxLength, const Mac::ExtAddress &aAddress)
 {
     otError error = OT_ERROR_NONE;
 
-    VerifyOrExit(GetLength() + sizeof(uint64_t) <= aMaxLength, error = OT_ERROR_NO_BUFS);
+    VerifyOrExit(GetLength() + OT_EXT_ADDRESS_SIZE <= aMaxLength, error = OT_ERROR_NO_BUFS);
 
-    *reinterpret_cast<uint64_t *>(reinterpret_cast<void *>(GetValue() + GetValueLength())) = HostSwap64(aValue);
-    mLength += sizeof(uint64_t);
+    aAddress.CopyTo(GetValue() + GetValueLength(), Mac::ExtAddress::kReverseByteOrder);
+    mLength += OT_EXT_ADDRESS_SIZE;
 
 exit:
     return error;
@@ -143,31 +143,19 @@ exit:
     return error;
 }
 
-otError Ads::GetUint64(Iterator &aIterator, uint64_t &aValue) const
+otError Ads::GetExtAddress(Iterator &aIterator, Mac::ExtAddress &aAddress) const
 {
     otError error = OT_ERROR_NONE;
 
-    VerifyOrExit(aIterator + sizeof(uint64_t) <= GetValueLength(), error = OT_ERROR_PARSE);
-
-    aValue = HostSwap32(*reinterpret_cast<const uint64_t *>(reinterpret_cast<const void *>(GetValue() + aIterator)));
-    aIterator += sizeof(uint64_t);
+    VerifyOrExit(aIterator + OT_EXT_ADDRESS_SIZE <= GetValueLength(), error = OT_ERROR_PARSE);
+    aAddress.Set(GetValue() + aIterator, Mac::ExtAddress::kReverseByteOrder);
+    aIterator += OT_EXT_ADDRESS_SIZE;
 
 exit:
     return error;
 }
 
-otError Ads::GetExtAddress(Iterator aIterator, Mac::ExtAddress &aAddress) const
-{
-    otError  error = OT_ERROR_NONE;
-    uint64_t address;
-
-    SuccessOrExit(error = GetUint64(aIterator, address));
-    aAddress.Set(reinterpret_cast<const uint8_t *>(&address));
-exit:
-    return error;
-}
-
-otError Ads::GetTlv(Iterator aIterator, Tlv &aTlv) const
+otError Ads::GetTlv(Iterator &aIterator, Tlv &aTlv) const
 {
     otError    error = OT_ERROR_NONE;
     const Tlv *tlv;

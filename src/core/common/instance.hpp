@@ -86,12 +86,11 @@
 #endif
 
 #endif // (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)
-
+#endif // OPENTHREAD_FTD || OPENTHREAD_MTD
 #if OPENTHREAD_CONFIG_TOBLE_ENABLE
 #include "toble/toble.hpp"
 #endif
 
-#endif // OPENTHREAD_FTD || OPENTHREAD_MTD
 #if OPENTHREAD_ENABLE_VENDOR_EXTENSION
 #include "common/extension.hpp"
 #endif

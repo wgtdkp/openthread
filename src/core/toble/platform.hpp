@@ -106,6 +106,7 @@ class Platform : public InstanceLocator
 public:
     typedef otTobleAdvType          AdvType;
     typedef otTobleAdvConfig        AdvConfig;
+    typedef otTobleAdvPacket        AdvPacket;
     typedef otTobleConnection       Connection;
     typedef otTobleConnectionConfig ConnectionConfig;
 
@@ -119,7 +120,8 @@ public:
         void HandleConnectionReady(Connection *aConn, otTobleConnectionLinkType aLinkType);
 
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
-        void HandleAdv(AdvType aAdvType, const Address &aSource, const uint8_t *aData, uint16_t aLength, int8_t aRssi);
+        void HandleAdv(AdvType aAdvType, AdvPacket &aAdvPacket);
+        void HandleScanResponse(AdvPacket &aAdvPacket);
         void HandleC1WriteDone(Connection *aConn);
         void HandleC2Indication(Connection *aConn, const uint8_t *aBuf, uint16_t aLength);
 #endif
@@ -153,43 +155,17 @@ public:
 
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
 
-    otError StartScan(uint16_t aInterval, uint16_t aWindow)
-    {
-        return otPlatTobleScanStart(GetInstance(), aInterval, aWindow);
-    }
-
-    otError StopScan(void) { return otPlatTobleScanStop(GetInstance()); }
-
-    Connection *CreateConnection(const Address &aPeerAddress, ConnectionConfig &aConfig)
-    {
-        return otPlatTobleCreateConnection(GetInstance(), &aPeerAddress, &aConfig);
-    }
-
-    void WriteC1(Connection *aConn, const void *aBuf, uint16_t aLength)
-    {
-        otPlatTobleC1Write(GetInstance(), aConn, aBuf, aLength);
-    }
-
-    void SubscribeC2(Connection *aConn, bool aSubscribe)
-    {
-        return otPlatTobleC2Subscribe(GetInstance(), aConn, aSubscribe);
-    }
-
-#if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
-    //-- Add L2CAP platform APIs for central
-#endif
-
+    otError     StartScan(uint16_t aInterval, uint16_t aWindow);
+    otError     StopScan(void);
+    Connection *CreateConnection(const Address &aPeerAddress, ConnectionConfig &aConfig);
+    void        WriteC1(Connection *aConn, const void *aBuf, uint16_t aLength);
+    void        SubscribeC2(Connection *aConn, bool aSubscribe);
 #endif // OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
 
 #if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
-
-    otError StartAdv(const AdvConfig &aConfig) { return otPlatTobleAdvStart(GetInstance(), &aConfig); }
-    otError StopAdv(void) { return otPlatTobleAdvStop(GetInstance()); }
-
-    void IndicateC2(Connection *aConn, const void *aFrame, uint16_t aLength)
-    {
-        otPlatTobleC2Indicate(GetInstance(), aConn, aFrame, aLength);
-    }
+    otError StartAdv(const AdvConfig &aConfig);
+    otError StopAdv(void);
+    void    IndicateC2(Connection *aConn, const void *aFrame, uint16_t aLength);
 
 #if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
     uint8_t GetL2capPsm(void) { return otPlatTobleGetL2capPsm(GetInstance()); }

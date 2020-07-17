@@ -240,4 +240,44 @@
 #define OPENTHREAD_CONFIG_MLE_INFORM_PREVIOUS_PARENT_ON_REATTACH 0
 #endif
 
+/**
+ * @def OPENTHREAD_CONFIG_MLE_PARENT_REQUEST_ROUTER_TIMEOUT
+ *
+ * Specifies the timeoout for receiving response on MLE Parent Request to routers.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_MLE_PARENT_REQUEST_ROUTER_TIMEOUT
+#define OPENTHREAD_CONFIG_MLE_PARENT_REQUEST_ROUTER_TIMEOUT 750
+#endif
+
+/**
+ * @def OPENTHREAD_CONFIG_MLE_PARENT_REQUEST_REED_TIMEOUT
+ *
+ * Specifies the timeoout for receiving response on MLE Parent Request to REEDs.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_MLE_PARENT_REQUEST_REED_TIMEOUT
+#define OPENTHREAD_CONFIG_MLE_PARENT_REQUEST_REED_TIMEOUT 1250
+#endif
+
+/**
+ * @def OPENTHREAD_CONFIG_MLE_UNICAST_RETRANSMISSION_DELAY
+ *
+ * Base delay before retransmitting an MLE unicast message.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_MLE_UNICAST_RETRANSMISSION_DELAY
+#define OPENTHREAD_CONFIG_MLE_UNICAST_RETRANSMISSION_DELAY 1000
+#endif
+
+/**
+ * @def OPENTHREAD_CONFIG_MLE_CHILD_ID_REQUEST_TIMEOUT
+ *
+ * Specifies the timeoout for receiving MLE Child ID Request on MLE Parent Response message.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_MLE_CHILD_ID_REQUEST_TIMEOUT
+#define OPENTHREAD_CONFIG_MLE_CHILD_ID_REQUEST_TIMEOUT 5000
+#endif
+
 #endif // CONFIG_MLE_H_

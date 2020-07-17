@@ -178,6 +178,66 @@ exit:
     return error;
 }
 #endif
+
+void Toble::PrintHex(const char *aName, const uint8_t *aData, uint8_t aLength)
+{
+    char    string[300] = {0};
+    char *  start       = string;
+    char *  end         = string + sizeof(string) - 1;
+    uint8_t i;
+
+    for (i = 0; i < aLength; i++)
+    {
+        start += snprintf(start, static_cast<uint32_t>(end - start), "%02x ", aData[i]);
+    }
+
+    otLogCritBle("%s: %s", aName, string);
+}
+
+void Toble::Test(void)
+{
+    uint8_t data[OT_TOBLE_ADV_DATA_MAX_LENGTH];
+    uint8_t ScanRespData[OT_TOBLE_ADV_DATA_MAX_LENGTH];
+
+    Advertisement advertisement(data, sizeof(data));
+    ScanResponse  scanRespone(ScanRespData, sizeof(ScanRespData));
+    AdvData::Info info;
+    AdvData::Info parsedInfo;
+    uint8_t       extSrcAddress[OT_EXT_ADDRESS_SIZE] = {0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18};
+    uint8_t       extDstAddress[OT_EXT_ADDRESS_SIZE] = {0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28};
+    Mac::NameData networkName("OpenThread", 11);
+
+    info.mL2capTransport     = false;
+    info.mJoiningPermitted   = false;
+    info.mDtcEnabled         = true;
+    info.mBorderAgentEnabled = true;
+    info.mLinkState          = AdvData::kTxReadyToExtended;
+    info.mTobleRole          = AdvData::kBedPeripheral;
+    info.mL2capPsm           = 0;
+    info.mPanId              = 0x1234;
+    info.mSrcShort           = 0x2b01;
+    info.mSrcExtended.Set(extSrcAddress);
+    info.mDest.SetExtended(extDstAddress);
+
+    info.mNetworkName.Init();
+    info.mNetworkName.SetNetworkName(networkName);
+
+    info.mSteeringData.Init();
+    info.mSteeringData.Set();
+
+    otLogCritBle("%s", info.ToString().AsCString());
+
+    advertisement.Populate(info);
+    PrintHex("ADV", advertisement.GetData(), advertisement.GetLength());
+
+    scanRespone.Populate(info);
+    PrintHex("RSP", scanRespone.GetData(), scanRespone.GetLength());
+
+    advertisement.Parse(parsedInfo);
+    scanRespone.Parse(parsedInfo);
+    otLogCritBle("%s", parsedInfo.ToString().AsCString());
+}
+
 } // namespace Toble
 } // namespace ot
 

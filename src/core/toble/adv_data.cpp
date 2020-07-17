@@ -42,7 +42,7 @@ namespace Toble {
 
 AdvData::Info::InfoString Advertisement::Info::ToString(void) const
 {
-    InfoString str("L2:%d State:%d BA:%d D:%d J:%d Role:%d, PANID:0x%04x, SRC16:0x%04x ", mL2capTransport, mLinkState,
+    InfoString str("L2:%d State:%d BA:%d D:%d J:%d Role:%d, PANID:0x%04x, SRC16:0x%04x", mL2capTransport, mLinkState,
                    mBorderAgentEnabled, mDtcEnabled, mJoiningPermitted, mTobleRole, mPanId, mSrcShort);
 
     SuccessOrExit(str.Append(", SRC64:%s", mSrcExtended.ToString().AsCString()));
@@ -70,7 +70,10 @@ AdvData::Info::InfoString Advertisement::Info::ToString(void) const
 
     if (mBorderAgentEnabled)
     {
-        SuccessOrExit(str.Append(", NetworkName:%s", mNetworkName.GetNetworkName().GetBuffer()));
+        char networkName[OT_NETWORK_NAME_MAX_SIZE + 1] = {0};
+
+        mNetworkName.GetNetworkName().CopyTo(networkName, OT_NETWORK_NAME_MAX_SIZE);
+        SuccessOrExit(str.Append(", NetworkName:%s", networkName));
     }
 
 exit:
@@ -184,6 +187,7 @@ otError Advertisement::Parse(Info &aInfo) const
 
     SuccessOrExit(error = ads->GetUint16(iterator, aInfo.mPanId));
     SuccessOrExit(error = ads->GetShortAddress(iterator, aInfo.mSrcShort));
+    SuccessOrExit(error = ads->GetExtAddress(iterator, aInfo.mSrcExtended));
 
     if (aInfo.mL2capTransport)
     {

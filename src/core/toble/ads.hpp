@@ -47,7 +47,6 @@ namespace Toble {
 
 using ot::Encoding::BigEndian::HostSwap16;
 using ot::Encoding::BigEndian::HostSwap32;
-using ot::Encoding::BigEndian::HostSwap64;
 
 /**
  * This class implements ADS generation and parsing.
@@ -188,20 +187,6 @@ public:
     otError AppendUint32(uint8_t aMaxLength, uint32_t aValue);
 
     /**
-     * This method appends an `uint64_t` value to ADS.
-     *
-     * On success this method grows the Length by the size of the `uint64_t`.
-     *
-     * @param[in]  aMaxLength   The max value of the Length field.
-     * @param[in]  aValue       The value (`uint64_t`).
-     *
-     * @retval OT_ERROR_NONE     Successfully appended the `uint64_t` value to the ADS.
-     * @retval OT_ERROR_NO_BUFS  Insufficient available buffers to grow the ADS.
-     *
-     */
-    otError AppendUint64(uint8_t aMaxLength, uint64_t aValue);
-
-    /**
      * This method appends an `Mac::ShortAddress` value to ADS.
      *
      * On success this method grows the Length by the size of the `Mac::ShortAddress`.
@@ -230,11 +215,7 @@ public:
      * @retval OT_ERROR_NO_BUFS  Insufficient available buffers to grow the ADS.
      *
      */
-    otError AppendExtAddress(uint8_t aMaxLength, const Mac::ExtAddress &aAddress)
-    {
-        return AppendUint64(aMaxLength,
-                            *reinterpret_cast<const uint64_t *>(reinterpret_cast<const void *>(aAddress.m8)));
-    }
+    otError AppendExtAddress(uint8_t aMaxLength, const Mac::ExtAddress &aAddress);
 
     /**
      * This method appends an `Tlv` value to ADS.
@@ -293,20 +274,6 @@ public:
     otError GetUint32(Iterator &aIterator, uint32_t &aValue) const;
 
     /**
-     * This method reads an `uint64_t` value from ADS.
-     *
-     * On success this method grows the @p aIterator by the size of the `uint64_t`.
-     *
-     * @param[inout]   aIterator   A reference to the iterator.
-     * @param[out]     aValue      A reference to an `uint64_t` value.
-     *
-     * @retval OT_ERROR_NONE    Successfully parsed the @p aValue.
-     * @retval OT_ERROR_PARSE   The `uint64_t` value could not be parsed.
-     *
-     */
-    otError GetUint64(Iterator &aIterator, uint64_t &aValue) const;
-
-    /**
      * This method reads a MAC short address from ADS.
      *
      * On success this method grows the @p aIterator by the size of the `Mac::ShortAddress`.
@@ -318,7 +285,7 @@ public:
      * @retval OT_ERROR_PARSE   The MAC short address could not be parsed.
      *
      */
-    otError GetShortAddress(Iterator aIterator, Mac::ShortAddress &aAddress) const
+    otError GetShortAddress(Iterator &aIterator, Mac::ShortAddress &aAddress) const
     {
         return GetUint16(aIterator, aAddress);
     }
@@ -335,7 +302,7 @@ public:
      * @retval OT_ERROR_PARSE   The MAC extended address could not be parsed.
      *
      */
-    otError GetExtAddress(Iterator aIterator, Mac::ExtAddress &aAddress) const;
+    otError GetExtAddress(Iterator &aIterator, Mac::ExtAddress &aAddress) const;
 
     /**
      * This method reads a TLV from ADS.
@@ -349,11 +316,11 @@ public:
      * @retval OT_ERROR_PARSE   The TLV could not be parsed.
      *
      */
-    otError GetTlv(Iterator aIterator, Tlv &aTlv) const;
+    otError GetTlv(Iterator &aIterator, Tlv &aTlv) const;
 
 private:
-    uint8_t mType;
     uint8_t mLength;
+    uint8_t mType;
 } OT_TOOL_PACKED_END;
 
 } // namespace Toble
