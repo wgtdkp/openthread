@@ -165,14 +165,8 @@ void Controller::StartRxModeAdv(void)
     info.mJoiningPermitted   = false;
     info.mDtcEnabled         = false;
     info.mBorderAgentEnabled = false;
+    info.mL2capTransport     = false;
     info.mTobleRole          = AdvData::kBedPeripheral;
-
-#if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
-    info.mL2capTransport = true;
-    info.mL2capPsm       = Get<Platform>().GetL2capPsm();
-#else
-    info.mL2capTransport = false;
-#endif
 
     info.mLinkState   = Advertisement::kRxReady;
     info.mPanId       = Get<Mac::Mac>().GetPanId();
@@ -238,7 +232,10 @@ otError Controller::Transmit(Mac::TxFrame &aFrame)
         // or a timeout.
         SetState(kStateTxSending);
         mTimer.Start(kTxTimeout);
-        Get<Transport>().Send(*mConn, mTxFrame->GetPsdu(), mTxFrame->GetPsduLength());
+
+        // All ToBLE transports strip MAC FCS.
+        Get<Btp>().Send(*mConn, mTxFrame->GetPsdu(), mTxFrame->GetPsduLength() - Mac::Frame::GetFcsSize());
+        // Get<Btp>().Send(*mConn, mTxFrame->GetPsdu(), mTxFrame->GetPsduLength());
     }
 
 exit:
@@ -259,14 +256,8 @@ void Controller::StartTxModeAdv(void)
     info.mJoiningPermitted   = false;
     info.mDtcEnabled         = false;
     info.mBorderAgentEnabled = false;
+    info.mL2capTransport     = false;
     info.mTobleRole          = AdvData::kBedPeripheral;
-
-#if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
-    info.mL2capTransport = true;
-    info.mL2capPsm       = Get<Platform>().GetL2capPsm();
-#else
-    info.mL2capTransport = false;
-#endif
 
     info.mSrcShort    = Get<Mac::Mac>().GetShortAddress();
     info.mSrcExtended = Get<Mac::Mac>().GetExtAddress();
@@ -333,7 +324,7 @@ void Controller::HandleTimer(void)
         if (mConn != NULL)
         {
             otLogDebgBle("PeriCtrl::HandleTimer: TIMEOUT EXCEEDED: kSleepDisconnectTimeout");
-            Get<Transport>().Stop(*mConn);
+            Get<Btp>().Stop(*mConn);
             Get<Platform>().Disconnect(mConn->mPlatConn);
             Get<ConnectionTable>().Remove(*mConn);
             mConn = NULL;
@@ -350,7 +341,7 @@ void Controller::HandleTimer(void)
         {
             // Connection timeout, disconnect and start adv again.
             otLogDebgBle("PeriCtrl::HandleTimer: TIMEOUT EXCEEDED: kRxModeConnTimeout");
-            Get<Transport>().Stop(*mConn);
+            Get<Btp>().Stop(*mConn);
             Get<Platform>().Disconnect(mConn->mPlatConn);
             Get<ConnectionTable>().Remove(*mConn);
             mConn = NULL;
@@ -361,7 +352,7 @@ void Controller::HandleTimer(void)
     case kStateTxSending:
         // Timed out waiting for BTP send done callback.
         otLogDebgBle("PeriCtrl::HandleTimer: TIMEOUT EXCEEDED: kTxTimeout");
-        Get<Transport>().Stop(*mConn);
+        Get<Btp>().Stop(*mConn);
         Get<Platform>().Disconnect(mConn->mPlatConn);
         Get<ConnectionTable>().Remove(*mConn);
         mConn = NULL;
@@ -392,7 +383,7 @@ void Controller::HandleConnected(Platform::Connection *aPlatConn)
         if (mConn != NULL)
         {
             otLogNoteBle("PeriCtrl: Got a new connection while already connected in Rx mode");
-            Get<Transport>().Stop(*mConn);
+            Get<Btp>().Stop(*mConn);
             Get<Platform>().Disconnect(mConn->mPlatConn);
             Get<ConnectionTable>().Remove(*mConn);
             mConn = NULL;
@@ -403,7 +394,7 @@ void Controller::HandleConnected(Platform::Connection *aPlatConn)
         mConn = Get<ConnectionTable>().GetNew();
         VerifyOrExit(mConn != NULL, StartRxModeAdv());
         mConn->mPlatConn = aPlatConn;
-        Get<Transport>().Start(*mConn);
+        Get<Btp>().Start(*mConn);
         mTimer.Start(kTransportStartTimeout + kRxModeConnTimeout);
         break;
 
@@ -419,10 +410,11 @@ void Controller::HandleConnected(Platform::Connection *aPlatConn)
         mConn = Get<ConnectionTable>().GetNew();
         OT_ASSERT(mConn != NULL);
         mConn->mPlatConn = aPlatConn;
-        Get<Transport>().Start(*mConn);
+        Get<Btp>().Start(*mConn);
         SetState(kStateTxSending);
         mTimer.Start(kTransportStartTimeout + kTxTimeout);
-        Get<Transport>().Send(*mConn, mTxFrame->GetPsdu(), mTxFrame->GetPsduLength());
+        // All ToBLE transports strip MAC FCS.
+        Get<Btp>().Send(*mConn, mTxFrame->GetPsdu(), mTxFrame->GetPsduLength() - Mac::Frame::GetFcsSize());
         break;
     }
 
@@ -438,7 +430,7 @@ void Controller::HandleDisconnected(Platform::Connection *aPlatConn)
 
     otLogInfoBle("PeriCtrl::Disconnected()");
 
-    Get<Transport>().Stop(*mConn);
+    Get<Btp>().Stop(*mConn);
     Get<ConnectionTable>().Remove(*mConn);
     mConn = NULL;
 

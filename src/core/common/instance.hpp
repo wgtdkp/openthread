@@ -801,12 +801,6 @@ template <> inline Toble::Btp &Instance::Get(void)
     return mToble.mTransport.mBtp;
 }
 
-#if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
-template <> inline Toble::L2cap &Instance::Get(void)
-{
-    return mToble.mTransport.mL2cap;
-}
-#endif
 #endif // OPENTHREAD_CONFIG_TOBLE_ENABLE
 
 #endif // OPENTHREAD_MTD || OPENTHREAD_FTD

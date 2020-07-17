@@ -72,10 +72,6 @@ public:
         kConnected,
         kSending,
     } mState;
-
-#if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
-    uint8_t mL2capPsm;
-#endif // OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
 #endif // OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
 
     Btp::Session mSession;

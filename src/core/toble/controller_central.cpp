@@ -104,7 +104,7 @@ otError Controller::Sleep(void)
         {
         case Connection::kConnected:
         case Connection::kSending:
-            Get<Transport>().Stop(*conn);
+            Get<Btp>().Stop(*conn);
 
             // Fall through
 
@@ -308,7 +308,8 @@ void Controller::StartTransmit(void)
 
         SetState((mState == kStateRxConnecting) ? kStateTxSendingRxConnecting : kStateTxSending);
         mTxConn->mState = Connection::kSending;
-        Get<Transport>().Send(*mTxConn, mTxFrame->GetPsdu(), mTxFrame->GetPsduLength());
+        // All ToBLE transports strip MAC FCS.
+        Get<Btp>().Send(*mTxConn, mTxFrame->GetPsdu(), mTxFrame->GetPsduLength() - Mac::Frame::GetFcsSize());
         mTxConn->mDisconnectTime = TimerMilli::GetNow() + kTxDisconnectTimeout;
         UpdateConnTimer();
         // Wait for `TransportSendDone` callback, a tx timeout and/or a connection timeout.
@@ -564,19 +565,7 @@ void Controller::HandleAdv(Platform::AdvType aAdvType, Platform::AdvPacket &aAdv
     conn->mRssi      = aAdvPacket.mRssi;
     conn->mState     = Connection::kConnecting;
 
-#if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
-    if (advInfo.mL2capSupport)
-    {
-        // Use L2CAP transport if it is supported by both
-        // peripheral and central
-        conn->mTransport = Transport::kL2cap;
-        conn->mL2capPsm  = advInfo.mL2capPsm;
-    }
-    else
-#endif
-    {
-        conn->mTransport = Transport::kBtp;
-    }
+    conn->mTransport = Transport::kBtp;
 
     switch (mState)
     {
@@ -640,7 +629,7 @@ void Controller::HandleConnTimer(void)
             case Connection::kConnected:
                 otLogDebgBle("CentCtrl::HandleConnTimer: TIMEOUT EXCEEDED: %s",
                              (conn == mTxConn) ? "kTxDisconnectTimeout" : "kRxDisconnectTimeout");
-                Get<Transport>().Stop(*conn);
+                Get<Btp>().Stop(*conn);
 
                 // Fall through
 
@@ -754,7 +743,7 @@ void Controller::HandleConnected(Platform::Connection *aPlatConn)
 
     UpdateConnTimer();
 
-    Get<Transport>().Start(*conn);
+    Get<Btp>().Start(*conn);
 
     switch (mState)
     {
@@ -788,7 +777,8 @@ void Controller::HandleConnected(Platform::Connection *aPlatConn)
         VerifyOrExit(conn == mTxConn, OT_NOOP);
         SetState(kStateTxSending);
         mTxConn->mState = Connection::kSending;
-        Get<Transport>().Send(*mTxConn, mTxFrame->GetPsdu(), mTxFrame->GetPsduLength());
+        // All ToBLE transports strip MAC FCS.
+        Get<Btp>().Send(*mTxConn, mTxFrame->GetPsdu(), mTxFrame->GetPsduLength() - Mac::Frame::GetFcsSize());
         // Wait for `TransportSendDone` callback, or a tx timeout and/or
         // a connection timeout.
         break;
@@ -807,7 +797,7 @@ void Controller::HandleDisconnected(Platform::Connection *aPlatConn)
 
     otLogNoteBle("CentCtrl::HandleDisconnected(conn:[%s])", conn->ToString().AsCString());
 
-    Get<Transport>().Stop(*conn);
+    Get<Btp>().Stop(*conn);
     Get<ConnectionTable>().Remove(*conn);
     UpdateConnTimer();
 
@@ -866,7 +856,7 @@ exit:
     return;
 }
 
-// This is callback from transport layer after `Get<Transport>().Send()`
+// This is callback from transport layer after `Get<Btp>().Send()`
 // aError should OT_ERROR_NONE or NO_ACK.
 void Controller::HandleTransportSendDone(Connection &aConn, otError aError)
 {

@@ -44,9 +44,6 @@ namespace Toble {
 Transport::Transport(Instance &aInstance)
     : InstanceLocator(aInstance)
     , mBtp(aInstance)
-#if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
-    , mL2cap(aInstance)
-#endif
 {
 }
 
@@ -64,12 +61,6 @@ void Transport::Start(Connection &aConn)
         case kBtp:
             Get<Btp>().Start(aConn);
             break;
-
-#if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
-        case kL2cap:
-            Get<L2cap>().Start(aConn);
-            break;
-#endif
         }
     }
     else
@@ -79,9 +70,6 @@ void Transport::Start(Connection &aConn)
         // The transport layer code should determine this based
         // on event/callbacks from platform layer
         Get<Btp>().Start(aConn);
-#if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
-        Get<L2cap>().Start(aConn);
-#endif
     }
 }
 
@@ -99,12 +87,6 @@ void Transport::Stop(Connection &aConn)
         case kBtp:
             Get<Btp>().Stop(aConn);
             break;
-
-#if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
-        case kL2cap:
-            Get<L2cap>().Stop(aConn);
-            break;
-#endif
         }
     }
     else
@@ -113,9 +95,6 @@ void Transport::Stop(Connection &aConn)
         // This ensures all transport layer clear their internal
         // states.
         Get<Btp>().Stop(aConn);
-#if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
-        Get<L2cap>().Stop(aConn);
-#endif
     }
 }
 
@@ -131,20 +110,11 @@ void Transport::Send(Connection &aConn, const uint8_t *aBuf, uint16_t aLength)
         // This allows the central to decide on the transport.
         OT_ASSERT(!Get<Toble>().IsCentral());
         Get<Btp>().Send(aConn, aBuf, aLength);
-#if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
-        Get<L2cap>().Send(aConn, aBuf, aLength);
-#endif
         break;
 
     case kBtp:
         Get<Btp>().Send(aConn, aBuf, aLength);
         break;
-
-#if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
-    case kL2cap:
-        Get<L2cap>().Send(aConn, aBuf, aLength);
-        break;
-#endif
     }
 }
 

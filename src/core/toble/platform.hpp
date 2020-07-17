@@ -166,13 +166,6 @@ public:
     otError StartAdv(const AdvConfig &aConfig);
     otError StopAdv(void);
     void    IndicateC2(Connection *aConn, const void *aFrame, uint16_t aLength);
-
-#if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
-    uint8_t GetL2capPsm(void) { return otPlatTobleGetL2capPsm(GetInstance()); }
-
-    //-- Add other L2CAP platform APIs for peripheral
-#endif
-
 #endif // OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
 
 private:

@@ -248,7 +248,6 @@ SOURCES_COMMON                             = \
     toble/conn_table.cpp                     \
     toble/controller_central.cpp             \
     toble/controller_peripheral.cpp          \
-    toble/l2cap.cpp                          \
     toble/platform.cpp                       \
     toble/toble.cpp                          \
     toble/transport.cpp                      \
@@ -470,7 +469,6 @@ HEADERS_COMMON                             = \
     toble/conn_table.hpp                     \
     toble/controller_central.hpp             \
     toble/controller_peripheral.hpp          \
-    toble/l2cap.hpp                          \
     toble/platform.hpp                       \
     toble/toble.hpp                          \
     toble/transport.hpp                      \

@@ -211,7 +211,19 @@ void Btp::HandleSentData(Connection &aConn)
     if ((session.mSendOffset >= session.mSendLength) && (session.mSendBuf != NULL))
     {
         session.mSendBuf = NULL;
-        Get<Transport>().HandleSendDone(aConn, OT_ERROR_NONE);
+
+        if (Get<Toble>().IsCentral())
+        {
+#if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
+            Get<Central::Controller>().HandleTransportSendDone(aConn, OT_ERROR_NONE);
+#endif
+        }
+        else
+        {
+#if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+            Get<Peripheral::Controller>().HandleTransportSendDone(aConn, OT_ERROR_NONE);
+#endif
+        }
     }
 }
 
@@ -260,10 +272,26 @@ void Btp::HandleDataFrame(Connection &aConn, const uint8_t *aFrame, uint16_t aLe
 
     if (frame.IsEnd())
     {
+        uint16_t length;
+
         OT_ASSERT(session.mReceiveOffset == session.mReceiveLength);
         otLogDebgBle("BTP received %d", session.mReceiveOffset);
 
-        Get<Transport>().HandleReceiveDone(aConn, session.mRxBuf, session.mReceiveLength, OT_ERROR_NONE);
+        // All ToBLE transports strip MAC FCS.
+        length = session.mReceiveLength + Mac::Frame::GetFcsSize();
+
+        if (Get<Toble>().IsCentral())
+        {
+#if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
+            Get<Central::Controller>().HandleTransportReceiveDone(aConn, session.mRxBuf, length, OT_ERROR_NONE);
+#endif
+        }
+        else
+        {
+#if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+            Get<Peripheral::Controller>().HandleTransportReceiveDone(aConn, session.mRxBuf, length, OT_ERROR_NONE);
+#endif
+        }
     }
 
 exit:

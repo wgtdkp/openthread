@@ -46,7 +46,6 @@
 #include "toble/conn_table.hpp"
 #include "toble/controller_central.hpp"
 #include "toble/controller_peripheral.hpp"
-#include "toble/l2cap.hpp"
 #include "toble/platform.hpp"
 #include "toble/transport.hpp"
 

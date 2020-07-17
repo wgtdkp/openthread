@@ -82,23 +82,6 @@ Connection::InfoString Connection::ToString(void) const
 
     str.Append(", rssi:%d", mRssi);
 
-#if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
-    str.Append(", transport:");
-
-    switch (mTransport)
-    {
-    case Transport::kBtp:
-        str.Append("btp");
-        break;
-    case Transport::kL2cap:
-        str.Append("l2cap (psm:0x%02x)", mL2capPsm);
-        break;
-    case Transport::kUnspecified:
-        str.Append("unspecified");
-        break;
-    }
-#endif
-
     return str;
 }
 #endif // #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE

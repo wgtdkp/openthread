@@ -38,7 +38,6 @@
 
 #include "common/locator.hpp"
 #include "toble/btp.hpp"
-#include "toble/l2cap.hpp"
 
 #if OPENTHREAD_CONFIG_TOBLE_ENABLE
 
@@ -56,9 +55,6 @@ public:
     {
         kUnspecified, // Unspecified transport type (should be used ONLY on peripheral)
         kBtp,
-#if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
-        kL2cap
-#endif
     };
 
     explicit Transport(Instance &aInstance);
@@ -73,10 +69,6 @@ public:
 
 private:
     Btp mBtp;
-
-#if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE
-    L2cap mL2cap;
-#endif
 };
 
 } // namespace Toble
