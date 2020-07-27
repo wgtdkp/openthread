@@ -192,6 +192,17 @@ public:
     {
     }
 
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    void SetMleDiscoverRequestParameters(bool     aJoiner,
+                                         bool     aEnableFiltering,
+                                         uint16_t aDiscoverCcittIndex,
+                                         uint16_t aDiscoverAnsiIndex);
+
+    void SetJoiningPermitted(bool aEnabled, otSteeringData *aSteeringData);
+    void SetDtc(bool aEnabled);
+    void SetBoarderAgent(bool aEnabled);
+    void SetTobleRole(uint8_t aRole);
+#endif
     /**
      * This method gets the radio capabilities.
      *
@@ -685,6 +696,17 @@ inline uint32_t Radio::GetSupportedChannelMask(void)
 inline uint32_t Radio::GetPreferredChannelMask(void)
 {
     return otPlatRadioGetPreferredChannelMask(GetInstance());
+}
+
+inline void SetMleDiscoverRequestParameters(bool     aJoiner,
+                                            bool     aEnableFiltering,
+                                            uint16_t aDiscoverCcittIndex,
+                                            uint16_t aDiscoverAnsiIndex)
+{
+    OT_UNUSED_VARIABLE(aJoiner);
+    OT_UNUSED_VARIABLE(aEnableFiltering);
+    OT_UNUSED_VARIABLE(aDiscoverCcittIndex);
+    OT_UNUSED_VARIABLE(aDiscoverAnsiIndex);
 }
 #endif
 

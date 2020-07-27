@@ -288,7 +288,8 @@ otError Dtls::Setup(bool aClient)
     OT_ASSERT(mCipherSuites[1] == 0);
     mbedtls_ssl_conf_ciphersuites(&mConf, mCipherSuites);
     mbedtls_ssl_conf_export_keys_cb(&mConf, HandleMbedtlsExportKeys, this);
-    mbedtls_ssl_conf_handshake_timeout(&mConf, 8000, 60000);
+    // mbedtls_ssl_conf_handshake_timeout(&mConf, 8000, 60000);
+    mbedtls_ssl_conf_handshake_timeout(&mConf, 20000, 60000);
     mbedtls_ssl_conf_dbg(&mConf, HandleMbedtlsDebug, this);
 
 #if defined(MBEDTLS_SSL_SRV_C) && defined(MBEDTLS_SSL_COOKIE_C)

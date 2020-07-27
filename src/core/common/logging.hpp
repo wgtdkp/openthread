@@ -90,7 +90,10 @@ extern "C" {
 #define _OT_REGION_CORE_PREFIX "-CORE----: "
 #define _OT_REGION_UTIL_PREFIX "-UTIL----: "
 #define _OT_REGION_BBR_PREFIX "-BBR-----: "
-#define _OT_REGION_BLE_PREFIX "-BLE-----: "
+#define _OT_REGION_BTP_PREFIX "-BTP-----: "
+#define _OT_REGION_TOBLE_PREFIX "-TOBLE---: "
+#define _OT_REGION_TOBLE_C_PREFIX "-TOBLE-C-: "
+#define _OT_REGION_TOBLE_P_PREFIX "-TOBLE-P-: "
 #else
 #define _OT_REGION_API_PREFIX _OT_REGION_SUFFIX
 #define _OT_REGION_MLE_PREFIX _OT_REGION_SUFFIX
@@ -109,7 +112,10 @@ extern "C" {
 #define _OT_REGION_CORE_PREFIX _OT_REGION_SUFFIX
 #define _OT_REGION_UTIL_PREFIX _OT_REGION_SUFFIX
 #define _OT_REGION_BBR_PREFIX _OT_REGION_SUFFIX
-#define _OT_REGION_BLE_PREFIX _OT_REGION_SUFFIX
+#define _OT_REGION_TOBLE_PREFIX _OT_REGION_SUFFIX
+#define _OT_REGION_BTP_PREFIX _OT_REGION_SUFFIX
+#define _OT_REGION_TOBLE_C_PREFIX _OT_REGION_SUFFIX
+#define _OT_REGION_TOBLE_P_PREFIX _OT_REGION_SUFFIX
 #endif
 
 /**
@@ -1034,18 +1040,119 @@ extern "C" {
  * @param[in]  ...          Arguments for the format specification.
  *
  */
-#if OPENTHREAD_CONFIG_LOG_BLE == 1
-#define otLogCritBle(aFormat, ...) otLogCrit(OT_LOG_REGION_BLE, _OT_REGION_BLE_PREFIX aFormat, ##__VA_ARGS__)
-#define otLogWarnBle(aFormat, ...) otLogWarn(OT_LOG_REGION_BLE, _OT_REGION_BLE_PREFIX aFormat, ##__VA_ARGS__)
-#define otLogNoteBle(aFormat, ...) otLogNote(OT_LOG_REGION_BLE, _OT_REGION_BLE_PREFIX aFormat, ##__VA_ARGS__)
-#define otLogInfoBle(aFormat, ...) otLogInfo(OT_LOG_REGION_BLE, _OT_REGION_BLE_PREFIX aFormat, ##__VA_ARGS__)
-#define otLogDebgBle(aFormat, ...) otLogDebg(OT_LOG_REGION_BLE, _OT_REGION_BLE_PREFIX aFormat, ##__VA_ARGS__)
+#if OPENTHREAD_CONFIG_LOG_TOBLE == 1
+#define otLogCritToble(aFormat, ...) otLogCrit(OT_LOG_REGION_TOBLE, _OT_REGION_TOBLE_PREFIX aFormat, ##__VA_ARGS__)
+#define otLogWarnToble(aFormat, ...) otLogWarn(OT_LOG_REGION_TOBLE, _OT_REGION_TOBLE_PREFIX aFormat, ##__VA_ARGS__)
+#define otLogNoteToble(aFormat, ...) otLogNote(OT_LOG_REGION_TOBLE, _OT_REGION_TOBLE_PREFIX aFormat, ##__VA_ARGS__)
+#define otLogInfoToble(aFormat, ...) otLogInfo(OT_LOG_REGION_TOBLE, _OT_REGION_TOBLE_PREFIX aFormat, ##__VA_ARGS__)
+#define otLogDebgToble(aFormat, ...) otLogDebg(OT_LOG_REGION_TOBLE, _OT_REGION_TOBLE_PREFIX aFormat, ##__VA_ARGS__)
 #else
-#define otLogCritBle(aFormat, ...)
-#define otLogWarnBle(aFormat, ...)
-#define otLogNoteBle(aFormat, ...)
-#define otLogInfoBle(aFormat, ...)
-#define otLogDebgBle(aFormat, ...)
+#define otLogCritToble(aFormat, ...)
+#define otLogWarnToble(aFormat, ...)
+#define otLogNoteToble(aFormat, ...)
+#define otLogInfoToble(aFormat, ...)
+#define otLogDebgToble(aFormat, ...)
+#endif
+
+#if OPENTHREAD_CONFIG_LOG_TOBLE == 1
+#define otLogCritTobleCent(aFormat, ...) \
+    otLogCrit(OT_LOG_REGION_TOBLE, _OT_REGION_TOBLE_C_PREFIX aFormat, ##__VA_ARGS__)
+#define otLogWarnTobleCent(aFormat, ...) \
+    otLogWarn(OT_LOG_REGION_TOBLE, _OT_REGION_TOBLE_C_PREFIX aFormat, ##__VA_ARGS__)
+#define otLogNoteTobleCent(aFormat, ...) \
+    otLogNote(OT_LOG_REGION_TOBLE, _OT_REGION_TOBLE_C_PREFIX aFormat, ##__VA_ARGS__)
+#define otLogInfoTobleCent(aFormat, ...) \
+    otLogInfo(OT_LOG_REGION_TOBLE, _OT_REGION_TOBLE_C_PREFIX aFormat, ##__VA_ARGS__)
+#define otLogDebgTobleCent(aFormat, ...) \
+    otLogDebg(OT_LOG_REGION_TOBLE, _OT_REGION_TOBLE_C_PREFIX aFormat, ##__VA_ARGS__)
+#else
+#define otLogCritTobleCent(aFormat, ...)
+#define otLogWarnTobleCent(aFormat, ...)
+#define otLogNoteTobleCent(aFormat, ...)
+#define otLogInfoTobleCent(aFormat, ...)
+#define otLogDebgTobleCent(aFormat, ...)
+#endif
+
+#if OPENTHREAD_CONFIG_LOG_TOBLE == 1
+#define otLogCritToblePeri(aFormat, ...) \
+    otLogCrit(OT_LOG_REGION_TOBLE, _OT_REGION_TOBLE_P_PREFIX aFormat, ##__VA_ARGS__)
+#define otLogWarnToblePeri(aFormat, ...) \
+    otLogWarn(OT_LOG_REGION_TOBLE, _OT_REGION_TOBLE_P_PREFIX aFormat, ##__VA_ARGS__)
+#define otLogNoteToblePeri(aFormat, ...) \
+    otLogNote(OT_LOG_REGION_TOBLE, _OT_REGION_TOBLE_P_PREFIX aFormat, ##__VA_ARGS__)
+#define otLogInfoToblePeri(aFormat, ...) \
+    otLogInfo(OT_LOG_REGION_TOBLE, _OT_REGION_TOBLE_P_PREFIX aFormat, ##__VA_ARGS__)
+#define otLogDebgToblePeri(aFormat, ...) \
+    otLogDebg(OT_LOG_REGION_TOBLE, _OT_REGION_TOBLE_P_PREFIX aFormat, ##__VA_ARGS__)
+#else
+#define otLogCritToblePeri(aFormat, ...)
+#define otLogWarnToblePeri(aFormat, ...)
+#define otLogNoteToblePeri(aFormat, ...)
+#define otLogInfoToblePeri(aFormat, ...)
+#define otLogDebgToblePeri(aFormat, ...)
+#endif
+
+/**
+ * @def otLogCritBtp
+ *
+ * This method generates a log with level critical for the ToBLE BTP region.
+ *
+ * @param[in]  aFormat      A pointer to the format string.
+ * @param[in]  ...          Arguments for the format specification.
+ *
+ */
+
+/**
+ * @def otLogWarnBtp
+ *
+ * This method generates a log with level warning for the ToBLE BTP region.
+ *
+ * @param[in]  aFormat      A pointer to the format string.
+ * @param[in]  ...          Arguments for the format specification.
+ *
+ */
+
+/**
+ * @def otLogNoteBtp
+ *
+ * This method generates a log with level note for the ToBLE BTP region.
+ *
+ * @param[in]  aFormat      A pointer to the format string.
+ * @param[in]  ...          Arguments for the format specification.
+ *
+ */
+
+/**
+ * @def otLogInfoBtp
+ *
+ * This method generates a log with level info for the ToBLE BTP region.
+ *
+ * @param[in]  aFormat      A pointer to the format string.
+ * @param[in]  ...          Arguments for the format specification.
+ *
+ */
+
+/**
+ * @def otLogDebgBtp
+ *
+ * This method generates a log with level debug for the ToBLE BTP region.
+ *
+ * @param[in]  aFormat      A pointer to the format string.
+ * @param[in]  ...          Arguments for the format specification.
+ *
+ */
+#if OPENTHREAD_CONFIG_LOG_TOBLE == 1
+#define otLogCritBtp(aFormat, ...) otLogCrit(OT_LOG_REGION_TOBLE, _OT_REGION_BTP_PREFIX aFormat, ##__VA_ARGS__)
+#define otLogWarnBtp(aFormat, ...) otLogWarn(OT_LOG_REGION_TOBLE, _OT_REGION_BTP_PREFIX aFormat, ##__VA_ARGS__)
+#define otLogNoteBtp(aFormat, ...) otLogNote(OT_LOG_REGION_TOBLE, _OT_REGION_BTP_PREFIX aFormat, ##__VA_ARGS__)
+#define otLogInfoBtp(aFormat, ...) otLogInfo(OT_LOG_REGION_TOBLE, _OT_REGION_BTP_PREFIX aFormat, ##__VA_ARGS__)
+#define otLogDebgBtp(aFormat, ...) otLogDebg(OT_LOG_REGION_TOBLE, _OT_REGION_BTP_PREFIX aFormat, ##__VA_ARGS__)
+#else
+#define otLogCritBtp(aFormat, ...)
+#define otLogWarnBtp(aFormat, ...)
+#define otLogNoteBtp(aFormat, ...)
+#define otLogInfoBtp(aFormat, ...)
+#define otLogDebgBtp(aFormat, ...)
 #endif
 
 /**

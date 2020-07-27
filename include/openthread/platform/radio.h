@@ -140,6 +140,17 @@ enum
 #define OT_PANID_BROADCAST 0xffff ///< IEEE 802.15.4 Broadcast PAN ID
 
 /**
+ * This enumeration represents the message sub-type.
+ *
+ */
+enum SubType
+{
+    OT_RADIO_SUB_TYPE_NONE                  = 0, ///< None
+    OT_RADIO_SUB_TYPE_MLE_PARENT_REQUEST    = 1, ///< MLE Parent Request
+    OT_RADIO_SUB_TYPE_MLE_DISCOVERY_REQUEST = 2, ///< MLE Discovery Request
+};
+
+/**
  * This type represents the IEEE 802.15.4 PAN ID.
  *
  */
@@ -228,6 +239,7 @@ typedef struct otRadioFrame
             bool            mIsARetx : 1;       ///< True if this frame is a retransmission (ignored by radio driver).
             bool            mCsmaCaEnabled : 1; ///< Set to true to enable CSMA-CA for this packet, false otherwise.
             bool            mIsSecurityProcessed : 1; ///< True if SubMac should skip the AES processing of this frame.
+            uint8_t         mSubType : 4;             ///< Identifies the message sub type.
         } mTxInfo;
 
         /**

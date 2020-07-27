@@ -48,6 +48,10 @@
 #include "thread/thread_uri_paths.hpp"
 #include "utils/otns.hpp"
 
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+#include "toble/adv_data.hpp"
+#endif
+
 #if OPENTHREAD_CONFIG_JOINER_ENABLE
 
 using ot::Encoding::BigEndian::HostSwap16;
@@ -153,6 +157,9 @@ otError Joiner::Start(const char *     aPskd,
     mContext  = aContext;
 
     SetState(OT_JOINER_STATE_DISCOVER);
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    Get<Radio>().SetTobleRole(Toble::AdvData::kRoleJoiner);
+#endif
 
 exit:
     if (error != OT_ERROR_NONE)
@@ -202,6 +209,14 @@ void Joiner::Finish(otError aError)
     {
         mCallback(aError, mContext);
     }
+
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+#if OPENTHREAD_MTD
+    Get<Radio>().SetTobleRole(Toble::AdvData::kRoleEndDevice);
+#else
+    Get<Radio>().SetTobleRole(Toble::AdvData::kRoleInactiveRouter);
+#endif
+#endif
 
 exit:
     return;
@@ -401,12 +416,14 @@ void Joiner::HandleSecureCoapClientConnect(bool aConnected)
 
     if (aConnected)
     {
+        otLogWarnMeshCoP("%s: Connected ------------------->", __func__);
         SetState(OT_JOINER_STATE_CONNECTED);
         SendJoinerFinalize();
         mTimer.Start(kReponseTimeout);
     }
     else
     {
+        otLogWarnMeshCoP("%s: Connect Failed ------------------->", __func__);
         TryNextJoinerRouter(OT_ERROR_SECURITY);
     }
 

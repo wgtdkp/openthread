@@ -741,6 +741,30 @@ public:
     }
 
     /**
+     * This method initializes the TLV.
+     *
+     */
+    void Init(otSteeringData &aSteeringData)
+    {
+        SetType(kSteeringData);
+        SetLength(sizeof(*this) - sizeof(Tlv) + aSteeringData.mLength);
+        memcpy(mSteeringData, aSteeringData.m8,
+               aSteeringData.mLength <= sizeof(mSteeringData) ? aSteeringData.mLength : sizeof(mSteeringData));
+    }
+
+    otError Get(otSteeringData &aSteeringData)
+    {
+        otError error = OT_ERROR_NONE;
+
+        VerifyOrExit(IsValid(), error = OT_ERROR_PARSE);
+        memcpy(mSteeringData, aSteeringData.m8, GetSteeringDataLength());
+        aSteeringData.mLength = GetSteeringDataLength();
+
+    exit:
+        return error;
+    }
+
+    /**
      * This method indicates whether or not the TLV appears to be well-formed.
      *
      * @retval TRUE   If the TLV appears to be well-formed.

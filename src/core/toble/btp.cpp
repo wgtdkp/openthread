@@ -57,7 +57,7 @@ Btp::Btp(Instance &aInstance)
 
 void Btp::Start(Connection &aConn)
 {
-    otLogDebgBle("Btp::Start");
+    otLogNoteBtp("Btp::Start");
 
     aConn.mSession.mState = kStateIdle;
 }
@@ -66,12 +66,13 @@ void Btp::HandleConnectionReady(Platform::Connection *aPlatConn)
 {
     Connection *conn = Get<ConnectionTable>().Find(aPlatConn);
 
-    otLogDebgBle("Btp::ConnectionReady (%p -> %p)", aPlatConn, conn);
+    otLogNoteBtp("Btp::ConnectionReady (%p -> %p)", aPlatConn, conn);
 
     VerifyOrExit(conn != NULL, OT_NOOP);
     VerifyOrExit(Get<Toble>().IsCentral(), OT_NOOP);
 
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
+    otLogNoteBtp("Btp::HandleConnectionReady: WriteC1(CONNECT_REQ)");
     conn->mSession.mRequest.Init(Get<Platform>().GetConnMtu(aPlatConn), kWindowSize);
     Get<Platform>().WriteC1(aPlatConn, &conn->mSession.mRequest, sizeof(conn->mSession.mRequest));
     conn->mSession.mState = kStateHandshake;
@@ -83,7 +84,7 @@ exit:
 
 void Btp::Stop(Connection &aConn)
 {
-    otLogNoteBle("Btp::Stop");
+    otLogNoteBtp("Btp::Stop");
 
     // Optional future enhancement: On central we can consider
     // unsubscribe from C2.
@@ -93,7 +94,7 @@ void Btp::Stop(Connection &aConn)
 
 void Btp::Send(Connection &aConn, const uint8_t *aBuf, uint16_t aLength)
 {
-    otLogDebgBle("Btp::Send");
+    otLogNoteBtp("Btp::Send");
 
     aConn.mSession.mSendBuf    = aBuf;
     aConn.mSession.mSendLength = aLength;
@@ -113,7 +114,7 @@ void Btp::SendData(Connection &aConn)
 
     session.mTxBuf[0] = 0;
 
-    otLogDebgBle("BTP send");
+    otLogNoteBtp("BTP send");
 
     if (session.mRxSeqnoCurrent == session.mRxSeqnoAcked)
     {
@@ -122,14 +123,14 @@ void Btp::SendData(Connection &aConn)
     else
     {
         session.mTxBuf[0] |= Frame::kAckFlag;
-        otLogDebgBle("  ack=%u", session.mRxSeqnoCurrent);
+        otLogNoteBtp("  ack=%u", session.mRxSeqnoCurrent);
 
         *cur++                = session.mRxSeqnoCurrent;
         session.mRxSeqnoAcked = session.mRxSeqnoCurrent;
     }
 
     *cur++ = ++session.mTxSeqnoCurrent;
-    otLogDebgBle("  seq=%u ", cur[-1]);
+    otLogNoteBtp("  seq=%u ", cur[-1]);
 
     if (session.mSendBuf != NULL)
     {
@@ -139,7 +140,8 @@ void Btp::SendData(Connection &aConn)
         if (session.mSendOffset == 0)
         {
             session.mTxBuf[0] |= Frame::kBeginFlag;
-            otLogDebgBle("  len=%u", session.mSendLength);
+            otLogNoteBtp("  start ------------>");
+            otLogNoteBtp("  len=%u", session.mSendLength);
 
             WriteUint16(session.mSendLength, cur);
             cur += sizeof(uint16_t);
@@ -147,7 +149,7 @@ void Btp::SendData(Connection &aConn)
         else
         {
             session.mTxBuf[0] |= Frame::kContinueFlag;
-            otLogDebgBle("  off=%u", session.mSendOffset);
+            otLogNoteBtp("  off=%u", session.mSendOffset);
         }
 
         segmentRemaining = session.mMtu - (cur - session.mTxBuf);
@@ -158,6 +160,7 @@ void Btp::SendData(Connection &aConn)
             segmentLength = segmentRemaining;
         }
 
+        otLogNoteBtp("  segLen=%u", segmentLength);
         memcpy(cur, session.mSendBuf + session.mSendOffset, segmentLength);
         cur += segmentLength;
         session.mSendOffset += segmentLength;
@@ -165,8 +168,9 @@ void Btp::SendData(Connection &aConn)
         if (session.mSendOffset >= session.mSendLength)
         {
             session.mTxBuf[0] |= Frame::kEndFlag;
-            otLogDebgBle("  end");
-            otLogDebgBle("BTP::Send Done %d", session.mSendLength);
+            // otLogNoteBtp("  end");
+            otLogNoteBtp("  end -------------->");
+            otLogNoteBtp("BTP::Send Done %d", session.mSendLength);
         }
     }
 
@@ -175,18 +179,7 @@ void Btp::SendData(Connection &aConn)
     mTimer.Stop();
     session.mIsSending = true;
 
-    if (Get<Toble>().IsCentral())
-    {
-#if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
-        Get<Platform>().WriteC1(aConn.mPlatConn, session.mTxBuf, frameLength);
-#endif
-    }
-    else
-    {
-#if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
-        Get<Platform>().IndicateC2(aConn.mPlatConn, session.mTxBuf, frameLength);
-#endif
-    }
+    GattSend(aConn, session.mTxBuf, frameLength);
 
 exit:
     return;
@@ -212,18 +205,7 @@ void Btp::HandleSentData(Connection &aConn)
     {
         session.mSendBuf = NULL;
 
-        if (Get<Toble>().IsCentral())
-        {
-#if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
-            Get<Central::Controller>().HandleTransportSendDone(aConn, OT_ERROR_NONE);
-#endif
-        }
-        else
-        {
-#if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
-            Get<Peripheral::Controller>().HandleTransportSendDone(aConn, OT_ERROR_NONE);
-#endif
-        }
+        HandleGattSentDone(aConn, OT_ERROR_NONE);
     }
 }
 
@@ -235,24 +217,37 @@ void Btp::HandleDataFrame(Connection &aConn, const uint8_t *aFrame, uint16_t aLe
 
     VerifyOrExit(session.mState == kStateConnected, OT_NOOP);
 
-    otLogDebgBle("BTP receive");
+    ConnectionTimerRefresh(aConn);
+
+    otLogNoteBtp("BTP receive");
+
+    if (frame.IsBegin())
+    {
+        otLogNoteBtp("  start <------------");
+    }
 
     if (frame.IsAck())
     {
         session.mTxSeqnoAcked = *cur++;
-        otLogDebgBle("  ack=%d", session.mTxSeqnoAcked);
+        otLogNoteBtp("  ack=%d", session.mTxSeqnoAcked);
     }
 
-    OT_ASSERT(static_cast<uint8_t>(session.mRxSeqnoCurrent + 1) == cur[0]);
+    // OT_ASSERT(static_cast<uint8_t>(session.mRxSeqnoCurrent + 1) == cur[0]);
+    if (static_cast<uint8_t>(session.mRxSeqnoCurrent + 1) != cur[0])
+    {
+        otLogNoteBtp("  mRxSeqnoCurrent+1=%d cur[0]=%d ---ERROR------------>", (session.mRxSeqnoCurrent + 1), cur[0]);
+        return;
+    }
+
     session.mRxSeqnoCurrent = *cur++;
-    otLogDebgBle("  seq=%d ", session.mRxSeqnoCurrent);
+    otLogNoteBtp("  seq=%d ", session.mRxSeqnoCurrent);
 
     if (frame.IsBegin())
     {
         session.mReceiveOffset = 0;
         session.mReceiveLength = ReadUint16(cur);
         cur += sizeof(uint16_t);
-        otLogDebgBle("  len=%u", session.mReceiveLength);
+        otLogNoteBtp("  len=%u", session.mReceiveLength);
     }
 
     aLength -= cur - aFrame;
@@ -275,23 +270,13 @@ void Btp::HandleDataFrame(Connection &aConn, const uint8_t *aFrame, uint16_t aLe
         uint16_t length;
 
         OT_ASSERT(session.mReceiveOffset == session.mReceiveLength);
-        otLogDebgBle("BTP received %d", session.mReceiveOffset);
+        otLogNoteBtp("  end <--------------");
+        otLogNoteBtp("BTP received %d", session.mReceiveOffset);
 
         // All ToBLE transports strip MAC FCS.
         length = session.mReceiveLength + Mac::Frame::GetFcsSize();
 
-        if (Get<Toble>().IsCentral())
-        {
-#if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
-            Get<Central::Controller>().HandleTransportReceiveDone(aConn, session.mRxBuf, length, OT_ERROR_NONE);
-#endif
-        }
-        else
-        {
-#if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
-            Get<Peripheral::Controller>().HandleTransportReceiveDone(aConn, session.mRxBuf, length, OT_ERROR_NONE);
-#endif
-        }
+        HandleGattReceiveDone(aConn, session.mRxBuf, length, OT_ERROR_NONE);
     }
 
 exit:
@@ -315,7 +300,7 @@ void Btp::HandleTimer(void)
             continue;
         }
 
-        otLogDebgBle("BTP timer fired");
+        otLogNoteBtp("BTP timer fired");
 
         session.mIsTimerSet = false;
 
@@ -325,6 +310,7 @@ void Btp::HandleTimer(void)
             break;
 
         case kStateHandshake:
+        case kStateSubscribe:
             // did not receive handshake response, close the connection
             Reset(session);
             break;
@@ -374,7 +360,7 @@ void Btp::UpdateTimer(void)
 
 void Btp::Reset(Session &aSession)
 {
-    otLogDebgBle("BTP::Reset");
+    otLogNoteBtp("BTP::Reset");
 
     aSession.mSendBuf    = NULL;
     aSession.mSendOffset = 0;
@@ -384,6 +370,73 @@ void Btp::Reset(Session &aSession)
     aSession.mState      = kStateIdle;
 
     UpdateTimer();
+}
+
+void Btp::GattSend(Connection &aConn, uint8_t *aBuffer, uint16_t aLength)
+{
+    ConnectionTimerRefresh(aConn);
+
+    if (Get<Toble>().IsCentral())
+    {
+#if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
+        otLogNoteBtp("Btp::SendData: WriteC1");
+        Get<Platform>().WriteC1(aConn.mPlatConn, aBuffer, aLength);
+#endif
+    }
+    else
+    {
+#if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+        Get<Platform>().IndicateC2(aConn.mPlatConn, aBuffer, aLength);
+#endif
+    }
+}
+
+void Btp::HandleGattSentDone(Connection &aConn, otError aError)
+{
+    if (Get<Toble>().IsCentral())
+    {
+#if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
+        Get<Central::Controller>().HandleTransportSendDone(aConn, aError);
+#endif
+    }
+    else
+    {
+#if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+        Get<Peripheral::Controller>().HandleTransportSendDone(aConn, aError);
+#endif
+    }
+}
+
+void Btp::HandleGattReceiveDone(Connection &aConn, uint8_t *aBuffer, uint16_t aLength, otError aError)
+{
+    if (Get<Toble>().IsCentral())
+    {
+#if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
+        Get<Central::Controller>().HandleTransportReceiveDone(aConn, aBuffer, aLength, aError);
+#endif
+    }
+    else
+    {
+#if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+        Get<Peripheral::Controller>().HandleTransportReceiveDone(aConn, aBuffer, aLength, aError);
+#endif
+    }
+}
+
+void Btp::ConnectionTimerRefresh(Connection &aConn)
+{
+    if (Get<Toble>().IsCentral())
+    {
+#if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
+        Get<Central::Controller>().ConnectionTimerRefresh(aConn);
+#endif
+    }
+    else
+    {
+#if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+        Get<Peripheral::Controller>().ConnectionTimerRefresh(aConn);
+#endif
+    }
 }
 
 } // namespace Toble

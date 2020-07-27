@@ -92,7 +92,7 @@ void Platform::Callbacks::HandleDisconnected(Connection *aConn)
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
 otError Platform::StartScan(uint16_t aInterval, uint16_t aWindow)
 {
-    return otPlatTobleScanStart(GetInstance(), aInterval, aWindow, false);
+    return otPlatTobleScanStart(GetInstance(), aInterval, aWindow, true);
 }
 
 otError Platform::StopScan(void)
@@ -133,7 +133,7 @@ void Platform::Callbacks::HandleConnectionReady(Connection *aConn, otTobleConnec
         Get<Btp>().HandleConnectionReady(aConn);
         break;
     default:
-        otLogCritBle("Unsupported link type");
+        otLogWarnToble("Unsupported link type");
         break;
     }
 }

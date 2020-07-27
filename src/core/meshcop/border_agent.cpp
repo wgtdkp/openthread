@@ -691,6 +691,10 @@ otError BorderAgent::Start(void)
 
     SetState(OT_BORDER_AGENT_STATE_STARTED);
 
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    Get<Radio>().SetBoarderAgent(true);
+#endif
+
 exit:
     return error;
 }
@@ -734,6 +738,10 @@ otError BorderAgent::Stop(void)
     coaps.Stop();
 
     SetState(OT_BORDER_AGENT_STATE_STOPPED);
+
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    Get<Radio>().SetBoarderAgent(false);
+#endif
 
 exit:
     return error;

@@ -56,6 +56,8 @@ Connection::InfoString Connection::ToString(void) const
 {
     InfoString str;
 
+    str.Append("PlatConn=0x%08x, ", (uint32_t)mPlatConn);
+
     str.Append("%s, ", mExtAddr.ToString().AsCString());
 
     if (mShortAddr != Mac::kShortAddrInvalid)
@@ -74,10 +76,6 @@ Connection::InfoString Connection::ToString(void) const
     case kConnected:
         str.Append("connected, dt:%d", mDisconnectTime - TimerMilli::GetNow().GetValue());
         break;
-
-    case kSending:
-        str.Append("sending");
-        break;
     }
 
     str.Append(", rssi:%d", mRssi);
@@ -86,8 +84,6 @@ Connection::InfoString Connection::ToString(void) const
 }
 #endif // #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
 
-//----------------------------------------------------------------------------------------------------------------------
-// ConnectionTable
 ConnectionTable::ConnectionTable(void)
 {
     for (Connection *conn = &mConnArray[0]; conn < OT_ARRAY_END(mConnArray); conn++)

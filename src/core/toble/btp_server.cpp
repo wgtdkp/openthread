@@ -32,6 +32,7 @@
  */
 
 #include "toble/btp.hpp"
+#include "toble/toble.hpp"
 
 #include "common/debug.hpp"
 #include "common/locator-getters.hpp"
@@ -53,13 +54,14 @@ void Btp::HandleC2Subscribed(Platform::Connection *aPlatConn, bool aIsSubscribed
     if (aIsSubscribed)
     {
         VerifyOrExit(conn->mSession.mState == kStateHandshake, OT_NOOP);
-        otLogDebgBle("Btp::HandleC2Subscribed(subscribed)");
+        otLogNoteBtp("Btp::HandleC2Subscribed(subscribed) IndicateC2(CONNECT_RSP)");
         Get<Platform>().IndicateC2(aPlatConn, &conn->mSession.mResponse, sizeof(HandshakeResponse));
+        conn->mSession.mState = kStateSubscribe;
     }
     else
     {
         VerifyOrExit(conn->mSession.mState != kStateIdle, OT_NOOP);
-        otLogDebgBle("Btp::HandleC2Subscribed(unsubscribed)");
+        otLogNoteBtp("Btp::HandleC2Subscribed(unsubscribed)");
 
         // Optional future enhancement: Trigger a BLE disconnect on un-subscribe.
 
@@ -78,15 +80,19 @@ void Btp::HandleC2IndicateDone(Platform::Connection *aPlatConn)
 
     OT_ASSERT(!Get<Toble>().IsCentral());
 
+    otLogNoteBtp("Btp::HandleC2IndicateDone");
     VerifyOrExit(conn != NULL, OT_NOOP);
 
     switch (conn->mSession.mState)
     {
     case kStateIdle:
-        break;
     case kStateHandshake:
+        break;
+    case kStateSubscribe:
         conn->mSession.mState = kStateConnected;
-        otLogNoteBle("BTP connected: MTU=%d, TxWindow = %d", conn->mSession.mMtu, conn->mSession.mTxWindow);
+        otLogNoteBtp("BTP connected: MTU=%d, TxWindow = %d", conn->mSession.mMtu, conn->mSession.mTxWindow);
+
+        Get<Peripheral::Controller>().HandleTransportConnected(*conn);
 
         if ((conn->mSession.mSendOffset != conn->mSession.mSendLength) || conn->mSession.GetRxWindowRemaining() <= 1)
         {
@@ -113,6 +119,7 @@ void Btp::HandleC1Write(Platform::Connection *aPlatConn, const uint8_t *aFrame, 
     Connection * conn  = Get<ConnectionTable>().Find(aPlatConn);
     const Frame *frame = reinterpret_cast<const Frame *>(aFrame);
 
+    otLogNoteBtp("Btp::HandleC1Write");
     OT_ASSERT(!Get<Toble>().IsCentral());
 
     VerifyOrExit(aLength > 0, OT_NOOP);
@@ -139,7 +146,7 @@ void Btp::HandleHandshake(Connection &aConn, const HandshakeRequest &aRequest)
 
     VerifyOrExit(session.mState == kStateIdle, OT_NOOP);
 
-    otLogDebgBle("Btp::HandleHandshake");
+    otLogNoteBtp("Btp::HandleHandshake");
 
     session.mMtu = aRequest.GetMtu();
 

@@ -84,6 +84,15 @@ private:
     otInstance *GetInstancePtr(void) { return reinterpret_cast<otInstance *>(&GetInstance()); }
 
     // Radio APIs
+    void SetMleDiscoverRequestParameters(bool     aJoiner,
+                                         bool     aEnableFiltering,
+                                         uint16_t aDiscoverCcittIndex,
+                                         uint16_t aDiscoverAnsiIndex);
+    void SetJoiningPermitted(bool aEnabled, otSteeringData *aSteeringData);
+    void SetDtc(bool aEnabled);
+    void SetBoarderAgent(bool aEnabled);
+    void SetTobleRole(uint8_t aRole);
+
     otError      Sleep(void);
     otError      Receive(uint8_t aChannel);
     otError      Transmit(Mac::TxFrame &aFrame);
@@ -116,6 +125,8 @@ private:
     uint32_t      GetPreferredChannelMask(void) { return OT_RADIO_2P4GHZ_OQPSK_CHANNEL_MASK; }
     void          SetMacKey(uint8_t, uint8_t, const Mac::Key &, const Mac::Key &, const Mac::Key &) {}
     void          PrintHex(const char *aName, const uint8_t *aData, uint8_t aLength);
+    void          AdvDataTest(void);
+    static void   ScanHandler(Advertisement::Info &aAdvInfo);
 
     // Callbacks from Toble::Platform
     void HandleConnected(Platform::Connection *aPlatConn);

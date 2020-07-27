@@ -234,10 +234,10 @@ public:
      */
     typedef enum
     {
-        kJoiner                 = 0, ///< Joiner (Unconfigured).
-        kBedPeripheral          = 1, ///< BED-P.
-        kInactiveBlerPeripheral = 2, ///< BLER-P (Inactive — REED, disconnected, or not taking children).
-        kActiveBlerPeripheral   = 3, ///< BLER-P (Active).
+        kRoleJoiner         = 0, ///< Joiner (Unconfigured).
+        kRoleEndDevice      = 1, ///< BED.
+        kRoleInactiveRouter = 2, ///< BLER (Inactive - REED, disconnected, or not taking children).
+        kRoleActiveRouter   = 3, ///< BLER (Active).
     } TobleRole;
 
     typedef struct Info

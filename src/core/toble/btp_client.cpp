@@ -48,6 +48,7 @@ void Btp::HandleC1WriteDone(Platform::Connection *aPlatConn)
 {
     Connection *conn = Get<ConnectionTable>().Find(aPlatConn);
 
+    otLogNoteBtp("Btp::HandleC1WriteDone");
     OT_ASSERT(Get<Toble>().IsCentral());
 
     VerifyOrExit(conn != NULL, OT_NOOP);
@@ -58,8 +59,12 @@ void Btp::HandleC1WriteDone(Platform::Connection *aPlatConn)
         break;
 
     case kStateHandshake:
-        otLogDebgBle("Btp::SubscribeC2");
+        otLogNoteBtp("Btp::SubscribeC2");
         Get<Platform>().SubscribeC2(aPlatConn, true);
+        conn->mSession.mState = kStateSubscribe;
+        break;
+
+    case kStateSubscribe:
         break;
 
     case kStateConnected:
@@ -76,11 +81,12 @@ void Btp::HandleC2Indication(Platform::Connection *aPlatConn, const uint8_t *aFr
     Connection * conn  = Get<ConnectionTable>().Find(aPlatConn);
     const Frame *frame = reinterpret_cast<const Frame *>(aFrame);
 
+    otLogNoteBtp("Btp::HandleC2Indication");
     OT_ASSERT(Get<Toble>().IsCentral());
 
     VerifyOrExit(conn != NULL, OT_NOOP);
 
-    VerifyOrExit(conn->mSession.mState == kStateHandshake || conn->mSession.mState == kStateConnected, OT_NOOP);
+    VerifyOrExit(conn->mSession.mState == kStateSubscribe || conn->mSession.mState == kStateConnected, OT_NOOP);
 
     VerifyOrExit(aLength > 0, OT_NOOP);
 
@@ -102,9 +108,8 @@ void Btp::HandleHandshake(Connection &aConn, const HandshakeResponse &aResponse)
 {
     Session &session = aConn.mSession;
 
-    VerifyOrExit(session.mState == kStateHandshake, OT_NOOP);
-
-    otLogDebgBle("Btp::HandleHandshake");
+    otLogNoteBtp("Btp::HandleHandshake");
+    VerifyOrExit(session.mState == kStateSubscribe, OT_NOOP);
 
     session.mState = kStateConnected;
 
@@ -118,7 +123,9 @@ void Btp::HandleHandshake(Connection &aConn, const HandshakeResponse &aResponse)
     session.mRxSeqnoAcked   = 255;
     session.mRxWindow       = kWindowSize;
 
-    otLogNoteBle("BTP connected: MTU=%d, TxWindow = %d", session.mMtu, session.mTxWindow);
+    otLogNoteBtp("BTP connected: MTU=%d, TxWindow = %d", session.mMtu, session.mTxWindow);
+
+    Get<Central::Controller>().HandleTransportConnected(aConn);
 
     if ((session.mSendOffset != session.mSendLength) || session.GetRxWindowRemaining() <= 1)
     {

@@ -87,6 +87,9 @@
 
 #define MS_TO_BLE_TIME_UNIT(ms) (((ms)*USEC_PER_MSEC) / BLE_TIME_UNIT_USEC)
 
+#define BLE_CONNECTION_INTERVAL_UNIT 1250
+#define MS_TO_BLE_CONNECTION_INTERVAL_UNIT(ms) (((ms)*USEC_PER_MSEC) / BLE_CONNECTION_INTERVAL_UNIT)
+
 #define BLE_L2CAP_MTU 1000
 #define BLE_L2CAP_PSM 0x90
 
@@ -446,10 +449,10 @@ otError bleGapAdvStart(otTobleAdvType aType, uint16_t aInterval)
     params.primary_phy   = BLE_GAP_PHY_1MBPS;
 
     retval = sd_ble_gap_adv_set_configure(&sBle.mAdvHandle, &sBle.mAdvDataInfo, &params);
-    otEXPECT_ACTION(retval == NRF_SUCCESS, otLogInfoPlat("[BLE]: sd_ble_gap_adv_set_configure error: 0x%x", retval));
+    otEXPECT_ACTION(retval == NRF_SUCCESS, otLogCritMac("[BLE]: sd_ble_gap_adv_set_configure error: 0x%x", retval));
 
     retval = sd_ble_gap_adv_start(sBle.mAdvHandle, BLE_CFG_TAG);
-    otEXPECT_ACTION(retval == NRF_SUCCESS, otLogInfoPlat("[BLE]: sd_ble_gap_adv_start error: 0x%x", retval));
+    otEXPECT_ACTION(retval == NRF_SUCCESS, otLogCritMac("[BLE]: sd_ble_gap_adv_start error: 0x%x", retval));
 
     sBle.mAdvInterval = aInterval;
     sBle.mAdvType     = aType;
@@ -552,12 +555,12 @@ otTobleConnection *otPlatTobleCreateConnection(otInstance *             aInstanc
 
     memset(&scanParams, 0, sizeof(ble_gap_scan_params_t));
     scanParams.scan_phys = BLE_GAP_PHY_1MBPS;
-    scanParams.interval  = aConfig->mScanInterval;
-    scanParams.window    = aConfig->mScanWindow;
+    scanParams.interval  = MS_TO_BLE_TIME_UNIT(aConfig->mScanInterval);
+    scanParams.window    = MS_TO_BLE_TIME_UNIT(aConfig->mScanWindow);
     scanParams.timeout   = BLE_GAP_SCAN_TIMEOUT_UNLIMITED;
 
-    connParams.min_conn_interval = aConfig->mInterval;
-    connParams.max_conn_interval = aConfig->mInterval;
+    connParams.min_conn_interval = MS_TO_BLE_CONNECTION_INTERVAL_UNIT(aConfig->mInterval);
+    connParams.max_conn_interval = MS_TO_BLE_CONNECTION_INTERVAL_UNIT(aConfig->mInterval);
     connParams.slave_latency     = BLE_DEFAULT_SLAVE_LATENCY;
     connParams.conn_sup_timeout  = aConfig->mInterval * BLE_DEFAULT_CONNECTION_RETRY;
 

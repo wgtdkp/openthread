@@ -80,6 +80,18 @@ void JoinerRouter::HandleStateChanged(otChangedFlags aFlags)
     {
         Ip6::SockAddr sockaddr;
 
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+        {
+            const MeshCoP::Tlv *steeringDataTlv;
+            otSteeringData      steeringData;
+
+            steeringDataTlv = Get<NetworkData::Leader>().GetCommissioningDataSubTlv(MeshCoP::Tlv::kSteeringData);
+
+            memcmp(steeringData.m8, steeringDataTlv->GetValue(), steeringDataTlv->GetLength());
+            steeringData.mLength = steeringDataTlv->GetLength();
+            Get<Radio>().SetJoiningPermitted(true, &steeringData);
+        }
+#endif
         VerifyOrExit(!mSocket.IsBound(), OT_NOOP);
 
         sockaddr.mPort = GetJoinerUdpPort();
@@ -91,6 +103,10 @@ void JoinerRouter::HandleStateChanged(otChangedFlags aFlags)
     }
     else
     {
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+        Get<Radio>().SetJoiningPermitted(false, NULL);
+#endif
+
         VerifyOrExit(mSocket.IsBound(), OT_NOOP);
 
         IgnoreError(Get<Ip6::Filter>().RemoveUnsecurePort(mSocket.GetSockName().mPort));
@@ -141,7 +157,7 @@ void JoinerRouter::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &a
     uint16_t         borderAgentRloc;
     uint16_t         offset;
 
-    otLogInfoMeshCoP("JoinerRouter::HandleUdpReceive");
+    otLogInfoMeshCoP("JoinerRouter::HandleUdpReceive\r\n\r\n");
 
     SuccessOrExit(error = GetBorderAgentRloc(Get<ThreadNetif>(), borderAgentRloc));
 

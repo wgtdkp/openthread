@@ -259,6 +259,7 @@ public:
         kSubTypeMleChildUpdateRequest  = 8,  ///< MLE Child Update Request
         kSubTypeMleDataResponse        = 9,  ///< MLE Data Response
         kSubTypeMleChildIdRequest      = 10, ///< MLE Child ID Request
+        kSubTypeMleParentRequest       = 11, ///< MLE Parent Request
     };
 
     enum Priority

@@ -70,61 +70,95 @@ public:
     void HandleTransportSendDone(Connection &aConn, otError aError);
     void HandleTransportReceiveDone(Connection &aConn, uint8_t *aFrame, uint16_t aLength, otError aError);
 
+    /**
+     * This function pointer is called on receiving an MLE Discovery Response message.
+     *
+     * @param[in]  aResult   A valid pointer to the Discovery Response information or NULL when the Discovery completes.
+     * @param[in]  aContext  A pointer to application-specific context.
+     *
+     */
+    typedef void (*ScanHandler)(Advertisement::Info &aAdvInfo);
+
+    otError Scan(ScanHandler aCallback);
+
+    void SetMleDiscoverRequestParameters(bool     aJoiner,
+                                         bool     aEnableFiltering,
+                                         uint16_t aDiscoverCcittIndex,
+                                         uint16_t aDiscoverAnsiIndex);
+
+    void HandleTransportConnected(Connection &aConn);
+    void ConnectionTimerRefresh(Connection &aConn);
+
+    void SetJoiningPermitted(bool aEnabled, otSteeringData *aSteeringData);
+    void SetDtc(bool aEnabled);
+    void SetBoarderAgent(bool aEnabled);
+    void SetTobleRole(uint8_t aRole);
+
 private:
     enum State
     {
-        kStateSleep,                 // Sleep (not scanning).
-        kStateRxScanning,            // Scanning to rx.
-        kStateRxConnecting,          // Establishing a connection to rx (`mRxConn`).
-        kStateTxPending,             // Pending Tx, waiting for a mRxConn to be established or timeout to scan for tx.
-        kStateTxScanning,            // Scanning to tx (looking for peer).
-        kStateTxConnecting,          // Establishing a connection for tx (`mTxConn`).
-        kStateTxSending,             // Sending a frame over `mTxConn`.
-        kStateTxSendingRxConnecting, // Sending a frame over `mTxConn` while establishing a `mRxConn`.
+        kStateSleep,       // Sleep (Radio off).
+        kStateNotScanning, // Not scanning.
+        kStateScanning,    // Scanning.
     };
 
     enum
     {
-        kRxScanInterval = OPENTHREAD_CONFIG_TOBLE_SCAN_INTERVAL, // Scan interval while in rx mode (msec, same as
-                                                                 // kConnectionInterval).
-        kRxScanWindow = OPENTHREAD_CONFIG_TOBLE_SCAN_WINDOW,     // Scan window while in rx mode (msec, larger than
-                                                                 // peripheral's kTxModeAdvInterval).
+        kRxScanInterval = 40, // Scan interval while in rx mode (msec, same as
+                              // kConnectionInterval).
+        kRxScanWindow = 30,   // Scan window while in rx mode (msec, larger
+                              // than peripheral's kTxModeAdvInterval).
 
-        kTxScanInterval = OPENTHREAD_CONFIG_TOBLE_SCAN_INTERVAL, // Scan interval while in tx mode (msec, same as
-                                                                 // kConnectionInterval).
-        kTxScanWindow = OPENTHREAD_CONFIG_TOBLE_SCAN_WINDOW,     // Scan window while in tx mode (msec, larger than
-                                                                 // peripheral's kRxModeAdvInterval).
+        kTxScanInterval = 40, // Scan interval while in tx mode (msec, same as
+                              // kConnectionInterval).
+        kTxScanWindow = 30,   // Scan window while in tx mode (msec, larger
+                              // than peripheral's kRxModeAdvInterval).
 
-        kRxWaitToConnectTimeout =
-            OPENTHREAD_CONFIG_TOBLE_WAIT_TO_CONNECTION_TIMEOUT, // Wait time to establish a connection for rx.
-        kTxWaitToConnectTimeout =
-            OPENTHREAD_CONFIG_TOBLE_WAIT_TO_CONNECTION_TIMEOUT, // Wait time to establish a connection for tx.
+        kRxWaitToConnectTimeout = 1600, // Wait time to establish a connection for rx.
+        kTxWaitToConnectTimeout = 1600, // Wait time to establish a connection for tx.
 
-        kTxTimeout = OPENTHREAD_CONFIG_TOBLE_TRANSMIT_TIMEOUT, // Tx timeout interval (max time waiting for entire tx
-                                                               // operation to finish.
+        kTxTimeout = 10000, // 5000, // Tx timeout interval (max time waiting for
+                            // entire tx operation to finish.
 
-        kRxDisconnectTimeout =
-            OPENTHREAD_CONFIG_TOBLE_DISCONNECT_TIMEOUT, // Timeout to disconnect from an idle connected connection.
-        kTxDisconnectTimeout =
-            OPENTHREAD_CONFIG_TOBLE_DISCONNECT_TIMEOUT, // Timeout to disconnect from a connection in sending/tx state.
-        kTxErrorDisconnectTimeout = 5,                  // Timeout to disconnect after a tx error happens.
+        kRxDisconnectTimeout      = 5000, // Timeout to disconnect from an idle connected connection.
+        kTxDisconnectTimeout      = 5000, // Timeout to disconnect from a connection in sending/tx state.
+        kTxErrorDisconnectTimeout = 5,    // Timeout to disconnect after a tx error happens.
 
-        kConnectionInterval = OPENTHREAD_CONFIG_TOBLE_CONNECTION_INTERVAL, // The connection data interval (msec).
-        kConnectionScanInterval =
-            OPENTHREAD_CONFIG_TOBLE_CONNECTION_SCAN_INTERVAL, // Scan interval when trying to establish a connection
-                                                              // (msec, same as kConnectionInterval).
-        kConnectionScanWindow =
-            OPENTHREAD_CONFIG_TOBLE_CONNECTION_SCAN_WINDOW, // Scan window when trying to establish a connection (msec,
-                                                            // larger than peripheral's kTxModeAdvInterval).
+        kConnectionInterval     = 40, // The connection data interval (msec).
+        kConnectionScanInterval = 40, // Scan interval when trying to establish a connection
+                                      // (msec, same as kConnectionInterval).
+        kConnectionScanWindow = 30,   // Scan window when trying to establish a connection (msec,
+                                      // larger than peripheral's kTxModeAdvInterval).
+
+        kWaitBleConnectionTimeout   = 1000,
+        kWaitTobleConnectionTimeout = (7 + 2) * 2 * kConnectionInterval,
+        kConnectionTimeout          = (kWaitBleConnectionTimeout + kWaitTobleConnectionTimeout),
+        kMaxConnectionTimeout       = 10000,
 
         kAckFrameLength = 5,
+        kScanTimeout    = 500, // 10000,
+        kMaxPeers       = 4,
+        kRssiMin        = -127,
     };
 
+    typedef enum
+    {
+        kStateIdle,
+        kStateTxSending,
+        kStatePeerScanning,
+        kStateTxScanning,
+    } TxState;
+
     void SetState(State aState);
-    void StartRxScanning(void);
+    void SetTxState(TxState aTxState);
+    void StartScanning(void);
+    void StopScanning(void);
     void StartTransmit(void);
-    void StartTxScanning(void);
     void InvokeRadioTxDone(otError aError);
+
+    bool IsAdvSendToUs(Advertisement::Info &aAdvInfo);
+    bool IsAdvFromDest(Advertisement::Info &aAdvInfo, Mac::Address &aAddress);
+    void ProcessAdvertisement(Platform::AdvPacket &aAdvPacket, Advertisement::Info &aAdvInfo);
 
     void UpdateConnTimer(void);
 
@@ -140,15 +174,50 @@ private:
     static void HandleTxTimer(Timer &aTimer);
     void        HandleTxTimer(void);
 
+    void ClearPeers(void);
+    void SavePeer(Platform::AdvPacket &aAdvPacket, Advertisement::Info &aAdvInfo);
+    void ScanDone(void);
+    bool SendToNextPeer(void);
+
     static const char *StateToString(State aState);
+    static const char *TxStateToString(TxState aTxState);
+
+    struct Peer
+    {
+        int8_t            mRssi;
+        otTobleAddress    mBleAddress;
+        Mac::ShortAddress mSrcShort;
+    };
 
     State         mState;
+    TxState       mTxState;
     Mac::TxFrame *mTxFrame;
     Mac::Address  mTxDest;
     Connection *  mTxConn; // Connection being used for tx.
     Connection *  mRxConn; // Connection we are connecting (while in `kStateRxConnecting` or `kStateTxPending`).
+    ScanHandler   mScanHandler;
     TimerMilli    mConnTimer;
     TimerMilli    mTxTimer;
+    bool          mWaitForCreatingTxConnection;
+
+    Advertisement::Info mAdvInfo;
+
+    Peer    mPeers[kMaxPeers];
+    uint8_t mPeerIndex;
+    bool    mSendToPeers;
+
+    bool     mDiscoverJoiner;
+    bool     mDiscoverEnableFiltering;
+    uint16_t mDiscoverCcittIndex;
+    uint16_t mDiscoverAnsiIndex;
+
+    uint8_t mTxFrameType;
+    bool    mJoiningPermitted;
+    bool    mBorderAgentEnabled;
+    bool    mDtcEnabled;
+    uint8_t mTobleRole;
+
+    MeshCoP::SteeringDataTlv mSteeringData;
 };
 
 } // namespace Central

@@ -68,6 +68,93 @@ Toble::Toble(ot::Instance &aInstance)
     mTxFrame.mPsdu = mTxPsdu;
 }
 
+void Toble::SetMleDiscoverRequestParameters(bool     aJoiner,
+                                            bool     aEnableFiltering,
+                                            uint16_t aDiscoverCcittIndex,
+                                            uint16_t aDiscoverAnsiIndex)
+{
+    if (IsCentral())
+    {
+#if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
+        Get<Central::Controller>().SetMleDiscoverRequestParameters(aJoiner, aEnableFiltering, aDiscoverCcittIndex,
+                                                                   aDiscoverAnsiIndex);
+#endif
+    }
+    else
+    {
+#if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+        OT_UNUSED_VARIABLE(aJoiner);
+        OT_UNUSED_VARIABLE(aEnableFiltering);
+        OT_UNUSED_VARIABLE(aDiscoverCcittIndex);
+        OT_UNUSED_VARIABLE(aDiscoverAnsiIndex);
+#endif
+    }
+}
+
+void Toble::SetJoiningPermitted(bool aEnabled, otSteeringData *aSteeringData)
+{
+    if (IsCentral())
+    {
+#if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
+        Get<Central::Controller>().SetJoiningPermitted(aEnabled, aSteeringData);
+#endif
+    }
+    else
+    {
+#if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+        Get<Peripheral::Controller>().SetJoiningPermitted(aEnabled, aSteeringData);
+#endif
+    }
+}
+
+void Toble::SetDtc(bool aEnabled)
+{
+    if (IsCentral())
+    {
+#if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
+        Get<Central::Controller>().SetDtc(aEnabled);
+#endif
+    }
+    else
+    {
+#if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+        Get<Peripheral::Controller>().SetDtc(aEnabled);
+#endif
+    }
+}
+
+void Toble::SetBoarderAgent(bool aEnabled)
+{
+    if (IsCentral())
+    {
+#if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
+        Get<Central::Controller>().SetBoarderAgent(aEnabled);
+#endif
+    }
+    else
+    {
+#if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+        Get<Peripheral::Controller>().SetBoarderAgent(aEnabled);
+#endif
+    }
+}
+
+void Toble::SetTobleRole(uint8_t aRole)
+{
+    if (IsCentral())
+    {
+#if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
+        Get<Central::Controller>().SetTobleRole(aRole);
+#endif
+    }
+    else
+    {
+#if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+        Get<Peripheral::Controller>().SetTobleRole(aRole);
+#endif
+    }
+}
+
 otError Toble::Sleep(void)
 {
     otError error = OT_ERROR_NONE;
@@ -172,7 +259,7 @@ otError Toble::SetMode(otTobleLinkMode aMode)
     VerifyOrExit(Get<Mle::MleRouter>().GetRole() == Mle::kRoleDisabled, error = OT_ERROR_INVALID_STATE);
     mMode = aMode;
 
-    otLogNoteBle("Toble mode set to %s", IsCentral() ? "central" : "peripheral");
+    otLogNoteToble("Toble mode set to %s", IsCentral() ? "central" : "peripheral");
 
 exit:
     return error;
@@ -191,10 +278,10 @@ void Toble::PrintHex(const char *aName, const uint8_t *aData, uint8_t aLength)
         start += snprintf(start, static_cast<uint32_t>(end - start), "%02x ", aData[i]);
     }
 
-    otLogCritBle("%s: %s", aName, string);
+    otLogCritToble("%s: %s", aName, string);
 }
 
-void Toble::Test(void)
+void Toble::AdvDataTest(void)
 {
     uint8_t data[OT_TOBLE_ADV_DATA_MAX_LENGTH];
     uint8_t ScanRespData[OT_TOBLE_ADV_DATA_MAX_LENGTH];
@@ -212,7 +299,7 @@ void Toble::Test(void)
     info.mDtcEnabled         = true;
     info.mBorderAgentEnabled = true;
     info.mLinkState          = AdvData::kTxReadyToExtended;
-    info.mTobleRole          = AdvData::kBedPeripheral;
+    info.mTobleRole          = AdvData::kRoleEndDevice;
     info.mL2capPsm           = 0;
     info.mPanId              = 0x1234;
     info.mSrcShort           = 0x2b01;
@@ -225,7 +312,7 @@ void Toble::Test(void)
     info.mSteeringData.Init();
     info.mSteeringData.Set();
 
-    otLogCritBle("%s", info.ToString().AsCString());
+    otLogCritToble("%s", info.ToString().AsCString());
 
     advertisement.Populate(info);
     PrintHex("ADV", advertisement.GetData(), advertisement.GetLength());
@@ -235,7 +322,21 @@ void Toble::Test(void)
 
     advertisement.Parse(parsedInfo);
     scanRespone.Parse(parsedInfo);
-    otLogCritBle("%s", parsedInfo.ToString().AsCString());
+    otLogCritToble("%s", parsedInfo.ToString().AsCString());
+}
+
+void Toble::ScanHandler(Advertisement::Info &aAdvInfo)
+{
+    otLogCritToble("%s", aAdvInfo.ToString().AsCString());
+}
+
+void Toble::Test(void)
+{
+    // AdvDataTest();
+
+#if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
+    Get<Central::Controller>().Scan(Toble::ScanHandler);
+#endif
 }
 
 } // namespace Toble

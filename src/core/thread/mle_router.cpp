@@ -50,6 +50,9 @@
 #include "thread/thread_uri_paths.hpp"
 #include "thread/time_sync_service.hpp"
 #include "utils/otns.hpp"
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+#include "toble/adv_data.hpp"
+#endif
 
 using ot::Encoding::BigEndian::HostSwap16;
 
@@ -92,6 +95,9 @@ MleRouter::MleRouter(Instance &aInstance)
     mDeviceMode.Set(mDeviceMode.Get() | DeviceMode::kModeFullThreadDevice | DeviceMode::kModeFullNetworkData);
 
     SetRouterId(kInvalidRouterId);
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    Get<Radio>().SetTobleRole(Toble::AdvData::kRoleInactiveRouter);
+#endif
 }
 
 void MleRouter::HandlePartitionChange(void)
@@ -333,6 +339,10 @@ void MleRouter::SetStateRouter(uint16_t aRloc16)
             RemoveNeighbor(*iter.GetChild());
         }
     }
+
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    Get<Radio>().SetTobleRole(Toble::AdvData::kRoleActiveRouter);
+#endif
 }
 
 void MleRouter::SetStateLeader(uint16_t aRloc16)
@@ -372,6 +382,9 @@ void MleRouter::SetStateLeader(uint16_t aRloc16)
         }
     }
 
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    Get<Radio>().SetTobleRole(Toble::AdvData::kRoleActiveRouter);
+#endif
     otLogNoteMle("Leader partition id 0x%x", mLeaderData.GetPartitionId());
 }
 

@@ -518,6 +518,7 @@ otError Mle::Discover(const Mac::ChannelMask &aScanChannels,
     MeshCoP::DiscoveryRequestTlv discoveryRequest;
     uint16_t                     startOffset;
 
+    VerifyOrExit(Get<ThreadNetif>().IsUp(), error = OT_ERROR_INVALID_STATE);
     VerifyOrExit(!mDiscoverInProgress, error = OT_ERROR_BUSY);
 
     mDiscoverEnableFiltering = aEnableFiltering;
@@ -567,6 +568,12 @@ otError Mle::Discover(const Mac::ChannelMask &aScanChannels,
     message->Write(startOffset - sizeof(tlv), sizeof(tlv), &tlv);
 
     destination.SetToLinkLocalAllRoutersMulticast();
+
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    Get<Radio>().SetMleDiscoverRequestParameters(aJoiner, mDiscoverEnableFiltering, mDiscoverCcittIndex,
+                                                 mDiscoverAnsiIndex);
+
+#endif
 
     SuccessOrExit(error = SendMessage(*message, destination));
 
@@ -762,6 +769,9 @@ void Mle::SetStateDetached(void)
     Get<Mac::Mac>().SetBeaconEnabled(false);
 #if OPENTHREAD_FTD
     Get<MleRouter>().HandleDetachStart();
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    Get<Radio>().SetTobleRole(Toble::AdvData::kRoleInactiveRouter);
+#endif
 #endif
     Get<Ip6::Ip6>().SetForwardingEnabled(false);
 #if OPENTHREAD_FTD
@@ -792,6 +802,9 @@ void Mle::SetStateChild(uint16_t aRloc16)
     {
         Get<MleRouter>().HandleChildStart(mParentRequestMode);
     }
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    Get<Radio>().SetTobleRole(Toble::AdvData::kRoleInactiveRouter);
+#endif
 #endif
 
     Get<Ip6::Ip6>().SetForwardingEnabled(false);
@@ -2028,6 +2041,8 @@ otError Mle::SendParentRequest(ParentRequestType aType)
 #if OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
     SuccessOrExit(error = AppendTimeRequest(*message));
 #endif
+
+    message->SetSubType(Message::kSubTypeMleParentRequest);
 
     destination.SetToLinkLocalAllRoutersMulticast();
     SuccessOrExit(error = SendMessage(*message, destination));

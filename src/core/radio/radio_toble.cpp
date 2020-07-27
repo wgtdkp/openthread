@@ -72,6 +72,35 @@ const char *Radio::LinkTypeToString(LinkType aLinkType)
 #endif // OPENTHREAD_CONFIG_TOBLE_MULTI_RADIO_ENABLE
 
 #if !OPENTHREAD_RADIO && !OPENTHREAD_CONFIG_LINK_RAW_ENABLE
+void Radio::SetMleDiscoverRequestParameters(bool     aJoiner,
+                                            bool     aEnableFiltering,
+                                            uint16_t aDiscoverCcittIndex,
+                                            uint16_t aDiscoverAnsiIndex)
+{
+    Get<ot::Toble::Toble>().SetMleDiscoverRequestParameters(aJoiner, aEnableFiltering, aDiscoverCcittIndex,
+                                                            aDiscoverAnsiIndex);
+}
+
+void Radio::SetJoiningPermitted(bool aEnabled, otSteeringData *aSteeringData)
+{
+    Get<ot::Toble::Toble>().SetJoiningPermitted(aEnabled, aSteeringData);
+}
+
+void Radio::SetDtc(bool aEnabled)
+{
+    Get<ot::Toble::Toble>().SetDtc(aEnabled);
+}
+
+void Radio::SetBoarderAgent(bool aEnabled)
+{
+    Get<ot::Toble::Toble>().SetBoarderAgent(aEnabled);
+}
+
+void Radio::SetTobleRole(uint8_t aRole)
+{
+    Get<ot::Toble::Toble>().SetTobleRole(aRole);
+}
+
 otRadioCaps Radio::GetCaps(void)
 {
     return
@@ -394,7 +423,40 @@ uint32_t Radio::GetPreferredChannelMask(void)
 #endif
                            Get<ot::Toble::Toble>().GetPreferredChannelMask();
 }
-#else
+#else  // #if !OPENTHREAD_RADIO && !OPENTHREAD_CONFIG_LINK_RAW_ENABLE
+
+void Radio::SetMleDiscoverRequestParameters(bool     aJoiner,
+                                            bool     aEnableFiltering,
+                                            uint16_t aDiscoverCcittIndex,
+                                            uint16_t aDiscoverAnsiIndex)
+{
+    OT_UNUSED_VARIABLE(aJoiner);
+    OT_UNUSED_VARIABLE(aEnableFiltering);
+    OT_UNUSED_VARIABLE(aDiscoverCcittIndex);
+    OT_UNUSED_VARIABLE(aDiscoverAnsiIndex);
+}
+
+void Radio::SetJoiningPermitted(bool aEnabled, otSteeringData *aSteeringData)
+{
+    OT_UNUSED_VARIABLE(aEnabled);
+    OT_UNUSED_VARIABLE(aSteeringData);
+}
+
+void Radio::SetDtc(bool aEnabled)
+{
+    OT_UNUSED_VARIABLE(aEnabled);
+}
+
+void Radio::SetBoarderAgent(bool aEnabled)
+{
+    OT_UNUSED_VARIABLE(aEnabled);
+}
+
+void Radio::SetTobleRole(uint8_t aRole)
+{
+    OT_UNUSED_VARIABLE(aRole);
+}
+
 otRadioCaps Radio::GetCaps(void)
 {
     return (otRadioCaps)(OT_RADIO_CAPS_ACK_TIMEOUT | OT_RADIO_CAPS_CSMA_BACKOFF);
@@ -561,7 +623,7 @@ uint32_t Radio::GetPreferredChannelMask(void)
 {
     return 0x00;
 }
-#endif
+#endif // #if !OPENTHREAD_RADIO && !OPENTHREAD_CONFIG_LINK_RAW_ENABLE
 
 #endif // OPENTHREAD_CONFIG_TOBLE_ENABLE
 

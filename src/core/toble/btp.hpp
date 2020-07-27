@@ -73,6 +73,7 @@ private:
     enum State
     {
         kStateIdle,
+        kStateSubscribe,
         kStateHandshake,
         kStateConnected,
     };
@@ -128,6 +129,11 @@ private:
     };
 
     void Reset(Session &aSession);
+
+    void GattSend(Connection &aConn, uint8_t *aBuffer, uint16_t aLength);
+    void HandleGattSentDone(Connection &aConn, otError aError);
+    void HandleGattReceiveDone(Connection &aConn, uint8_t *aBuffer, uint16_t aLength, otError aError);
+    void ConnectionTimerRefresh(Connection &aConn);
 
     void HandleConnectionReady(Platform::Connection *aPlatConn);
 

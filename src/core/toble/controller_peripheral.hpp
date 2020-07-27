@@ -69,34 +69,52 @@ public:
     // Callbacks from `Transport`
     void HandleTransportSendDone(Connection &aConn, otError aError);
     void HandleTransportReceiveDone(Connection &aConn, uint8_t *aFrame, uint16_t aLength, otError aError);
+    void HandleTransportConnected(Connection &aConn);
+    void ConnectionTimerRefresh(Connection &aConn);
+
+    void SetJoiningPermitted(bool aEnabled, otSteeringData *aSteeringData);
+    void SetDtc(bool aEnabled);
+    void SetBoarderAgent(bool aEnabled);
+    void SetTobleRole(uint8_t aRole);
 
 private:
     enum State
     {
         kStateSleep,
-        kStateRx,
-        kStateTxSending,
         kStateTxAdvertising,
+        kStateRxAdvertising,
+        kStateConnected,
+        kStateTxSending,
     };
 
     enum
     {
-        kSleepDisconnectTimeout = 90,   // Time to wait after `Sleep() to disconnect if already connected
-        kTransportStartTimeout  = 6000, // 3000, // Maximum time waiting for transport to be setup.
-        kRxModeAdvInterval      = 20,   // Adv interval during Rx Mode
-        kRxModeAdvStartDelay    = 2,    // Delay when entering receive before starting BLE advertisements.
-        kRxModeConnTimeout = 5000, // 2000, // Timeout keeping connection open while in rx mode (kicked on recvd frame).
-        kTxConnectTimeout  = 5000, // 1000, // Maximum time waiting for connection to be established while in tx mode.
-        kTxTimeout         = 5000, // 1000, // Tx timeout interval (max time waiting for tx to finish).
+        kSleepDisconnectTimeout = 90,    // Time to wait after `Sleep() to disconnect if already connected
+        kTransportStartTimeout  = 3000,  // 6000, // 3000, // Maximum time waiting for transport to be setup.
+        kRxModeAdvInterval      = 20,    // Adv interval during Rx Mode
+        kRxModeAdvStartDelay    = 2,     // Delay when entering receive before starting BLE advertisements.
+        kRxModeConnTimeout      = 10000, // 2000, // 5000, // 2000, // Timeout keeping connection open while in rx mode
+                                         // (kicked on recvd frame).
+        kTxConnectTimeout =
+            5000, // 1000, // 5000, // 1000, // Maximum time waiting for connection to be established while in tx mode.
+        kTxTimeout         = 4000, // 5000, // 1000, // Tx timeout interval (max time waiting for tx to finish).
         kTxModeAdvInterval = 20,   // Adv interval during Tx Mode
         kAckFrameLength    = 5,
+
+        kAdvInterval                = 20,
+        kConnectionInterval         = 40,
+        kWaitBleConnectionTimeout   = 1000,
+        kWaitTobleConnectionTimeout = (7 + 2) * 2 * kConnectionInterval,
+        kConnectionTimeout          = (kWaitBleConnectionTimeout + kWaitTobleConnectionTimeout),
+        kMaxConnectionTimeout       = 10000,
     };
 
     void SetState(State aState);
-    void StartReceive(void);
     void StartRxModeAdv(void);
     void StartTxModeAdv(void);
     void InvokeRadioTxDone(otError aError);
+    void StartAdvertising(bool aTransmit);
+    void Disconnect(void);
 
     // Callbacks from platform
     void HandleConnected(Platform::Connection *aPlatConn);
@@ -104,14 +122,25 @@ private:
 
     static void HandleTimer(Timer &aTimer);
     void        HandleTimer(void);
+    void        TimerStart(uint32_t aTimeout);
 
     static const char *StateToString(State aState);
 
+    Mac::Address  mDestAddr;
     Connection *  mConn;
     TimerMilli    mTimer;
+    TimeMilli     mFireTime;
     State         mState;
     Mac::TxFrame *mTxFrame;
-    uint8_t       mAdvDataBuffer[AdvData::kMaxSize];
+    bool          mJoiningPermitted;
+    bool          mBorderAgentEnabled;
+    bool          mDtcEnabled;
+    uint8_t       mTobleRole;
+
+    MeshCoP::SteeringDataTlv mSteeringData;
+
+    uint8_t mAdvDataBuffer[AdvData::kMaxSize];
+    uint8_t mScanRspDataBuffer[AdvData::kMaxSize];
 };
 } // namespace Peripheral
 } // namespace Toble

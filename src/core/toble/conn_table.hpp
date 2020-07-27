@@ -69,9 +69,12 @@ public:
     {
         kConnecting,
         kConnected,
-        kSending,
     } mState;
 #endif // OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
+
+#if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+    Mac::Address mPeerAddr;
+#endif
 
     Btp::Session mSession;
 };

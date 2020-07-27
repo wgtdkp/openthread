@@ -244,7 +244,12 @@ class Frame : public otRadioFrame
 public:
     enum
     {
-        kMtu                 = OT_RADIO_FRAME_MAX_SIZE,
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+        kMtu = OT_RADIO_TOBLE_FRAME_MAX_SIZE,
+#else
+        kMtu = OT_RADIO_FRAME_MAX_SIZE,
+#endif
+
         kFcfSize             = sizeof(uint16_t),
         kDsnSize             = sizeof(uint8_t),
         kSecurityControlSize = sizeof(uint8_t),

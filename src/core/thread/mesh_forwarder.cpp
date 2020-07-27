@@ -517,6 +517,7 @@ uint16_t MeshForwarder::PrepareDataFrame(Mac::TxFrame &      aFrame,
     uint16_t dstpan;
     uint8_t  secCtl;
     uint16_t nextOffset;
+    uint8_t  subType = OT_RADIO_SUB_TYPE_NONE;
 
 start:
 
@@ -579,8 +580,16 @@ start:
         break;
 
     case Message::kSubTypeMleDiscoverRequest:
+        subType = OT_RADIO_SUB_TYPE_MLE_DISCOVERY_REQUEST;
+
+        // Fall through
+
     case Message::kSubTypeMleDiscoverResponse:
         dstpan = aMessage.GetPanId();
+        break;
+
+    case Message::kSubTypeMleParentRequest:
+        subType = OT_RADIO_SUB_TYPE_MLE_PARENT_REQUEST;
         break;
 
     default:
@@ -612,6 +621,7 @@ start:
     IgnoreError(aFrame.SetSrcPanId(Get<Mac::Mac>().GetPanId()));
     aFrame.SetDstAddr(aMacDest);
     aFrame.SetSrcAddr(aMacSource);
+    aFrame.mInfo.mTxInfo.mSubType = subType;
 
 #if OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
     if (aMessage.IsTimeSync())
