@@ -472,6 +472,11 @@ int8_t Radio::GetReceiveSensitivity(void)
     return -100;
 }
 
+otRadioState Radio::GetState(void)
+{
+    return OT_RADIO_STATE_DISABLED;
+}
+
 void Radio::GetIeeeEui64(Mac::ExtAddress &aIeeeEui64)
 {
     OT_UNUSED_VARIABLE(aIeeeEui64);

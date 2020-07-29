@@ -520,9 +520,9 @@ otError ToblePlatform::ProcessShow(uint8_t aArgsLength, char *aArgs[])
         {
             uint8_t *address = mConns[i].mAddress.mAddress;
 
-            mInterpreter.mServer->OutputFormat("| %-5d | %-13s | %02x%02x%02x%02x%02x%02x | 0x%08x |\r\n", i,
+            mInterpreter.mServer->OutputFormat("| %-5d | %-13s | %02x%02x%02x%02x%02x%02x | %p |\r\n", i,
                                                StateToString(mConns[i].mState), address[0], address[1], address[2],
-                                               address[3], address[4], address[5], (uint32_t)mConns[i].mPlatConn);
+                                               address[3], address[4], address[5], mConns[i].mPlatConn);
         }
     }
 
@@ -631,8 +631,8 @@ void ToblePlatform::HandleConnected(otTobleConnection *aConn)
         memset(&connSession->mAddress, 0, sizeof(otTobleAddress));
     }
 
-    mInterpreter.mServer->OutputFormat("HandleConnected: index=%d, platConn=0x%08x\r\n", GetConnectionId(connSession),
-                                       (uint32_t)aConn);
+    mInterpreter.mServer->OutputFormat("HandleConnected: index=%d, platConn=%p\r\n", GetConnectionId(connSession),
+                                       aConn);
 
 exit:
     return;
@@ -642,12 +642,12 @@ void ToblePlatform::HandleDisconnected(otTobleConnection *aConn)
 {
     Connection *connSession = GetConnection(aConn);
 
-    mInterpreter.mServer->OutputFormat("HandleDisconnected: platConn=0x%08x\r\n", (uint32_t)aConn);
+    mInterpreter.mServer->OutputFormat("HandleDisconnected: platConn=%p\r\n", aConn);
 
     VerifyOrExit(connSession != NULL, OT_NOOP);
 
-    mInterpreter.mServer->OutputFormat("HandleDisconnected: index=%d, platConn=0x%08x\r\n",
-                                       GetConnectionId(connSession), (uint32_t)aConn);
+    mInterpreter.mServer->OutputFormat("HandleDisconnected: index=%d, platConn=%p\r\n", GetConnectionId(connSession),
+                                       aConn);
     connSession->mState    = kStateFree;
     connSession->mPlatConn = NULL;
 

@@ -261,7 +261,7 @@ otError Controller::Sleep(void)
             // Fall through
 
         case Connection::kConnecting:
-            otLogNoteTobleCent("%s: Disconnect(conn->mPlatConn=0x%08x) !!!!!!!!", __func__, (uint32_t)conn->mPlatConn);
+            otLogNoteTobleCent("%s: Disconnect(conn->mPlatConn=%p) !!!!!!!!", __func__, conn->mPlatConn);
             Get<Platform>().Disconnect(conn->mPlatConn);
             Get<ConnectionTable>().Remove(*conn);
             break;
@@ -771,7 +771,7 @@ void Controller::HandleAdv(Platform::AdvType aAdvType, Platform::AdvPacket &aAdv
     StopScanning();
     conn->mPlatConn = Get<Platform>().CreateConnection(*static_cast<const Address *>(&aAdvPacket.mSrcAddress), config);
 
-    otLogNoteTobleCent("CentCtrl: CreateConnection() conn->mPlatConn=0x%08x", (uint32_t)conn->mPlatConn);
+    otLogNoteTobleCent("CentCtrl: CreateConnection() conn->mPlatConn=%p", conn->mPlatConn);
 
     if (conn->mPlatConn == NULL)
     {
@@ -853,8 +853,7 @@ void Controller::HandleConnTimer(void)
             case Connection::kConnecting:
                 otLogDebgTobleCent("HandleConnTimer: TIMEOUT EXCEEDED: %s",
                                    (conn == mTxConn) ? "kTxWaitToConnectTimeout" : "kRxWaitToConnectTimeout");
-                otLogNoteTobleCent("%s: Disconnect(conn->mPlatConn=0x%08x) !!!!!!!!", __func__,
-                                   (uint32_t)conn->mPlatConn);
+                otLogNoteTobleCent("%s: Disconnect(conn->mPlatConn=%p) !!!!!!!!", __func__, conn->mPlatConn);
                 Get<Platform>().Disconnect(conn->mPlatConn);
                 Get<ConnectionTable>().Remove(*conn);
                 break;
@@ -882,7 +881,7 @@ void Controller::HandleConnected(Platform::Connection *aPlatConn)
 {
     Connection *conn;
 
-    otLogNoteTobleCent("%s: aPlatConn=0x%08x ~~~~~~~~~~~~~~", __func__, (uint32_t)aPlatConn);
+    otLogNoteTobleCent("%s: aPlatConn=%p ~~~~~~~~~~~~~~", __func__, aPlatConn);
     VerifyOrExit((conn = Get<ConnectionTable>().Find(aPlatConn)) != NULL, OT_NOOP);
     VerifyOrExit(conn->mState == Connection::kConnecting, OT_NOOP);
 
@@ -917,7 +916,7 @@ void Controller::HandleDisconnected(Platform::Connection *aPlatConn)
 {
     Connection *conn;
 
-    otLogNoteTobleCent("%s: aPlatConn=0x%08x !!!!!!!!", __func__, (uint32_t)aPlatConn);
+    otLogNoteTobleCent("%s: aPlatConn=%p !!!!!!!!", __func__, aPlatConn);
 
     conn = Get<ConnectionTable>().Find(aPlatConn);
     VerifyOrExit(conn != NULL, OT_NOOP);

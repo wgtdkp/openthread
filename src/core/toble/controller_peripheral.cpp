@@ -416,7 +416,7 @@ void Controller::HandleTimer(void)
 
 void Controller::HandleConnected(Platform::Connection *aPlatConn)
 {
-    otLogNoteToblePeri("%s: aPlatConn=0x%08x ~~~~~~~~~~~~~~", __func__, (uint32_t)aPlatConn);
+    otLogNoteToblePeri("%s: aPlatConn=%p ~~~~~~~~~~~~~~", __func__, aPlatConn);
 
     switch (mState)
     {
@@ -424,7 +424,7 @@ void Controller::HandleConnected(Platform::Connection *aPlatConn)
     case kStateConnected:
     case kStateTxSending:
 
-        otLogNoteToblePeri("%s: Disconnect(aPlatConn=0x%08x) !!!!!!!!", __func__, (uint32_t)aPlatConn);
+        otLogNoteToblePeri("%s: Disconnect(aPlatConn=%p) !!!!!!!!", __func__, aPlatConn);
         Get<Platform>().Disconnect(aPlatConn);
         break;
 
@@ -434,7 +434,7 @@ void Controller::HandleConnected(Platform::Connection *aPlatConn)
 
         if (mConn != NULL)
         {
-            otLogNoteToblePeri("%s: Disconnect(aPlatConn=0x%08x) !!!!!!!!", __func__, (uint32_t)aPlatConn);
+            otLogNoteToblePeri("%s: Disconnect(aPlatConn=%p) !!!!!!!!", __func__, aPlatConn);
             Get<Platform>().Disconnect(aPlatConn);
             ExitNow();
         }
@@ -502,7 +502,7 @@ void Controller::HandleDisconnected(Platform::Connection *aPlatConn)
 {
     Connection *conn = Get<ConnectionTable>().Find(aPlatConn);
 
-    otLogNoteToblePeri("%s: aPlatConn=0x%08x !!!!!!!!", __func__, (uint32_t)aPlatConn);
+    otLogNoteToblePeri("%s: aPlatConn=%p !!!!!!!!", __func__, aPlatConn);
 
     VerifyOrExit((conn != NULL) && (conn == mConn), OT_NOOP);
 

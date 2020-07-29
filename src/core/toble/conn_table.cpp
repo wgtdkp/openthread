@@ -56,7 +56,7 @@ Connection::InfoString Connection::ToString(void) const
 {
     InfoString str;
 
-    str.Append("PlatConn=0x%08x, ", (uint32_t)mPlatConn);
+    str.Append("PlatConn=%p, ", mPlatConn);
 
     str.Append("%s, ", mExtAddr.ToString().AsCString());
 
