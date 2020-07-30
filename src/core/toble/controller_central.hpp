@@ -41,6 +41,7 @@
 #include "common/locator.hpp"
 #include "common/timer.hpp"
 #include "mac/mac_frame.hpp"
+#include "thread/mle.hpp"
 #include "toble/adv_data.hpp"
 #include "toble/platform.hpp"
 
@@ -62,6 +63,7 @@ class Controller : public InstanceLocator
 public:
     Controller(Instance &aInstance);
 
+    void    test(void);
     otError Sleep(void);
     otError Receive(void);
     otError Transmit(Mac::TxFrame &aFrame);
@@ -70,18 +72,7 @@ public:
     void HandleTransportSendDone(Connection &aConn, otError aError);
     void HandleTransportReceiveDone(Connection &aConn, uint8_t *aFrame, uint16_t aLength, otError aError);
 
-    /**
-     * This function pointer is called on receiving an MLE Discovery Response message.
-     *
-     * @param[in]  aResult   A valid pointer to the Discovery Response information or NULL when the Discovery completes.
-     * @param[in]  aContext  A pointer to application-specific context.
-     *
-     */
-    typedef void (*ScanHandler)(Advertisement::Info &aAdvInfo);
-
-    otError Scan(ScanHandler aCallback);
-
-    void SetMleDiscoverRequestParameters(bool     aJoiner,
+    void SetMleDiscoverRequestParameters(uint8_t  aDiscoverTarget,
                                          bool     aEnableFiltering,
                                          uint16_t aDiscoverCcittIndex,
                                          uint16_t aDiscoverAnsiIndex);
@@ -104,39 +95,37 @@ private:
 
     enum
     {
-        kRxScanInterval = 40, // Scan interval while in rx mode (msec, same as
-                              // kConnectionInterval).
-        kRxScanWindow = 30,   // Scan window while in rx mode (msec, larger
-                              // than peripheral's kTxModeAdvInterval).
+#if 0
+         kRxScanInterval = 40, // Scan interval while in rx mode (msec, same as kConnectionInterval).
+         kRxScanWindow   = 30, // Scan window while in rx mode (msec, larger than peripheral's kTxModeAdvInterval).
 
-        kTxScanInterval = 40, // Scan interval while in tx mode (msec, same as
-                              // kConnectionInterval).
-        kTxScanWindow = 30,   // Scan window while in tx mode (msec, larger
-                              // than peripheral's kRxModeAdvInterval).
+         kTxScanInterval = 40, // Scan interval while in tx mode (msec, same as kConnectionInterval).
+         kTxScanWindow = 30,   // Scan window while in tx mode (msec, larger than peripheral's kRxModeAdvInterval).
 
-        kRxWaitToConnectTimeout = 1600, // Wait time to establish a connection for rx.
-        kTxWaitToConnectTimeout = 1600, // Wait time to establish a connection for tx.
+         kRxWaitToConnectTimeout = 1600, // Wait time to establish a connection for rx.
+         kTxWaitToConnectTimeout = 1600, // Wait time to establish a connection for tx.
 
-        kTxTimeout = 10000, // 5000, // Tx timeout interval (max time waiting for
-                            // entire tx operation to finish.
+         kTxTimeout = 10000, // 5000, // Tx timeout interval (max time waiting for entire tx operation to finish.
 
-        kRxDisconnectTimeout      = 5000, // Timeout to disconnect from an idle connected connection.
-        kTxDisconnectTimeout      = 5000, // Timeout to disconnect from a connection in sending/tx state.
-        kTxErrorDisconnectTimeout = 5,    // Timeout to disconnect after a tx error happens.
+         kRxDisconnectTimeout      = 5000, // Timeout to disconnect from an idle connected connection.
+         kTxDisconnectTimeout      = 5000, // Timeout to disconnect from a connection in sending/tx state.
+         kTxErrorDisconnectTimeout = 5,    // Timeout to disconnect after a tx error happens.
+#endif
 
-        kConnectionInterval     = 40, // The connection data interval (msec).
-        kConnectionScanInterval = 40, // Scan interval when trying to establish a connection
-                                      // (msec, same as kConnectionInterval).
-        kConnectionScanWindow = 30,   // Scan window when trying to establish a connection (msec,
-                                      // larger than peripheral's kTxModeAdvInterval).
+        kConnectionInterval =   = 40,                  // The connection data interval (msec).
+        kConnectionScanInterval = kConnectionInterval, // Scan interval when trying to establish a connection
+                                                       // (msec, same as kConnectionInterval).
+        kConnectionScanWindow = 30,                    // Scan window when trying to establish a connection (msec,
+                                                       // larger than peripheral's kAdvInterval).
 
-        kWaitBleConnectionTimeout   = 1000,
+        kScanInterval               = kConnectionInterval,
+        kScanWindow                 = kConnectionScanWindow,
+        kWaitBleConnectionTimeout   = 10 * kConnectionInterval,
         kWaitTobleConnectionTimeout = (7 + 2) * 2 * kConnectionInterval,
+        kScanPeersTimeout           = 10 * kConnectionInterval,
         kConnectionTimeout          = (kWaitBleConnectionTimeout + kWaitTobleConnectionTimeout),
-        kMaxConnectionTimeout       = 10000,
 
         kAckFrameLength = 5,
-        kScanTimeout    = 500, // 10000,
         kMaxPeers       = 4,
         kRssiMin        = -127,
     };
@@ -174,10 +163,11 @@ private:
     static void HandleTxTimer(Timer &aTimer);
     void        HandleTxTimer(void);
 
-    void ClearPeers(void);
-    void SavePeer(Platform::AdvPacket &aAdvPacket, Advertisement::Info &aAdvInfo);
-    void ScanDone(void);
-    bool SendToNextPeer(void);
+    void    ClearPeers(void);
+    void    SavePeer(Platform::AdvPacket &aAdvPacket, Advertisement::Info &aAdvInfo);
+    otError ScanPeers(void);
+    void    ScanPeersDone(void);
+    bool    SendToNextPeer(void);
 
     static const char *StateToString(State aState);
     static const char *TxStateToString(TxState aTxState);
@@ -194,8 +184,6 @@ private:
     Mac::TxFrame *mTxFrame;
     Mac::Address  mTxDest;
     Connection *  mTxConn; // Connection being used for tx.
-    Connection *  mRxConn; // Connection we are connecting (while in `kStateRxConnecting` or `kStateTxPending`).
-    ScanHandler   mScanHandler;
     TimerMilli    mConnTimer;
     TimerMilli    mTxTimer;
     bool          mWaitForCreatingTxConnection;
@@ -206,7 +194,7 @@ private:
     uint8_t mPeerIndex;
     bool    mSendToPeers;
 
-    bool     mDiscoverJoiner;
+    uint8_t  mDiscoverTarget;
     bool     mDiscoverEnableFiltering;
     uint16_t mDiscoverCcittIndex;
     uint16_t mDiscoverAnsiIndex;

@@ -66,6 +66,13 @@ Controller::Controller(Instance &aInstance)
     mSteeringData.Clear();
 }
 
+void Controller::test(void)
+{
+    otLogNoteToblePeri("%s: mJoiningPermitted   =%d", __func__, mJoiningPermitted);
+    otLogNoteToblePeri("%s: mBorderAgentEnabled =%d", __func__, mBorderAgentEnabled);
+    otLogNoteToblePeri("%s: mTobleRole          =%d", __func__, mTobleRole);
+}
+
 void Controller::SetJoiningPermitted(bool aEnabled, otSteeringData *aSteeringData)
 {
     mJoiningPermitted = aEnabled;
@@ -74,25 +81,45 @@ void Controller::SetJoiningPermitted(bool aEnabled, otSteeringData *aSteeringDat
     {
         mSteeringData.Init(*aSteeringData);
     }
+    UpdateAdvertising();
+
     otLogNoteToblePeri("%s: mJoiningPermitted=%d ~~~", __func__, mJoiningPermitted);
 }
 
 void Controller::SetBoarderAgent(bool aEnabled)
 {
     mBorderAgentEnabled = aEnabled;
+    UpdateAdvertising();
+
     otLogNoteToblePeri("%s: mBorderAgentEnabled=%d ~~~", __func__, mBorderAgentEnabled);
 }
 
 void Controller::SetDtc(bool aEnabled)
 {
     mDtcEnabled = aEnabled;
+    UpdateAdvertising();
+
     otLogNoteToblePeri("%s: mDtcEnabled=%d ~~~", __func__, mDtcEnabled);
 }
 
 void Controller::SetTobleRole(uint8_t aRole)
 {
-    mTobleRole = aRole;
+    mTobleRole = static_cast<AdvData::TobleRole>(aRole);
+    UpdateAdvertising();
+
     otLogNoteToblePeri("%s: mTobleRole=%d ~~~", __func__, mTobleRole);
+}
+
+void Controller::UpdateAdvertising(void)
+{
+    if (mState == kStateRxAdvertising)
+    {
+        StartAdvertising(false);
+    }
+    else if (mState == kStateTxAdvertising)
+    {
+        StartAdvertising(true);
+    }
 }
 
 void Controller::SetState(State aState)
@@ -176,7 +203,7 @@ void Controller::StartAdvertising(bool aTransmit)
     info.mJoiningPermitted   = mJoiningPermitted;
     info.mDtcEnabled         = mDtcEnabled;
     info.mBorderAgentEnabled = mBorderAgentEnabled;
-    info.mTobleRole          = AdvData::kRoleEndDevice;
+    info.mTobleRole          = mTobleRole;
 
     info.mSrcShort    = Get<Mac::Mac>().GetShortAddress();
     info.mSrcExtended = Get<Mac::Mac>().GetExtAddress();
@@ -215,7 +242,7 @@ void Controller::StartAdvertising(bool aTransmit)
     advData.Populate(info);
 
     config.mType     = OT_TOBLE_ADV_IND;
-    config.mInterval = aTransmit ? kTxModeAdvInterval : kRxModeAdvInterval;
+    config.mInterval = kAdvInterval;
     config.mData     = advData.GetData();
     config.mLength   = advData.GetLength();
 
@@ -275,43 +302,44 @@ otError Controller::Transmit(Mac::TxFrame &aFrame)
 
     if (mTxFrame->GetChannel() != Get<Mac::Mac>().GetPanChannel())
     {
-        otLogNoteToblePeri("PeriCtrl: Skip frame tx on channel %d (pan-channel: %d)", mTxFrame->GetChannel(),
+        otLogNoteToblePeri("Skip frame tx on channel %d (pan-channel: %d)", mTxFrame->GetChannel(),
                            Get<Mac::Mac>().GetPanChannel());
         InvokeRadioTxDone(OT_ERROR_NONE);
         ExitNow();
     }
 
-#if OPENTHREAD_FTD
+    if ((mTobleRole == AdvData::kRoleInactiveRouter) || (mTobleRole == AdvData::kRoleActiveRouter))
     {
-        Mac::PanId panId;
-        // Get PanId from the current tx frame
-        if (mTxFrame->GetDstPanId(panId) != OT_ERROR_NONE)
         {
-            panId = Get<Mac::Mac>().GetPanId();
+            Mac::PanId panId;
+            // Get PanId from the current tx frame
+            if (mTxFrame->GetDstPanId(panId) != OT_ERROR_NONE)
+            {
+                panId = Get<Mac::Mac>().GetPanId();
+            }
+
+            if (panId == OT_PANID_BROADCAST)
+            {
+                otLogNoteToblePeri("Skip sending to broadcast PAN-Id");
+                InvokeRadioTxDone(OT_ERROR_NONE);
+                ExitNow();
+            }
         }
 
-        if (panId == OT_PANID_BROADCAST)
+        if (mDestAddr.IsNone())
         {
-            otLogNoteToblePeri("PeriCtrl: Skip sending to broadcast PAN-Id");
+            otLogNoteToblePeri("TxFrame has no destination address");
+            InvokeRadioTxDone(OT_ERROR_NONE);
+            ExitNow();
+        }
+
+        if (mDestAddr.IsBroadcast())
+        {
+            otLogNoteToblePeri("TxFrame is broadcast - not supported yet!");
             InvokeRadioTxDone(OT_ERROR_NONE);
             ExitNow();
         }
     }
-
-    if (mDestAddr.IsNone())
-    {
-        otLogNoteToblePeri("PeriCtrl: TxFrame has no destination address");
-        InvokeRadioTxDone(OT_ERROR_NONE);
-        ExitNow();
-    }
-
-    if (mDestAddr.IsBroadcast())
-    {
-        otLogNoteToblePeri("PeriCtrl: TxFrame is broadcast - not supported yet!");
-        InvokeRadioTxDone(OT_ERROR_NONE);
-        ExitNow();
-    }
-#endif
 
     if (mConn == NULL)
     {
@@ -561,8 +589,6 @@ void Controller::HandleTransportReceiveDone(Connection &aConn, uint8_t *aFrame, 
     if (mState == kStateConnected)
     {
         Mac::Address addr;
-
-        otLogNoteToblePeri("%s: TimerStart(kRxModeConnTimeout=%d)", __func__, kRxModeConnTimeout);
 
         if ((rxFrame.GetSrcAddr(addr) == OT_ERROR_NONE) && !addr.IsNone() && !addr.IsBroadcast())
         {

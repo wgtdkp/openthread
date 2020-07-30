@@ -152,7 +152,8 @@ otError Joiner::Start(const char *     aPskd,
 
     SuccessOrExit(error = Get<Mle::MleRouter>().Discover(Mac::ChannelMask(0), Get<Mac::Mac>().GetPanId(),
                                                          /* aJoiner */ true, /* aEnableFiltering */ true,
-                                                         HandleDiscoverResult, this));
+                                                         HandleDiscoverResult, this,
+                                                         Mle::Mle::kDiscoverTargetJoinerRouter));
     mCallback = aCallback;
     mContext  = aContext;
 

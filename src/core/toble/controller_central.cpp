@@ -27,7 +27,7 @@
  */
 
 /**
- * @file
+ / @file
  *   This file implements ToBLE Controller for central mode.
  */
 
@@ -55,13 +55,11 @@ Controller::Controller(Instance &aInstance)
     , mTxFrame(NULL)
     , mTxDest()
     , mTxConn(NULL)
-    , mRxConn(NULL)
-    , mScanHandler(NULL)
     , mConnTimer(aInstance, &Controller::HandleConnTimer, this)
     , mTxTimer(aInstance, &Controller::HandleTxTimer, this)
     , mWaitForCreatingTxConnection(false)
     , mSendToPeers(false)
-    , mDiscoverJoiner(false)
+    , mDiscoverTarget(Mle::Mle::kDiscoverTargetAll)
     , mDiscoverEnableFiltering(false)
     , mDiscoverCcittIndex(0)
     , mDiscoverAnsiIndex(0)
@@ -75,12 +73,19 @@ Controller::Controller(Instance &aInstance)
     mSteeringData.Clear();
 }
 
-void Controller::SetMleDiscoverRequestParameters(bool     aJoiner,
+void Controller::test(void)
+{
+    otLogNoteTobleCent("%s: mJoiningPermitted   =%d", __func__, mJoiningPermitted);
+    otLogNoteTobleCent("%s: mBorderAgentEnabled =%d", __func__, mBorderAgentEnabled);
+    otLogNoteTobleCent("%s: mTobleRole          =%d", __func__, mTobleRole);
+}
+
+void Controller::SetMleDiscoverRequestParameters(uint8_t  aDiscoverTarget,
                                                  bool     aEnableFiltering,
                                                  uint16_t aDiscoverCcittIndex,
                                                  uint16_t aDiscoverAnsiIndex)
 {
-    mDiscoverJoiner          = aJoiner;
+    mDiscoverTarget          = aDiscoverTarget;
     mDiscoverEnableFiltering = aEnableFiltering;
     mDiscoverCcittIndex      = aDiscoverCcittIndex;
     mDiscoverAnsiIndex       = aDiscoverAnsiIndex;
@@ -166,14 +171,10 @@ void Controller::SavePeer(Platform::AdvPacket &aAdvPacket, Advertisement::Info &
     peer->mBleAddress = aAdvPacket.mSrcAddress;
     peer->mSrcShort   = aAdvInfo.mSrcShort;
 
-#if 0
-    {
-        uint8_t *addr = aAdvPacket.mSrcAddress.mAddress;
-
-        otLogNoteTobleCent("%s: BleAddr=%02x%02x%02x%02x%02x%02x Rssi=%d", __func__, addr[0], addr[1], addr[2], addr[3],
-                           addr[4], addr[5], aAdvPacket.mRssi);
-    }
-#endif
+    otLogNoteTobleCent("%s: BleAddr=%02x%02x%02x%02x%02x%02x Rssi=%d", __func__, aAdvPacket.mSrcAddress.mAddress[0],
+                       aAdvPacket.mSrcAddress.mAddress[1], aAdvPacket.mSrcAddress.mAddress[2],
+                       aAdvPacket.mSrcAddress.mAddress[3], aAdvPacket.mSrcAddress.mAddress[4],
+                       aAdvPacket.mSrcAddress.mAddress[5], aAdvPacket.mRssi);
 
 exit:
     return;
@@ -183,12 +184,15 @@ void Controller::ProcessAdvertisement(Platform::AdvPacket &aAdvPacket, Advertise
 {
     if (mTxFrameType == OT_RADIO_SUB_TYPE_MLE_PARENT_REQUEST)
     {
+        otLogNoteTobleCent("%s: aAdvInfo.mTobleRole=%d", aAdvInfo.mTobleRole);
+        VerifyOrExit(aAdvInfo.mTobleRole == AdvData::kRoleActiveRouter, OT_NOOP);
         SavePeer(aAdvPacket, aAdvInfo);
     }
     else if (mTxFrameType == OT_RADIO_SUB_TYPE_MLE_DISCOVERY_REQUEST)
     {
-        if (mDiscoverJoiner)
+        switch (mDiscoverTarget)
         {
+        case Mle::Mle::kDiscoverTargetJoinerRouter:
             VerifyOrExit(aAdvInfo.mJoiningPermitted, OT_NOOP);
 
             if (mDiscoverEnableFiltering)
@@ -200,13 +204,17 @@ void Controller::ProcessAdvertisement(Platform::AdvPacket &aAdvPacket, Advertise
                               steeringData.GetBit(mDiscoverAnsiIndex % steeringData.GetNumBits())),
                              OT_NOOP);
             }
+            break;
 
-            SavePeer(aAdvPacket, aAdvInfo);
+        case Mle::Mle::kDiscoverTargetBorderAgent:
+            VerifyOrExit(aAdvInfo.mBorderAgentEnabled, OT_NOOP);
+            break;
+
+        case Mle::Mle::kDiscoverTargetAll:
+            break;
         }
-        else // if (aAdvInfo.mBorderAgentEnabled)
-        {
-            SavePeer(aAdvPacket, aAdvInfo);
-        }
+
+        SavePeer(aAdvPacket, aAdvInfo);
     }
 
 exit:
@@ -305,14 +313,14 @@ void Controller::StopScanning(void)
 
 void Controller::StartScanning(void)
 {
-    otLogNoteTobleCent("StartScanning(int:%u, wind:%d)", kRxScanInterval, kRxScanWindow);
+    otLogNoteTobleCent("StartScanning(int:%u, wind:%d)", kScanInterval, kScanWindow);
 
-    OT_ASSERT(Get<Platform>().StartScan(kRxScanInterval, kRxScanWindow) == OT_ERROR_NONE);
+    OT_ASSERT(Get<Platform>().StartScan(kScanInterval, kScanWindow) == OT_ERROR_NONE);
 
     SetState(kStateScanning);
 }
 
-otError Controller::Scan(ScanHandler aCallback)
+otError Controller::ScanPeers(void)
 {
     otError error = OT_ERROR_NONE;
 
@@ -320,16 +328,16 @@ otError Controller::Scan(ScanHandler aCallback)
 
     otLogInfoTobleCent("Scan()");
 
-    mScanHandler = aCallback;
+    ClearPeers();
     SetTxState(kStatePeerScanning);
 
 exit:
     return error;
 }
 
-void Controller::ScanDone(void)
+void Controller::ScanPeersDone(void)
 {
-    otLogNoteTobleCent("CentCtrl: OT_RADIO_SUB_TYPE_MLE_PARENT_REQUEST  ScanDone");
+    otLogNoteTobleCent("OT_RADIO_SUB_TYPE_MLE_PARENT_REQUEST  ScanDone");
 
     if (SendToNextPeer())
     {
@@ -381,7 +389,7 @@ otError Controller::Transmit(Mac::TxFrame &aFrame)
 
     if (mTxFrame->GetChannel() != Get<Mac::Mac>().GetPanChannel())
     {
-        otLogNoteTobleCent("CentCtrl: Skip frame tx on channel %d (pan-channel: %d)", mTxFrame->GetChannel(),
+        otLogNoteTobleCent("Skip frame tx on channel %d (pan-channel: %d)", mTxFrame->GetChannel(),
                            Get<Mac::Mac>().GetPanChannel());
         InvokeRadioTxDone(OT_ERROR_NONE);
         ExitNow();
@@ -389,57 +397,55 @@ otError Controller::Transmit(Mac::TxFrame &aFrame)
 
     if (mTxDest.IsNone())
     {
-        otLogNoteTobleCent("CentCtrl: TxFrame has no destination address");
+        otLogNoteTobleCent("TxFrame has no destination address");
         InvokeRadioTxDone(OT_ERROR_NONE);
         ExitNow();
     }
 
     mTxFrameType = mTxFrame->mInfo.mTxInfo.mSubType;
-#if OPENTHREAD_MTD
-    if ((mTxFrame->mInfo.mTxInfo.mSubType == OT_RADIO_SUB_TYPE_MLE_PARENT_REQUEST) ||
-        (mTxFrame->mInfo.mTxInfo.mSubType == OT_RADIO_SUB_TYPE_MLE_DISCOVERY_REQUEST))
+    if ((mTobleRole == AdvData::kRoleJoiner) || (mTobleRole == AdvData::kRoleEndDevice))
     {
-#if 0
-        Connection *conn;
+        if ((mTxFrame->mInfo.mTxInfo.mSubType == OT_RADIO_SUB_TYPE_MLE_PARENT_REQUEST) ||
+            (mTxFrame->mInfo.mTxInfo.mSubType == OT_RADIO_SUB_TYPE_MLE_DISCOVERY_REQUEST))
+        {
+            Connection *conn = Get<ConnectionTable>().GetFirst();
 
-        conn = Get<ConnectionTable>().GetFirst();
-        if (conn != NULL)
-        {
-            otLogNoteTobleCent("CentCtrl: Found a existing connection: ShortAddr=0x%04x", conn->mShortAddr);
-            mTxDest.SetShort(conn->mShortAddr);
-        }
-        else
-#endif
-        {
-            if (mTxFrameType == OT_RADIO_SUB_TYPE_MLE_PARENT_REQUEST)
+            if (conn != NULL)
             {
-                otLogNoteTobleCent("CentCtrl: Send OT_RADIO_SUB_TYPE_MLE_PARENT_REQUEST");
+                otLogNoteTobleCent("Found an existing connection: ShortAddr=0x%04x", conn->mShortAddr);
+                mTxDest.SetShort(conn->mShortAddr);
             }
             else
             {
-                otLogNoteTobleCent("CentCtrl: Send OT_RADIO_SUB_TYPE_MLE_DISCOVERY_REQUEST");
+                if (mTxFrameType == OT_RADIO_SUB_TYPE_MLE_PARENT_REQUEST)
+                {
+                    otLogNoteTobleCent("Send OT_RADIO_SUB_TYPE_MLE_PARENT_REQUEST");
+                }
+                else
+                {
+                    otLogNoteTobleCent("Send OT_RADIO_SUB_TYPE_MLE_DISCOVERY_REQUEST");
+                }
+
+                otLogNoteTobleCent("Scan potential parents");
+
+                if (ScanPeers() == OT_ERROR_NONE)
+                {
+                    otLogNoteTobleCent("%s: mTxTimer.Start(kScanPeersTimeout=%d)", __func__, kScanPeersTimeout);
+                    mTxTimer.Start(kScanPeersTimeout);
+                }
+                else
+                {
+                    InvokeRadioTxDone(OT_ERROR_NONE);
+                }
             }
 
-            otLogNoteTobleCent("CentCtrl: Scan potential parents");
-            ClearPeers();
-
-            if (Scan(NULL) == OT_ERROR_NONE)
-            {
-                otLogNoteTobleCent("%s: mTxTimer.Start(kScanTimeout=%d)", __func__, kScanTimeout);
-                mTxTimer.Start(kScanTimeout);
-            }
-            else
-            {
-                InvokeRadioTxDone(OT_ERROR_NONE);
-            }
             ExitNow();
         }
     }
-    else
-#endif
-        if (mTxDest.IsBroadcast())
+
+    if (mTxDest.IsBroadcast())
     {
-        otLogNoteTobleCent("CentCtrl: TxFrame is broadcast - not supported yet!");
+        otLogNoteTobleCent("TxFrame is broadcast - not supported yet!");
         // For now we don't support broadcast frame tx from central. Ideas for
         // future enhancements: Send the frame over all existing (connected)
         // connections if device is attached. If device is detached, scan and
@@ -489,7 +495,7 @@ void Controller::StartTransmit(void)
             {
                 otLogNoteTobleCent("%s: Step 3", __func__);
                 mTxConn->mShortAddr = mTxDest.GetShort();
-                otLogNoteTobleCent("CentCtrl: Updated short addr, conn:[%s]", mTxConn->ToString().AsCString());
+                otLogNoteTobleCent("Updated short addr, conn:[%s]", mTxConn->ToString().AsCString());
             }
         }
     }
@@ -557,7 +563,7 @@ void Controller::HandleTxTimer(void)
         break;
 
     case kStatePeerScanning:
-        ScanDone();
+        ScanPeersDone();
         break;
 
     case kStateTxScanning:
@@ -632,15 +638,19 @@ bool Controller::IsAdvSendToUs(Advertisement::Info &aAdvInfo)
 
     case Mac::Address::kTypeShort:
 
-#if 0
-        VerifyOrExit(
-            (aAdvInfo.mDest.GetShort() == Get<Mac::Mac>().GetShortAddress()) ||
-                (aAdvInfo.mDest.IsBroadcast() && (Get<Mle::MleRouter>().GetNeighbor(aAdvInfo.mSrcExtended) != NULL)),
-            OT_NOOP);
-#endif
-
-        VerifyOrExit((aAdvInfo.mDest.GetShort() == Get<Mac::Mac>().GetShortAddress()) || aAdvInfo.mDest.IsBroadcast(),
-                     OT_NOOP);
+        if ((mTobleRole == AdvData::kRoleJoiner) || (mTobleRole == AdvData::kRoleEndDevice))
+        {
+            VerifyOrExit((aAdvInfo.mDest.GetShort() == Get<Mac::Mac>().GetShortAddress()) ||
+                             (aAdvInfo.mDest.IsBroadcast() &&
+                              (Get<Mle::MleRouter>().GetNeighbor(aAdvInfo.mSrcExtended) != NULL)),
+                         OT_NOOP);
+        }
+        else
+        {
+            VerifyOrExit((aAdvInfo.mDest.GetShort() == Get<Mac::Mac>().GetShortAddress()) ||
+                             aAdvInfo.mDest.IsBroadcast(),
+                         OT_NOOP);
+        }
 
         advSendToUs = true;
         break;
@@ -682,6 +692,11 @@ void Controller::HandleAdv(Platform::AdvType aAdvType, Platform::AdvPacket &aAdv
     VerifyOrExit(mState != kStateSleep, OT_NOOP);
 
     SuccessOrExit(advData.Parse(mAdvInfo));
+    if (mAdvInfo.mSrcShort == 0xaabb)
+    {
+        // Drop Diag message
+        ExitNow();
+    }
 
     // otLogDebgTobleCent("HandleAdv(AdvInfo:[%s])", mAdvInfo.ToString().AsCString());
 
@@ -693,23 +708,22 @@ void Controller::HandleAdv(Platform::AdvType aAdvType, Platform::AdvPacket &aAdv
         __func__, mAdvInfo.mSrcShort, mWaitForCreatingTxConnection, mAdvInfo.mPanId, Get<Mac::Mac>().GetPanId());
 #endif
 
-#if 0
     // In case a specific PAN ID of a Thread Network to be discovered is not known, Discovery
     // Request messages MUST have the Destination PAN ID in the IEEE 802.15.4 MAC header set
     // to be the Broadcast PAN ID (0xFFFF) and the Source PAN ID set to a randomly generated
     // value. In this case, the PAN ID of the MAC layer also be updated to a random value. When
     // we are sending the Disocver Request, we don't check the PAN ID.
-    if (!((mTxFrame != NULL) && (mTxFrameType == OT_RADIO_SUB_TYPE_MLE_DISCOVERY_REQUEST)))
+    if ((mTobleRole == AdvData::kRoleJoiner) || (mTobleRole == AdvData::kRoleEndDevice))
     {
-        otLogNoteTobleCent("%s: Step 1 ", __func__);
-        VerifyOrExit((Get<Mac::Mac>().GetPanId() == Mac::kPanIdBroadcast) ||
-                         (mAdvInfo.mPanId == Get<Mac::Mac>().GetPanId()),
-                     OT_NOOP);
+        if (!((mTxFrame != NULL) && (mTxFrameType == OT_RADIO_SUB_TYPE_MLE_DISCOVERY_REQUEST)))
+        {
+            VerifyOrExit((Get<Mac::Mac>().GetPanId() == Mac::kPanIdBroadcast) ||
+                             (mAdvInfo.mPanId == Get<Mac::Mac>().GetPanId()),
+                         OT_NOOP);
+        }
     }
-#endif
 
-    if ((mTxState == kStatePeerScanning) && (mAdvInfo.mJoiningPermitted == false) &&
-        (mAdvInfo.mBorderAgentEnabled == false))
+    if (mTxState == kStatePeerScanning)
     {
         ProcessAdvertisement(aAdvPacket, mAdvInfo);
     }
@@ -759,7 +773,7 @@ void Controller::HandleAdv(Platform::AdvType aAdvType, Platform::AdvPacket &aAdv
 
     if (conn == NULL)
     {
-        otLogNoteTobleCent("CentCtrl: Connection table is full - could not create new connection");
+        otLogNoteTobleCent("Connection table is full - could not create new connection");
         ExitNow();
     }
 
@@ -771,11 +785,11 @@ void Controller::HandleAdv(Platform::AdvType aAdvType, Platform::AdvPacket &aAdv
     StopScanning();
     conn->mPlatConn = Get<Platform>().CreateConnection(*static_cast<const Address *>(&aAdvPacket.mSrcAddress), config);
 
-    otLogNoteTobleCent("CentCtrl: CreateConnection() conn->mPlatConn=%p", conn->mPlatConn);
+    otLogNoteTobleCent("CreateConnection() conn->mPlatConn=%p", conn->mPlatConn);
 
     if (conn->mPlatConn == NULL)
     {
-        otLogNoteTobleCent("CentCtrl: Platform could not create new connection - restart scanning");
+        otLogNoteTobleCent("Platform could not create new connection - restart scanning");
 
         Get<ConnectionTable>().Remove(*conn);
         StartScanning();
@@ -796,7 +810,7 @@ void Controller::HandleAdv(Platform::AdvType aAdvType, Platform::AdvPacket &aAdv
 
     UpdateConnTimer();
 
-    otLogNoteTobleCent("CentCtrl: Created conn:[%s] ShortAddr=0x%04x   <------------>", conn->ToString().AsCString(),
+    otLogNoteTobleCent("Created conn:[%s] ShortAddr=0x%04x   <------------>", conn->ToString().AsCString(),
                        mAdvInfo.mSrcShort);
 
 exit:
@@ -1022,7 +1036,7 @@ void Controller::HandleTransportReceiveDone(Connection &aConn, uint8_t *aFrame, 
         {
             aConn.mShortAddr = srcAddr.GetShort();
 
-            otLogNoteTobleCent("CentCtrl: Updated short addr,conn:[%s]", aConn.ToString().AsCString());
+            otLogNoteTobleCent("Updated short addr,conn:[%s]", aConn.ToString().AsCString());
         }
     }
 

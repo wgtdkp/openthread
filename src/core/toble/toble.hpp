@@ -84,7 +84,7 @@ private:
     otInstance *GetInstancePtr(void) { return reinterpret_cast<otInstance *>(&GetInstance()); }
 
     // Radio APIs
-    void SetMleDiscoverRequestParameters(bool     aJoiner,
+    void SetMleDiscoverRequestParameters(uint8_t  aDiscoverTarget,
                                          bool     aEnableFiltering,
                                          uint16_t aDiscoverCcittIndex,
                                          uint16_t aDiscoverAnsiIndex);

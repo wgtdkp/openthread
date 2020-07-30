@@ -68,7 +68,7 @@ Toble::Toble(ot::Instance &aInstance)
     mTxFrame.mPsdu = mTxPsdu;
 }
 
-void Toble::SetMleDiscoverRequestParameters(bool     aJoiner,
+void Toble::SetMleDiscoverRequestParameters(uint8_t  aDiscoverTarget,
                                             bool     aEnableFiltering,
                                             uint16_t aDiscoverCcittIndex,
                                             uint16_t aDiscoverAnsiIndex)
@@ -76,14 +76,14 @@ void Toble::SetMleDiscoverRequestParameters(bool     aJoiner,
     if (IsCentral())
     {
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
-        Get<Central::Controller>().SetMleDiscoverRequestParameters(aJoiner, aEnableFiltering, aDiscoverCcittIndex,
-                                                                   aDiscoverAnsiIndex);
+        Get<Central::Controller>().SetMleDiscoverRequestParameters(aDiscoverTarget, aEnableFiltering,
+                                                                   aDiscoverCcittIndex, aDiscoverAnsiIndex);
 #endif
     }
     else
     {
 #if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
-        OT_UNUSED_VARIABLE(aJoiner);
+        OT_UNUSED_VARIABLE(aDiscoverTarget);
         OT_UNUSED_VARIABLE(aEnableFiltering);
         OT_UNUSED_VARIABLE(aDiscoverCcittIndex);
         OT_UNUSED_VARIABLE(aDiscoverAnsiIndex);
@@ -334,9 +334,18 @@ void Toble::Test(void)
 {
     // AdvDataTest();
 
+    if (IsCentral())
+    {
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
-    Get<Central::Controller>().Scan(Toble::ScanHandler);
+        Get<Central::Controller>().test();
 #endif
+    }
+    else
+    {
+#if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+        Get<Peripheral::Controller>().test();
+#endif
+    }
 }
 
 } // namespace Toble

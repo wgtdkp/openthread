@@ -62,6 +62,7 @@ class Controller : public InstanceLocator
 public:
     explicit Controller(Instance &aInstance);
 
+    void    test(void);
     otError Sleep(void);
     otError Receive(void);
     otError Transmit(Mac::TxFrame &aFrame);
@@ -89,31 +90,31 @@ private:
 
     enum
     {
-        kSleepDisconnectTimeout = 90,    // Time to wait after `Sleep() to disconnect if already connected
+        kSleepDisconnectTimeout = 90, // Time to wait after `Sleep() to disconnect if already connected
+#if 0
         kTransportStartTimeout  = 3000,  // 6000, // 3000, // Maximum time waiting for transport to be setup.
         kRxModeAdvInterval      = 20,    // Adv interval during Rx Mode
         kRxModeAdvStartDelay    = 2,     // Delay when entering receive before starting BLE advertisements.
-        kRxModeConnTimeout      = 10000, // 2000, // 5000, // 2000, // Timeout keeping connection open while in rx mode
+        kRxModeConnTimeout      = 10000, // 5000, // 2000, // Timeout keeping connection open while in rx mode
                                          // (kicked on recvd frame).
         kTxConnectTimeout =
-            5000, // 1000, // 5000, // 1000, // Maximum time waiting for connection to be established while in tx mode.
-        kTxTimeout         = 4000, // 5000, // 1000, // Tx timeout interval (max time waiting for tx to finish).
+            5000, // 1000, // Maximum time waiting for connection to be established while in tx mode.
+        kTxTimeout         = 4000, // 1000, // Tx timeout interval (max time waiting for tx to finish).
         kTxModeAdvInterval = 20,   // Adv interval during Tx Mode
-        kAckFrameLength    = 5,
+#endif
+        kAckFrameLength = 5,
 
         kAdvInterval                = 20,
         kConnectionInterval         = 40,
-        kWaitBleConnectionTimeout   = 1000,
+        kWaitBleConnectionTimeout   = 10 * kConnectionInterval,
         kWaitTobleConnectionTimeout = (7 + 2) * 2 * kConnectionInterval,
         kConnectionTimeout          = (kWaitBleConnectionTimeout + kWaitTobleConnectionTimeout),
-        kMaxConnectionTimeout       = 10000,
     };
 
     void SetState(State aState);
-    void StartRxModeAdv(void);
-    void StartTxModeAdv(void);
     void InvokeRadioTxDone(otError aError);
     void StartAdvertising(bool aTransmit);
+    void UpdateAdvertising(void);
     void Disconnect(void);
 
     // Callbacks from platform
@@ -126,16 +127,15 @@ private:
 
     static const char *StateToString(State aState);
 
-    Mac::Address  mDestAddr;
-    Connection *  mConn;
-    TimerMilli    mTimer;
-    TimeMilli     mFireTime;
-    State         mState;
-    Mac::TxFrame *mTxFrame;
-    bool          mJoiningPermitted;
-    bool          mBorderAgentEnabled;
-    bool          mDtcEnabled;
-    uint8_t       mTobleRole;
+    Mac::Address       mDestAddr;
+    Connection *       mConn;
+    TimerMilli         mTimer;
+    State              mState;
+    Mac::TxFrame *     mTxFrame;
+    bool               mJoiningPermitted;
+    bool               mBorderAgentEnabled;
+    bool               mDtcEnabled;
+    AdvData::TobleRole mTobleRole;
 
     MeshCoP::SteeringDataTlv mSteeringData;
 

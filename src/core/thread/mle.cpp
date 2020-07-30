@@ -199,6 +199,10 @@ Mle::Mle(Instance &aInstance)
 
     // `SetMeshLocalPrefix()` also adds the Mesh-Local EID and subscribes
     // to the Link- and Realm-Local All Thread Nodes multicast addresses.
+
+#if OPENTHREAD_FTD
+    Get<Radio>().SetTobleRole(Toble::AdvData::kRoleInactiveRouter);
+#endif
 }
 
 otError Mle::Enable(void)
@@ -509,7 +513,8 @@ otError Mle::Discover(const Mac::ChannelMask &aScanChannels,
                       bool                    aJoiner,
                       bool                    aEnableFiltering,
                       DiscoverHandler         aCallback,
-                      void *                  aContext)
+                      void *                  aContext,
+                      DiscoverTarget          aTarget)
 {
     otError                      error   = OT_ERROR_NONE;
     Message *                    message = NULL;
@@ -570,9 +575,8 @@ otError Mle::Discover(const Mac::ChannelMask &aScanChannels,
     destination.SetToLinkLocalAllRoutersMulticast();
 
 #if OPENTHREAD_CONFIG_TOBLE_ENABLE
-    Get<Radio>().SetMleDiscoverRequestParameters(aJoiner, mDiscoverEnableFiltering, mDiscoverCcittIndex,
+    Get<Radio>().SetMleDiscoverRequestParameters(aTarget, mDiscoverEnableFiltering, mDiscoverCcittIndex,
                                                  mDiscoverAnsiIndex);
-
 #endif
 
     SuccessOrExit(error = SendMessage(*message, destination));

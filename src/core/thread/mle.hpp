@@ -379,6 +379,13 @@ public:
      */
     typedef void (*DiscoverHandler)(otActiveScanResult *aResult, void *aContext);
 
+    enum DiscoverTarget
+    {
+        kDiscoverTargetAll          = 0,
+        kDiscoverTargetJoinerRouter = 1,
+        kDiscoverTargetBorderAgent  = 2,
+    };
+
     /**
      * This method initiates a Thread Discovery.
      *
@@ -399,7 +406,8 @@ public:
                      bool                    aJoiner,
                      bool                    aEnableFiltering,
                      DiscoverHandler         aCallback,
-                     void *                  aContext);
+                     void *                  aContext,
+                     DiscoverTarget          aTarget = kDiscoverTargetAll);
 
     /**
      * This method indicates whether or not an MLE Thread Discovery is currently in progress.
