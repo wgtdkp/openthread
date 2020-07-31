@@ -237,6 +237,39 @@
 #define BLE_DEFAULT_CONNECTION_INTERVAL_MIN 60
 
 /**
+ * @def BLE_GAP_ROLE_COUNT_CENTRAL
+ *
+ * Maximum number of connections concurrently acting as a central.
+ *
+ */
+#define BLE_GAP_ROLE_COUNT_CENTRAL 6
+
+/**
+ * @def BLE_GAP_ROLE_COUNT_PERIPHERAL
+ *
+ * Maximum number of connections concurrently acting as a peripheral.
+ *
+ */
+#define BLE_GAP_ROLE_COUNT_PERIPHERAL 1
+
+/**
+ * @def BLE_GATT_TX_QUEUE_SIZE
+ *
+ * The guaranteed minimum number of Write without Response or Handle Value Notifications that can be queued for
+ * transmission.
+ *
+ */
+#define BLE_GATT_TX_QUEUE_SIZE 4
+
+/**
+ * @def BLE_GATT_ATT_MTU
+ *
+ * The ATT MTU.
+ *
+ */
+#define BLE_GATT_ATT_MTU BLE_GATT_ATT_MTU_DEFAULT
+
+/**
  * @def BLE_DEFAULT_CONNECTION_INTERVAL_MAX
  *
  * Default maximum connection interval 1.25ms unit.

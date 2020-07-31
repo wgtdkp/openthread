@@ -112,10 +112,10 @@ private:
          kTxErrorDisconnectTimeout = 5,    // Timeout to disconnect after a tx error happens.
 #endif
 
-        kConnectionInterval =   = 40,                  // The connection data interval (msec).
+        kConnectionInterval     = 30,                  // The connection data interval (msec).
         kConnectionScanInterval = kConnectionInterval, // Scan interval when trying to establish a connection
                                                        // (msec, same as kConnectionInterval).
-        kConnectionScanWindow = 30,                    // Scan window when trying to establish a connection (msec,
+        kConnectionScanWindow = 20,                    // Scan window when trying to establish a connection (msec,
                                                        // larger than peripheral's kAdvInterval).
 
         kScanInterval               = kConnectionInterval,
@@ -123,7 +123,7 @@ private:
         kWaitBleConnectionTimeout   = 10 * kConnectionInterval,
         kWaitTobleConnectionTimeout = (7 + 2) * 2 * kConnectionInterval,
         kScanPeersTimeout           = 10 * kConnectionInterval,
-        kConnectionTimeout          = (kWaitBleConnectionTimeout + kWaitTobleConnectionTimeout),
+        kConnectionTimeout          = Timer::kMaxDelay, // (kWaitBleConnectionTimeout + kWaitTobleConnectionTimeout),
 
         kAckFrameLength = 5,
         kMaxPeers       = 4,

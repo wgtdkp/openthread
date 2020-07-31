@@ -105,6 +105,16 @@
 #endif
 
 /**
+ * @def OPENTHREAD_CONFIG_TOBLE_BTP_NO_GATT_ACK
+ *
+ * Define to 1 to disable ToBLE BTP GATT ack.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_TOBLE_BTP_NO_GATT_ACK
+#define OPENTHREAD_CONFIG_TOBLE_BTP_NO_GATT_ACK 1
+#endif
+
+/**
  * @def OPENTHREAD_CONFIG_TOBLE_ATT_MTU_MAX
  *
  * Specifies the maximum BTP segment size.

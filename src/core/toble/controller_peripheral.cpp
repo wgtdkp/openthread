@@ -298,7 +298,8 @@ otError Controller::Transmit(Mac::TxFrame &aFrame)
         otLogNoteToblePeri("CentCtrl: Send OT_RADIO_SUB_TYPE_MLE_PARENT_REQUEST");
     }
 
-    OT_ASSERT(aFrame.GetDstAddr(mDestAddr) == OT_ERROR_NONE);
+    error = aFrame.GetDstAddr(mDestAddr);
+    OT_ASSERT(error == OT_ERROR_NONE);
 
     if (mTxFrame->GetChannel() != Get<Mac::Mac>().GetPanChannel())
     {
@@ -406,6 +407,8 @@ void Controller::HandleTimer(void)
 {
     otLogDebgToblePeri("HandleTimer()");
 
+    mTimer.Stop();
+
     switch (mState)
     {
     case kStateSleep:
@@ -444,7 +447,7 @@ void Controller::HandleTimer(void)
 
 void Controller::HandleConnected(Platform::Connection *aPlatConn)
 {
-    otLogNoteToblePeri("%s: aPlatConn=%p ~~~~~~~~~~~~~~", __func__, aPlatConn);
+    otLogCritToblePeri("%s: aPlatConn=%p ~~~~~~~~~~~~~~", __func__, aPlatConn);
 
     switch (mState)
     {
@@ -458,17 +461,12 @@ void Controller::HandleConnected(Platform::Connection *aPlatConn)
 
     case kStateTxAdvertising:
     case kStateRxAdvertising:
-        // VerifyOrExit(mConn == NULL, Get<Platform>().Disconnect(aPlatConn));
-
-        if (mConn != NULL)
-        {
-            otLogNoteToblePeri("%s: Disconnect(aPlatConn=%p) !!!!!!!!", __func__, aPlatConn);
-            Get<Platform>().Disconnect(aPlatConn);
-            ExitNow();
-        }
+        VerifyOrExit(mConn == NULL, Get<Platform>().Disconnect(aPlatConn));
 
         Get<Platform>().StopAdv();
-        OT_ASSERT((mConn = Get<ConnectionTable>().GetNew()) != NULL);
+        mConn = Get<ConnectionTable>().GetNew();
+        OT_ASSERT(mConn != NULL);
+
         mConn->mPlatConn = aPlatConn;
         if (mState == kStateTxAdvertising)
         {
@@ -509,7 +507,7 @@ void Controller::HandleTransportConnected(Connection &aConn)
     OT_UNUSED_VARIABLE(aConn);
     if (mState == kStateConnected)
     {
-        otLogNoteToblePeri("Refresh=%d", kConnectionTimeout);
+        // otLogNoteToblePeri("Refresh=%d", kConnectionTimeout);
         TimerStart(kConnectionTimeout);
     }
 }
@@ -530,7 +528,7 @@ void Controller::HandleDisconnected(Platform::Connection *aPlatConn)
 {
     Connection *conn = Get<ConnectionTable>().Find(aPlatConn);
 
-    otLogNoteToblePeri("%s: aPlatConn=%p !!!!!!!!", __func__, aPlatConn);
+    otLogCritToblePeri("%s: aPlatConn=%p !!!!!!!!", __func__, aPlatConn);
 
     VerifyOrExit((conn != NULL) && (conn == mConn), OT_NOOP);
 

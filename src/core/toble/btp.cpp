@@ -74,7 +74,7 @@ void Btp::HandleConnectionReady(Platform::Connection *aPlatConn)
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
     otLogNoteBtp("Btp::HandleConnectionReady: WriteC1(CONNECT_REQ)");
     conn->mSession.mRequest.Init(Get<Platform>().GetConnMtu(aPlatConn), kWindowSize);
-    Get<Platform>().WriteC1(aPlatConn, &conn->mSession.mRequest, sizeof(conn->mSession.mRequest));
+    GattSend(*conn, reinterpret_cast<uint8_t *>(&conn->mSession.mRequest), sizeof(conn->mSession.mRequest));
     conn->mSession.mState = kStateHandshake;
 #endif
 
@@ -232,12 +232,7 @@ void Btp::HandleDataFrame(Connection &aConn, const uint8_t *aFrame, uint16_t aLe
         otLogNoteBtp("  ack=%d", session.mTxSeqnoAcked);
     }
 
-    // OT_ASSERT(static_cast<uint8_t>(session.mRxSeqnoCurrent + 1) == cur[0]);
-    if (static_cast<uint8_t>(session.mRxSeqnoCurrent + 1) != cur[0])
-    {
-        otLogNoteBtp("  mRxSeqnoCurrent+1=%d cur[0]=%d ---ERROR------------>", (session.mRxSeqnoCurrent + 1), cur[0]);
-        return;
-    }
+    OT_ASSERT(static_cast<uint8_t>(session.mRxSeqnoCurrent + 1) == cur[0]);
 
     session.mRxSeqnoCurrent = *cur++;
     otLogNoteBtp("  seq=%d ", session.mRxSeqnoCurrent);
@@ -386,6 +381,7 @@ void Btp::GattSend(Connection &aConn, uint8_t *aBuffer, uint16_t aLength)
     else
     {
 #if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
+        otLogNoteBtp("Btp::SendData: IndicateC2");
         Get<Platform>().IndicateC2(aConn.mPlatConn, aBuffer, aLength);
 #endif
     }

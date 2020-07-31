@@ -81,7 +81,7 @@ private:
     class Session
     {
     public:
-        bool    IsTimerExpired(void) const { return (mTimerExpire < TimerMilli::GetNow()); }
+        bool    IsTimerExpired(void) const { return (mTimerExpire <= TimerMilli::GetNow()); }
         int32_t GetTimer(void) const { return mTimerExpire - TimerMilli::GetNow(); }
         void    SetTimer(uint32_t aDelay)
         {

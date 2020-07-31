@@ -208,7 +208,7 @@ static void peerInit(BlePeer *aPeer)
 {
     memset(aPeer, 0, sizeof(BlePeer));
     aPeer->mConnHandle = BLE_CONN_HANDLE_INVALID;
-    aPeer->mAttMtu     = BLE_GATT_ATT_MTU_DEFAULT;
+    aPeer->mAttMtu     = BLE_GATT_ATT_MTU;
 }
 
 /**
@@ -256,7 +256,7 @@ static BlePeer *peerAllocate(void)
     assert(index != NRF_SDH_BLE_TOTAL_LINK_COUNT);
 
     sBlePeers[index].mIsUsed = true;
-    sBlePeers[index].mAttMtu = BLE_GATT_ATT_MTU_DEFAULT;
+    sBlePeers[index].mAttMtu = BLE_GATT_ATT_MTU;
 
     return &sBlePeers[index];
 }
@@ -628,7 +628,12 @@ void otPlatTobleC2Subscribe(otInstance *aInstance, otTobleConnection *aConn, boo
 
     OT_UNUSED_VARIABLE(aInstance);
 
-    cccdVal[0] = aSubscribe ? BLE_GATT_HVX_INDICATION : 0;
+#if OPENTHREAD_CONFIG_TOBLE_BTP_NO_GATT_ACK
+    cccdVal[0] = aSubscribe ? BLE_GATT_HVX_NOTIFICATION : 0;
+#else
+    cccdVal[0]      = aSubscribe ? BLE_GATT_HVX_INDICATION : 0;
+#endif
+
     cccdVal[1] = 0;
 
     memset(&params, 0, sizeof(ble_gattc_write_params_t));
@@ -658,12 +663,16 @@ void otPlatTobleC1Write(otInstance *aInstance, otTobleConnection *aConn, const v
     BlePeer *                peer = (BlePeer *)aConn;
 
     memset(&params, 0, sizeof(ble_gattc_write_params_t));
+#if OPENTHREAD_CONFIG_TOBLE_BTP_NO_GATT_ACK
+    params.write_op = BLE_GATT_OP_WRITE_CMD;
+#else
     params.write_op = BLE_GATT_OP_WRITE_REQ;
-    params.flags    = BLE_GATT_EXEC_WRITE_FLAG_PREPARED_WRITE;
-    params.handle   = sBle.mC1Handle;
-    params.offset   = 0;
-    params.p_value  = aBuffer;
-    params.len      = aLength;
+#endif
+    params.flags   = BLE_GATT_EXEC_WRITE_FLAG_PREPARED_WRITE;
+    params.handle  = sBle.mC1Handle;
+    params.offset  = 0;
+    params.p_value = aBuffer;
+    params.len     = aLength;
 
     retval = sd_ble_gattc_write(peer->mConnHandle, &params);
 
@@ -843,7 +852,11 @@ void otPlatTobleC2Indicate(otInstance *aInstance, otTobleConnection *aConn, cons
     params.handle = sBle.mC2Handle;
     params.p_data = aBuffer;
     params.p_len  = &aLength;
-    params.type   = BLE_GATT_HVX_INDICATION;
+#if OPENTHREAD_CONFIG_TOBLE_BTP_NO_GATT_ACK
+    params.type = BLE_GATT_HVX_NOTIFICATION;
+#else
+    params.type     = BLE_GATT_HVX_INDICATION;
+#endif
 
     retval = sd_ble_gatts_hvx(peer->mConnHandle, &params);
 
@@ -1241,6 +1254,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         otBleRadioPacket       packet;
         uint8_t                channel_index;
 
+        // otLogInfoPlat("BLE_GATTS_EVT_WRITE");
         retval = sd_ble_gap_rssi_get(connectionId, &packet.mPower, &channel_index);
 
         if (retval != NRF_SUCCESS)
@@ -1259,15 +1273,19 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
             if (packet.mLength == 2 && isCccdHandle(evtWrite->handle))
             {
                 uint16_t cccd = packet.mValue[0] | (packet.mValue[1] << 8);
+#if OPENTHREAD_CONFIG_TOBLE_BTP_NO_GATT_ACK
+                bool subscribed = (cccd & BLE_GATT_HVX_NOTIFICATION) > 0;
+#else
+                bool subscribed = (cccd & BLE_GATT_HVX_INDICATION) > 0;
+#endif
 
                 if (sDiagMode)
                 {
-                    otPlatTobleDiagHandleC2Subscribed(sInstance, (otTobleConnection *)peer,
-                                                      cccd & BLE_GATT_HVX_INDICATION);
+                    otPlatTobleDiagHandleC2Subscribed(sInstance, (otTobleConnection *)peer, subscribed);
                 }
                 else
                 {
-                    otPlatTobleHandleC2Subscribed(sInstance, (otTobleConnection *)peer, cccd & BLE_GATT_HVX_INDICATION);
+                    otPlatTobleHandleC2Subscribed(sInstance, (otTobleConnection *)peer, subscribed);
                 }
             }
             else
@@ -1286,10 +1304,18 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         break;
     }
 
+    case BLE_GATTS_EVT_HVN_TX_COMPLETE:
+    {
+        // ble_gatts_evt_hvn_tx_complete_t *evtHvn = &evt->evt.gatts_evt.params.hvn_tx_complete;
+        // otLogInfoPlat("BLE_GATTS_EVT_HVN_TX_COMPLETE: connectionId=%d count=%d", connectionId, evtHvn->count);
+    }
+        // Fall through
+
     case BLE_GATTS_EVT_HVC:
     {
         // ble_gatts_evt_hvc_t *evtHvc = &evt->evt.gatts_evt.params.hvc;
 
+        // otLogInfoPlat("BLE_GATTS_EVT_HVC");
         if ((peer = peerFind(connectionId)) != NULL)
         {
             if (sDiagMode)
@@ -1342,6 +1368,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
     {
         ble_gattc_evt_hvx_t *evtHvx = &evt->evt.gattc_evt.params.hvx;
 
+        // otLogInfoPlat("BLE_GATTC_EVT_HVX");
         retval = sd_ble_gattc_hv_confirm(connectionId, evtHvx->handle);
         if (retval != NRF_SUCCESS)
         {
@@ -1362,9 +1389,17 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         break;
     }
 
+    case BLE_GATTC_EVT_WRITE_CMD_TX_COMPLETE:
+    {
+        // ble_gattc_evt_write_cmd_tx_complete_t *evtWcmd = &evt->evt.gattc_evt.params.write_cmd_tx_complete;
+        // otLogInfoPlat("BLE_GATTC_EVT_WRITE_CMD_TX_COMPLETE: connectionId=%d count=%d", connectionId, evtWcmd->count);
+    }
+        // Fall through
+
     case BLE_GATTC_EVT_WRITE_RSP:
     {
         // ble_gattc_evt_write_rsp_t *evtWrsp = &evt->evt.gattc_evt.params.write_rsp;
+        // otLogCritMac("BLE_GATTC_EVT_WRITE_RSP");
 
         if (sBle.mState == kStateGattSubscribing)
         {

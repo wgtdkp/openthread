@@ -184,7 +184,7 @@ void Controller::ProcessAdvertisement(Platform::AdvPacket &aAdvPacket, Advertise
 {
     if (mTxFrameType == OT_RADIO_SUB_TYPE_MLE_PARENT_REQUEST)
     {
-        otLogNoteTobleCent("%s: aAdvInfo.mTobleRole=%d", aAdvInfo.mTobleRole);
+        otLogNoteTobleCent("%s: aAdvInfo.mTobleRole=%d", __func__, aAdvInfo.mTobleRole);
         VerifyOrExit(aAdvInfo.mTobleRole == AdvData::kRoleActiveRouter, OT_NOOP);
         SavePeer(aAdvPacket, aAdvInfo);
     }
@@ -306,7 +306,7 @@ void Controller::StopScanning(void)
 {
     otLogNoteTobleCent("StopScanning()");
 
-    OT_ASSERT(Get<Platform>().StopScan() == OT_ERROR_NONE);
+    Get<Platform>().StopScan();
 
     SetState(kStateNotScanning);
 }
@@ -315,7 +315,7 @@ void Controller::StartScanning(void)
 {
     otLogNoteTobleCent("StartScanning(int:%u, wind:%d)", kScanInterval, kScanWindow);
 
-    OT_ASSERT(Get<Platform>().StartScan(kScanInterval, kScanWindow) == OT_ERROR_NONE);
+    Get<Platform>().StartScan(kScanInterval, kScanWindow);
 
     SetState(kStateScanning);
 }
@@ -385,7 +385,8 @@ otError Controller::Transmit(Mac::TxFrame &aFrame)
 
     mTxFrame = &aFrame;
     SetTxState(kStateIdle);
-    OT_ASSERT(aFrame.GetDstAddr(mTxDest) == OT_ERROR_NONE);
+    error = aFrame.GetDstAddr(mTxDest);
+    OT_ASSERT(error == OT_ERROR_NONE);
 
     if (mTxFrame->GetChannel() != Get<Mac::Mac>().GetPanChannel())
     {
@@ -558,8 +559,7 @@ void Controller::HandleTxTimer(void)
     switch (mTxState)
     {
     case kStateIdle:
-        otLogNoteTobleCent("%s: ------------ERROR----------------->");
-        //        OT_ASSERT(false);
+        OT_ASSERT(false);
         break;
 
     case kStatePeerScanning:
@@ -895,7 +895,7 @@ void Controller::HandleConnected(Platform::Connection *aPlatConn)
 {
     Connection *conn;
 
-    otLogNoteTobleCent("%s: aPlatConn=%p ~~~~~~~~~~~~~~", __func__, aPlatConn);
+    otLogCritTobleCent("%s: aPlatConn=%p ~~~~~~~~~~~~~~", __func__, aPlatConn);
     VerifyOrExit((conn = Get<ConnectionTable>().Find(aPlatConn)) != NULL, OT_NOOP);
     VerifyOrExit(conn->mState == Connection::kConnecting, OT_NOOP);
 
@@ -930,7 +930,7 @@ void Controller::HandleDisconnected(Platform::Connection *aPlatConn)
 {
     Connection *conn;
 
-    otLogNoteTobleCent("%s: aPlatConn=%p !!!!!!!!", __func__, aPlatConn);
+    otLogCritTobleCent("%s: aPlatConn=%p !!!!!!!!", __func__, aPlatConn);
 
     conn = Get<ConnectionTable>().Find(aPlatConn);
     VerifyOrExit(conn != NULL, OT_NOOP);
@@ -951,7 +951,7 @@ void Controller::HandleTransportConnected(Connection &aConn)
     {
         aConn.mDisconnectTime = TimerMilli::GetNow() + kConnectionTimeout;
         UpdateConnTimer();
-        otLogNoteTobleCent("Refresh=%d", kConnectionTimeout);
+        // otLogNoteTobleCent("Refresh=%d", kConnectionTimeout);
         mTxTimer.Start(kConnectionTimeout);
     }
 }

@@ -105,10 +105,10 @@ private:
         kAckFrameLength = 5,
 
         kAdvInterval                = 20,
-        kConnectionInterval         = 40,
+        kConnectionInterval         = 30,
         kWaitBleConnectionTimeout   = 10 * kConnectionInterval,
         kWaitTobleConnectionTimeout = (7 + 2) * 2 * kConnectionInterval,
-        kConnectionTimeout          = (kWaitBleConnectionTimeout + kWaitTobleConnectionTimeout),
+        kConnectionTimeout          = Timer::kMaxDelay, //(kWaitBleConnectionTimeout + kWaitTobleConnectionTimeout),
     };
 
     void SetState(State aState);

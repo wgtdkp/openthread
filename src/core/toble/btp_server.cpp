@@ -55,7 +55,7 @@ void Btp::HandleC2Subscribed(Platform::Connection *aPlatConn, bool aIsSubscribed
     {
         VerifyOrExit(conn->mSession.mState == kStateHandshake, OT_NOOP);
         otLogNoteBtp("Btp::HandleC2Subscribed(subscribed) IndicateC2(CONNECT_RSP)");
-        Get<Platform>().IndicateC2(aPlatConn, &conn->mSession.mResponse, sizeof(HandshakeResponse));
+        GattSend(*conn, reinterpret_cast<uint8_t *>(&conn->mSession.mResponse), sizeof(HandshakeResponse));
         conn->mSession.mState = kStateSubscribe;
     }
     else

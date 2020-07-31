@@ -144,6 +144,50 @@ void otSysSoftdeviceInit(void)
     error = sd_ble_cfg_set(BLE_CONN_CFG_L2CAP, &bleCfg, ramStart);
     assert(error == NRF_SUCCESS);
 
+    // Global GAP configurations.
+    memset(&bleCfg, 0, sizeof(bleCfg));
+    bleCfg.gap_cfg.role_count_cfg.adv_set_count                     = BLE_GAP_ADV_SET_COUNT_DEFAULT;
+    bleCfg.gap_cfg.role_count_cfg.periph_role_count                 = BLE_GAP_ROLE_COUNT_PERIPHERAL;
+    bleCfg.gap_cfg.role_count_cfg.central_role_count                = BLE_GAP_ROLE_COUNT_CENTRAL;
+    bleCfg.gap_cfg.role_count_cfg.central_sec_count                 = BLE_GAP_ROLE_COUNT_CENTRAL_SEC_DEFAULT;
+    bleCfg.gap_cfg.role_count_cfg.qos_channel_survey_role_available = 1;
+
+    error = sd_ble_cfg_set(BLE_GAP_CFG_ROLE_COUNT, &bleCfg, ramStart);
+    assert(error == NRF_SUCCESS);
+
+    // BLE GAP connection configuration parameters.
+    memset(&bleCfg, 0, sizeof(bleCfg));
+    bleCfg.conn_cfg.conn_cfg_tag                     = BLE_CFG_TAG;
+    bleCfg.conn_cfg.params.gap_conn_cfg.conn_count   = BLE_GAP_ROLE_COUNT_PERIPHERAL + BLE_GAP_ROLE_COUNT_CENTRAL;
+    bleCfg.conn_cfg.params.gap_conn_cfg.event_length = BLE_GAP_EVENT_LENGTH_DEFAULT;
+
+    error = sd_ble_cfg_set(BLE_CONN_CFG_GAP, &bleCfg, ramStart);
+    assert(error == NRF_SUCCESS);
+
+    // BLE GATTC connection configuration parameters.
+    memset(&bleCfg, 0, sizeof(bleCfg));
+    bleCfg.conn_cfg.conn_cfg_tag                                  = BLE_CFG_TAG;
+    bleCfg.conn_cfg.params.gattc_conn_cfg.write_cmd_tx_queue_size = BLE_GATT_TX_QUEUE_SIZE;
+
+    error = sd_ble_cfg_set(BLE_CONN_CFG_GATTC, &bleCfg, ramStart);
+    assert(error == NRF_SUCCESS);
+
+    // BLE GATTS connection configuration parameters.
+    memset(&bleCfg, 0, sizeof(bleCfg));
+    bleCfg.conn_cfg.conn_cfg_tag                            = BLE_CFG_TAG;
+    bleCfg.conn_cfg.params.gatts_conn_cfg.hvn_tx_queue_size = BLE_GATT_TX_QUEUE_SIZE;
+
+    error = sd_ble_cfg_set(BLE_CONN_CFG_GATTS, &bleCfg, ramStart);
+    assert(error == NRF_SUCCESS);
+
+    // BLE GATT connection configuration parameters.
+    memset(&bleCfg, 0, sizeof(bleCfg));
+    bleCfg.conn_cfg.conn_cfg_tag                 = BLE_CFG_TAG;
+    bleCfg.conn_cfg.params.gatt_conn_cfg.att_mtu = BLE_GATT_ATT_MTU;
+
+    error = sd_ble_cfg_set(BLE_CONN_CFG_GATT, &bleCfg, ramStart);
+    assert(error == NRF_SUCCESS);
+
     error = nrf_sdh_ble_enable(&ramStart);
     assert(error == NRF_SUCCESS);
 }
