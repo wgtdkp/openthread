@@ -88,7 +88,9 @@ jobs:
         cd ~/otns
         ./script/test py-unittests py-examples
     - name: Codecov
-      uses: codecov/codecov-action@v1
+      run: |
+        lcov --directory ./ --capture --output-file coverage.info
+        bash <(curl -s https://codecov.io/bash) -f coverage.info
 
   cli-ftd:
     runs-on: ubuntu-18.04
@@ -114,7 +116,9 @@ jobs:
       run: |
         VERBOSE=1 make -f examples/Makefile-simulation check
     - name: Codecov
-      uses: codecov/codecov-action@v1
+      run: |
+        lcov --directory ./ --capture --output-file coverage.info
+        bash <(curl -s https://codecov.io/bash) -f coverage.info
 
   cli-mtd:
     runs-on: ubuntu-18.04
@@ -141,7 +145,9 @@ jobs:
       run: |
         VERBOSE=1 make -f examples/Makefile-simulation check
     - name: Codecov
-      uses: codecov/codecov-action@v1
+      run: |
+        lcov --directory ./ --capture --output-file coverage.info
+        bash <(curl -s https://codecov.io/bash) -f coverage.info
 
   cli-time-sync:
     runs-on: ubuntu-18.04
@@ -168,7 +174,9 @@ jobs:
       run: |
         VERBOSE=1 make -f examples/Makefile-simulation check
     - name: Codecov
-      uses: codecov/codecov-action@v1
+      run: |
+        lcov --directory ./ --capture --output-file coverage.info
+        bash <(curl -s https://codecov.io/bash) -f coverage.info
 
   expects:
     runs-on: ubuntu-18.04
@@ -184,12 +192,16 @@ jobs:
       run: |
         OT_OPTIONS=-DOT_TIME_SYNC=ON VIRTUAL_TIME=0 ./script/test build expect
     - name: Codecov
-      uses: codecov/codecov-action@v1
+      run: |
+        lcov --directory ./ --capture --output-file coverage.info
+        bash <(curl -s https://codecov.io/bash) -f coverage.info
     - name: Run RCP Mode
       run: |
         OT_OPTIONS=-DOT_READLINE=OFF VIRTUAL_TIME=0 NODE_MODE=rcp ./script/test clean build expect
     - name: Codecov
-      uses: codecov/codecov-action@v1
+      run: |
+        lcov --directory ./ --capture --output-file coverage.info
+        bash <(curl -s https://codecov.io/bash) -f coverage.info
     - name: Run TUN Mode
       run: |
         sudo apt-get install --no-install-recommends -y dnsmasq bind9-host ntp
@@ -201,7 +213,9 @@ jobs:
         host ipv6.google.com ::1
         OT_OPTIONS=-DOT_READLINE=OFF OT_NATIVE_IP=1 VIRTUAL_TIME=0 NODE_MODE=rcp ./script/test clean build expect
     - name: Codecov
-      uses: codecov/codecov-action@v1
+      run: |
+        lcov --directory ./ --capture --output-file coverage.info
+        bash <(curl -s https://codecov.io/bash) -f coverage.info
 
   external-commissioner:
     runs-on: ubuntu-18.04
@@ -233,7 +247,9 @@ jobs:
         ./bootstrap.sh
         ./run_tests.sh
     - name: Codecov
-      uses: codecov/codecov-action@v1
+      run: |
+        lcov --directory ./ --capture --output-file coverage.info
+        bash <(curl -s https://codecov.io/bash) -f coverage.info
 
   multiple-instance:
     runs-on: ubuntu-18.04
@@ -255,7 +271,9 @@ jobs:
       run: |
         VERBOSE=1 make -f examples/Makefile-simulation check
     - name: Codecov
-      uses: codecov/codecov-action@v1
+      run: |
+        lcov --directory ./ --capture --output-file coverage.info
+        bash <(curl -s https://codecov.io/bash) -f coverage.info
 
   ncp-gcc-m32:
     runs-on: ubuntu-18.04
@@ -284,7 +302,9 @@ jobs:
       run: |
         VERBOSE=1 make -f examples/Makefile-simulation check
     - name: Codecov
-      uses: codecov/codecov-action@v1
+      run: |
+        lcov --directory ./ --capture --output-file coverage.info
+        bash <(curl -s https://codecov.io/bash) -f coverage.info
 
   ncp-clang:
     runs-on: ubuntu-18.04
@@ -311,5 +331,7 @@ jobs:
       - name: Run
         run: |
           VERBOSE=1 make -f examples/Makefile-simulation check
-      - name: Codecov
-        uses: codecov/codecov-action@v1
+    - name: Codecov
+      run: |
+        lcov --directory ./ --capture --output-file coverage.info
+        bash <(curl -s https://codecov.io/bash) -f coverage.info

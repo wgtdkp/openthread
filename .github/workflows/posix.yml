@@ -66,7 +66,9 @@ jobs:
       run: |
         VERBOSE=1 OT_CLI_PATH="$(pwd)/$(ls output/posix/*/bin/ot-cli) -v" RADIO_DEVICE="$(pwd)/$(ls output/*/bin/ot-rcp)" make -f src/posix/Makefile-posix check
     - name: Codecov
-      uses: codecov/codecov-action@v1
+      run: |
+        lcov --directory ./ --capture --output-file coverage.info
+        bash <(curl -s https://codecov.io/bash) -f coverage.info
 
   posix-ncp:
     runs-on: ubuntu-18.04
@@ -95,7 +97,9 @@ jobs:
       run: |
         VERBOSE=1 OT_NCP_PATH="$(pwd)/$(ls output/posix/*/bin/ot-ncp)" RADIO_DEVICE="$(pwd)/$(ls output/*/bin/ot-rcp)" make -f src/posix/Makefile-posix check
     - name: Codecov
-      uses: codecov/codecov-action@v1
+      run: |
+        lcov --directory ./ --capture --output-file coverage.info
+        bash <(curl -s https://codecov.io/bash) -f coverage.info
 
   posix-ncp-rcp-migrate:
     runs-on: ubuntu-18.04
@@ -115,7 +119,9 @@ jobs:
       run: |
         script/check-ncp-rcp-migrate check
     - name: Codecov
-      uses: codecov/codecov-action@v1
+      run: |
+        lcov --directory ./ --capture --output-file coverage.info
+        bash <(curl -s https://codecov.io/bash) -f coverage.info
 
   posix-pty:
     runs-on: ubuntu-18.04
@@ -143,7 +149,9 @@ jobs:
       run: |
         script/check-posix-pty check
     - name: Codecov
-      uses: codecov/codecov-action@v1
+      run: |
+        lcov --directory ./ --capture --output-file coverage.info
+        bash <(curl -s https://codecov.io/bash) -f coverage.info
 
   posix-pty-daemon:
     runs-on: ubuntu-18.04
@@ -172,4 +180,6 @@ jobs:
       run: |
         script/check-posix-pty check
     - name: Codecov
-      uses: codecov/codecov-action@v1
+      run: |
+        lcov --directory ./ --capture --output-file coverage.info
+        bash <(curl -s https://codecov.io/bash) -f coverage.info
