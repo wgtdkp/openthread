@@ -331,7 +331,7 @@ jobs:
       - name: Run
         run: |
           VERBOSE=1 make -f examples/Makefile-simulation check
-    - name: Codecov
-      run: |
-        lcov --directory ./ --capture --output-file coverage.info
-        bash <(curl -s https://codecov.io/bash) -f coverage.info
+      - name: Codecov
+        run: |
+          lcov --directory ./ --capture --output-file coverage.info
+          bash <(curl -s https://codecov.io/bash) -f coverage.info
