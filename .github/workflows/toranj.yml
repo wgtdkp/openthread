@@ -67,7 +67,7 @@ jobs:
         top_builddir=$(pwd)/build/toranj ./tests/toranj/start.sh
     - name: Codecov
       run: |
-        lcov --directory ./ --capture --output-file coverage.info
+        gcov --directory ./ --capture --output-file coverage.info
         bash <(curl -s https://codecov.io/bash) -f coverage.info
 
   toranj-rcp:
@@ -98,5 +98,5 @@ jobs:
         top_builddir=$(pwd)/build/toranj ./tests/toranj/start.sh
     - name: Codecov
       run: |
-        lcov --directory ./ --capture --output-file coverage.info
+        gcov --directory ./ --capture --output-file coverage.info
         bash <(curl -s https://codecov.io/bash) -f coverage.info

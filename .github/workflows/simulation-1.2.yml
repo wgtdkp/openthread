@@ -73,5 +73,5 @@ jobs:
         ./script/test cert_suite tests/scripts/thread-cert/v1_2_*
     - name: Codecov
       run: |
-        lcov --directory ./ --capture --output-file coverage.info
+        gcov --directory ./ --capture --output-file coverage.info
         bash <(curl -s https://codecov.io/bash) -f coverage.info
