@@ -71,7 +71,7 @@
 #define BLE_DEFAULT_CONNECTION_EVENT_LENGTH 320
 
 /// Default BLE LL PDU size [bytes] (valid range: 27 to 251)
-#define BLE_DEFAULT_PDU_SIZE 251
+#define BLE_DEFAULT_PDU_SIZE 27 // 251
 
 /// Default number of retries when no communication happens [units of connection interval]
 #define BLE_DEFAULT_CONNECTION_RETRY 10
@@ -329,7 +329,7 @@ static bool isCccdHandle(uint16_t aHandle)
 
     if (retval != NRF_SUCCESS)
     {
-        otLogInfoPlat("[BLE]: sd_ble_gatts_attr_get error: 0x%x", retval);
+        otLogWarnPlat("[BLE] sd_ble_gatts_attr_get error: 0x%x", retval);
     }
     else
     {
@@ -449,10 +449,10 @@ otError bleGapAdvStart(otTobleAdvType aType, uint16_t aInterval)
     params.primary_phy   = BLE_GAP_PHY_1MBPS;
 
     retval = sd_ble_gap_adv_set_configure(&sBle.mAdvHandle, &sBle.mAdvDataInfo, &params);
-    otEXPECT_ACTION(retval == NRF_SUCCESS, otLogCritMac("[BLE]: sd_ble_gap_adv_set_configure error: 0x%x", retval));
+    otEXPECT_ACTION(retval == NRF_SUCCESS, otLogWarnPlat("[BLE]: sd_ble_gap_adv_set_configure error: 0x%x", retval));
 
     retval = sd_ble_gap_adv_start(sBle.mAdvHandle, BLE_CFG_TAG);
-    otEXPECT_ACTION(retval == NRF_SUCCESS, otLogCritMac("[BLE]: sd_ble_gap_adv_start error: 0x%x", retval));
+    otEXPECT_ACTION(retval == NRF_SUCCESS, otLogWarnPlat("[BLE]: sd_ble_gap_adv_start error: 0x%x", retval));
 
     sBle.mAdvInterval = aInterval;
     sBle.mAdvType     = aType;
@@ -492,7 +492,7 @@ otError otPlatTobleAdvStop(otInstance *aInstance)
     OT_UNUSED_VARIABLE(aInstance);
 
     retval = sd_ble_gap_adv_stop(sBle.mAdvHandle);
-    otEXPECT_ACTION(retval == NRF_SUCCESS, otLogInfoPlat("[BLE]: sd_ble_gap_adv_stop error: 0x%x", retval));
+    otEXPECT_ACTION(retval == NRF_SUCCESS, otLogWarnPlat("[BLE] sd_ble_gap_adv_stop error: 0x%x", retval));
 
 exit:
     return nrf5SdErrorToOtError(retval);
@@ -519,7 +519,7 @@ otError otPlatTobleScanStart(otInstance *aInstance, uint16_t aInterval, uint16_t
 
     if ((retval = sd_ble_gap_scan_start(&params, &advData)) != NRF_SUCCESS)
     {
-        otLogInfoPlat("[BLE]: sd_ble_gap_scan_start error: 0x%x", retval);
+        otLogWarnPlat("[BLE] sd_ble_gap_scan_start error: 0x%x", retval);
     }
 
     return nrf5SdErrorToOtError(retval);
@@ -533,7 +533,7 @@ otError otPlatTobleScanStop(otInstance *aInstance)
 
     if ((retval = sd_ble_gap_scan_stop()) != NRF_SUCCESS)
     {
-        otLogInfoPlat("[BLE]: sd_ble_gap_scan_stop error: 0x%x", retval);
+        otLogWarnPlat("[BLE] sd_ble_gap_scan_stop error: 0x%x", retval);
     }
 
     return nrf5SdErrorToOtError(retval);
@@ -579,7 +579,7 @@ otTobleConnection *otPlatTobleCreateConnection(otInstance *             aInstanc
     }
     else
     {
-        otLogInfoPlat("[BLE]: sd_ble_gap_connect error: 0x%x", retval);
+        otLogWarnPlat("[BLE] sd_ble_gap_connect error: 0x%x", retval);
     }
 
 exit:
@@ -604,7 +604,7 @@ void otPlatTobleDisconnect(otInstance *aInstance, otTobleConnection *aConn)
 
     if (retval != NRF_SUCCESS)
     {
-        otLogInfoPlat("[BLE]: sd_ble_gap_disconnect error: 0x%x", retval);
+        otLogWarnPlat("[BLE] sd_ble_gap_disconnect error: 0x%x", retval);
     }
 
 exit:
@@ -648,11 +648,11 @@ void otPlatTobleC2Subscribe(otInstance *aInstance, otTobleConnection *aConn, boo
 
     if (retval != NRF_SUCCESS)
     {
-        sBle.mState = kStateGattSubscribing;
+        otLogWarnPlat("[BLE] sd_ble_gattc_write error: 0x%x", retval);
     }
     else
     {
-        otLogInfoPlat("[BLE]: sd_ble_gattc_write error: 0x%x", retval);
+        sBle.mState = kStateGattSubscribing;
     }
 }
 
@@ -674,11 +674,12 @@ void otPlatTobleC1Write(otInstance *aInstance, otTobleConnection *aConn, const v
     params.p_value = aBuffer;
     params.len     = aLength;
 
+    otLogInfoPlat("[BLE] otPlatTobleC1Write(ConnectionId=%d)", peer->mConnHandle);
     retval = sd_ble_gattc_write(peer->mConnHandle, &params);
 
     if (retval != NRF_SUCCESS)
     {
-        otLogInfoPlat("[BLE]: sd_ble_gattc_write error: 0x%x", retval);
+        otLogWarnPlat("[BLE] sd_ble_gattc_write error: 0x%x", retval);
     }
     else
     {
@@ -709,7 +710,7 @@ static otError serviceRegister(const otPlatBleUuid *aUuid, uint16_t *aHandle)
 
     if (retval != NRF_SUCCESS)
     {
-        otLogInfoPlat("[BLE]: sd_ble_gatts_service_add error: 0x%x", retval);
+        otLogWarnPlat("[BLE] sd_ble_gatts_service_add error: 0x%x", retval);
     }
 
 exit:
@@ -736,7 +737,7 @@ static otError characteristicRegister(uint16_t aServiceHandle, otPlatBleGattChar
 
     if (retval != NRF_SUCCESS)
     {
-        otLogInfoPlat("[BLE]: sd_ble_uuid_vs_add error: 0x%x", retval);
+        otLogWarnPlat("[BLE] sd_ble_uuid_vs_add error: 0x%x", retval);
         otEXPECT(false);
     }
 
@@ -797,7 +798,7 @@ static otError characteristicRegister(uint16_t aServiceHandle, otPlatBleGattChar
 
     if (retval != NRF_SUCCESS)
     {
-        otLogInfoPlat("[BLE]: sd_ble_gatts_characteristic_add error: 0x%x", retval);
+        otLogWarnPlat("[BLE] sd_ble_gatts_characteristic_add error: 0x%x", retval);
     }
     else
     {
@@ -858,15 +859,12 @@ void otPlatTobleC2Indicate(otInstance *aInstance, otTobleConnection *aConn, cons
     params.type     = BLE_GATT_HVX_INDICATION;
 #endif
 
+    otLogInfoPlat("[BLE] otPlatTobleC2Indicate(ConnectionId=%d)", peer->mConnHandle);
     retval = sd_ble_gatts_hvx(peer->mConnHandle, &params);
 
     if (retval != NRF_SUCCESS)
     {
-        otLogInfoPlat("[BLE]: sd_ble_gatts_hvx error: 0x%x", retval);
-    }
-    else
-    {
-        otLogInfoPlat("[SD] sd_ble_gatts_hvx", retval);
+        otLogWarnPlat("[BLE] sd_ble_gatts_hvx error: 0x%x", retval);
     }
 
     return;
@@ -883,8 +881,6 @@ uint32_t bleL2capSendConnectionRequest(BlePeer *aPeer, uint16_t aPsm, uint16_t a
 
     otEXPECT_ACTION(aMtu <= BLE_DEFAULT_L2CAP_MAX_MTU_SIZE, retval = NRF_ERROR_INVALID_PARAM);
 
-    otLogInfoPlat("otPlatBleL2capConnectionRequest mtu %d psm %d", aMtu, aPsm);
-
     memset(&params, 0, sizeof(ble_l2cap_ch_setup_params_t));
     params.le_psm                   = aPsm;
     params.rx_params.rx_mtu         = aMtu;
@@ -896,7 +892,7 @@ uint32_t bleL2capSendConnectionRequest(BlePeer *aPeer, uint16_t aPsm, uint16_t a
 
     if (retval != NRF_SUCCESS)
     {
-        otLogInfoPlat("[BLE]: sd_ble_l2cap_ch_setup error: 0x%x", retval);
+        otLogWarnPlat("[BLE] sd_ble_l2cap_ch_setup error: 0x%x", retval);
     }
 
 exit:
@@ -910,8 +906,6 @@ uint32_t bleL2capSendConnectionResponse(BlePeer *aPeer, otPlatBleL2capError aErr
 
     otEXPECT_ACTION(aMtu <= BLE_DEFAULT_L2CAP_MAX_MTU_SIZE, retval = NRF_ERROR_INVALID_PARAM);
 
-    otLogInfoPlat("otPlatBleL2capConnectionResponse mtu %d result %d", aMtu, aError);
-
     memset(&params, 0, sizeof(ble_l2cap_ch_setup_params_t));
     params.le_psm                   = 0x0055; // TODO: PSM here?
     params.status                   = aError;
@@ -924,7 +918,7 @@ uint32_t bleL2capSendConnectionResponse(BlePeer *aPeer, otPlatBleL2capError aErr
 
     if (retval != NRF_SUCCESS)
     {
-        otLogInfoPlat("[BLE]: sd_ble_l2cap_ch_setup error: 0x%x", retval);
+        otLogWarnPlat("[BLE] sd_ble_l2cap_ch_setup error: 0x%x", retval);
     }
 
 exit:
@@ -944,7 +938,7 @@ otError otPlatTobleL2capSend(otInstance *aInstance, otTobleConnection *aConn, co
 
     if (retval != NRF_SUCCESS)
     {
-        otLogInfoPlat("[BLE]: sd_ble_l2cap_ch_tx error: 0x%x", retval);
+        otLogWarnPlat("[BLE] sd_ble_l2cap_ch_tx error: 0x%x", retval);
     }
 
     return nrf5SdErrorToOtError(retval);
@@ -997,6 +991,85 @@ uint32_t bleGattcCharValueByUuidRead(uint16_t                  aConnectionId,
     return sd_ble_gattc_char_value_by_uuid_read(aConnectionId, &uuid, aRange);
 }
 
+#if (OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_NOTE) && (OPENTHREAD_CONFIG_LOG_PLATFORM == 1)
+static const char *bleEvtToString(int aEvtId)
+{
+    const char *str = "unknown";
+
+    switch (aEvtId)
+    {
+    case BLE_GAP_EVT_CONNECTED:
+        str = "BLE_GAP_EVT_CONNECTED";
+        break;
+    case BLE_GAP_EVT_DISCONNECTED:
+        str = "BLE_GAP_EVT_DISCONNECTED";
+        break;
+    case BLE_GAP_EVT_CONN_PARAM_UPDATE:
+        str = "BLE_GAP_EVT_CONN_PARAM_UPDATE";
+        break;
+    case BLE_GATTS_EVT_SYS_ATTR_MISSING:
+        str = "BLE_GATTS_EVT_SYS_ATTR_MISSING";
+        break;
+    case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
+        str = "BLE_GAP_EVT_SEC_PARAMS_REQUEST";
+        break;
+    case BLE_GAP_EVT_ADV_REPORT:
+        str = "BLE_GAP_EVT_ADV_REPORT";
+        break;
+    case BLE_GAP_EVT_TIMEOUT:
+        str = "BLE_GAP_EVT_TIMEOUT";
+        break;
+    case BLE_GAP_EVT_RSSI_CHANGED:
+        str = "BLE_GAP_EVT_RSSI_CHANGED";
+        break;
+    case BLE_GAP_EVT_DATA_LENGTH_UPDATE:
+        str = "BLE_GAP_EVT_DATA_LENGTH_UPDATE";
+        break;
+    case BLE_GAP_EVT_DATA_LENGTH_UPDATE_REQUEST:
+        str = "BLE_GAP_EVT_DATA_LENGTH_UPDATE_REQUEST";
+        break;
+    case BLE_GATTS_EVT_EXCHANGE_MTU_REQUEST:
+        str = "BLE_GATTS_EVT_EXCHANGE_MTU_REQUEST";
+        break;
+    case BLE_GATTS_EVT_WRITE:
+        str = "BLE_GATTS_EVT_WRITE";
+        break;
+    case BLE_GATTS_EVT_HVN_TX_COMPLETE:
+        str = "BLE_GATTS_EVT_HVN_TX_COMPLETE";
+        break;
+    case BLE_GATTS_EVT_HVC:
+        str = "BLE_GATTS_EVT_HVC";
+        break;
+    case BLE_GATTS_EVT_TIMEOUT:
+        str = "BLE_GATTS_EVT_TIMEOUT";
+        break;
+    case BLE_GATTC_EVT_EXCHANGE_MTU_RSP:
+        str = "BLE_GATTC_EVT_EXCHANGE_MTU_RSP";
+        break;
+    case BLE_GATTC_EVT_TIMEOUT:
+        str = "BLE_GATTC_EVT_TIMEOUT";
+        break;
+    case BLE_GATTC_EVT_HVX:
+        str = "BLE_GATTC_EVT_HVX";
+        break;
+    case BLE_GATTC_EVT_WRITE_CMD_TX_COMPLETE:
+        str = "BLE_GATTC_EVT_WRITE_CMD_TX_COMPLETE";
+        break;
+    case BLE_GATTC_EVT_WRITE_RSP:
+        str = "BLE_GATTC_EVT_WRITE_RSP";
+        break;
+    case BLE_GATTC_EVT_PRIM_SRVC_DISC_RSP:
+        str = "BLE_GATTC_EVT_PRIM_SRVC_DISC_RSP";
+        break;
+    case BLE_GATTC_EVT_CHAR_VAL_BY_UUID_READ_RSP:
+        str = "BLE_GATTC_EVT_CHAR_VAL_BY_UUID_READ_RSP";
+        break;
+    }
+
+    return str;
+}
+#endif //#if (OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_DEBG) && (OPENTHREAD_CONFIG_LOG_PLATFORM == 1)
+
 static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 {
     uint32_t   retval       = NRF_SUCCESS;
@@ -1010,7 +1083,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 
     if (evt->header.evt_id != BLE_GAP_EVT_ADV_REPORT)
     {
-        otLogInfoPlat("[BLE] Event: 0x%x, conn_handle: 0x%x", evt->header.evt_id, connectionId);
+        otLogInfoPlat("[BLE] Event: ConnectionId=%d %s", connectionId, bleEvtToString(evt->header.evt_id));
     }
 
     switch (evt->header.evt_id)
@@ -1018,8 +1091,6 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
     case BLE_GAP_EVT_CONNECTED:
     {
         sBle.mState = kStateIdle;
-
-        otLogInfoPlat("%s: Connected ConnectionId=%d", __func__, connectionId);
 
         peer = (sPeripheralPeer != NULL) ? sPeripheralPeer : peerAllocate();
         if (peer == NULL)
@@ -1042,12 +1113,10 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         {
             if (peer->mLinkType == kConnectionLinkTypeL2Cap)
             {
-                otLogInfoPlat("[BLE]: bleL2capSendConnectionRequest, local_cid=%d", peer->mLocalCid);
                 bleL2capSendConnectionRequest(peer, BLE_L2CAP_PSM, BLE_L2CAP_MTU);
             }
             else if (peer->mLinkType == kConnectionLinkTypeGatt)
             {
-                otLogInfoPlat("[BLE]: sd_ble_gattc_exchange_mtu_request, local_cid=%d", peer->mLocalCid);
                 sd_ble_gattc_exchange_mtu_request(peer->mConnHandle, peer->mAttMtu);
             }
         }
@@ -1059,15 +1128,15 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         bleParams.max_tx_octets = BLE_DEFAULT_PDU_SIZE;
         bleParams.max_rx_octets = BLE_DEFAULT_PDU_SIZE;
 
-        otLogInfoPlat("[BLE]: Requesting data Length (tx, rx) octets = (%d, %d), time = (%d, %d) us",
-                      bleParams.max_tx_octets, dleParams.max_rx_octets, dleParams.max_tx_time_us,
+        otLogDebgPlat("[BLE] Requesting data Length (tx, rx) octets = (%d, %d), time = (%d, %d) us",
+                      bleParams.max_tx_octets, bleParams.max_rx_octets, bleParams.max_tx_time_us,
                       bleParams.max_rx_time_us);
 
         retval = sd_ble_gap_data_length_update(connectionId, &bleParams, NULL);
 
         if (retval != NRF_SUCCESS)
         {
-            otLogInfoPlat("[BLE]: sd_ble_gap_data_length_update error: 0x%x", retval);
+            otLogWarnPlat("[BLE] sd_ble_gap_data_length_update error: 0x%x", retval);
         }
 
         // Start reporting RSSI.
@@ -1075,14 +1144,13 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 
         if (retval != NRF_SUCCESS)
         {
-            otLogInfoPlat("[BLE]: sd_ble_gap_rssi_start error: 0x%x", retval);
+            otLogWarnPlat("[BLE] sd_ble_gap_rssi_start error: 0x%x", retval);
         }
 
         break;
     }
 
     case BLE_GAP_EVT_DISCONNECTED:
-        otLogInfoPlat("BLE_GAP_EVT_DISCONNECTED ConnectionId=%d ", connectionId);
 
         if ((peer = peerFind(connectionId)) != NULL)
         {
@@ -1110,7 +1178,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 
         if (retval != NRF_SUCCESS)
         {
-            otLogInfoPlat("[BLE]: sd_ble_gap_conn_param_update error: 0x%x", retval);
+            otLogWarnPlat("[BLE] sd_ble_gap_conn_param_update error: 0x%x", retval);
         }
 
         break;
@@ -1128,7 +1196,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 
         if (retval != NRF_SUCCESS)
         {
-            otLogInfoPlat("[BLE]: sd_ble_gap_sec_params_reply error: 0x%x", retval);
+            otLogWarnPlat("[BLE] sd_ble_gap_sec_params_reply error: 0x%x", retval);
         }
 
         break;
@@ -1182,7 +1250,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         retval = sd_ble_gap_scan_start(NULL, &advData);
         if (retval != NRF_SUCCESS)
         {
-            otLogInfoPlat("[BLE]: sd_ble_gap_sec_params_reply error: 0x%x", retval);
+            otLogWarnPlat("[BLE] sd_ble_gap_sec_params_reply error: 0x%x", retval);
         }
 
         break;
@@ -1203,7 +1271,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
     case BLE_GAP_EVT_DATA_LENGTH_UPDATE:
     {
         ble_gap_data_length_params_t *evtMtu = &evt->evt.gap_evt.params.data_length_update.effective_params;
-        otLogInfoPlat("BLE_GAP_EVT_DATA_LENGTH_UPDATE Data Length is (tx, rx) octets = (%d, %d), time = (%d, %d) us",
+        otLogDebgPlat("[BLE] BLE_GAP_EVT_DATA_LENGTH_UPDATE: (max_tx, max_rx) octets = (%d, %d), time = (%d, %d) us",
                       evtMtu->max_tx_octets, evtMtu->max_rx_octets, evtMtu->max_tx_time_us, evtMtu->max_rx_time_us);
         UNUSED_PARAMETER(evtMtu);
         break;
@@ -1217,13 +1285,13 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         memset(&bleParams, 0, sizeof(ble_gap_data_length_params_t));
         retval = sd_ble_gap_data_length_update(connectionId, &bleParams, NULL);
 
-        otLogInfoPlat("[BLE]: Data Length requested is (tx, rx) octets = (%d, %d), time = (%d, %d) us",
-                      bleParams.max_tx_octets, dleParams.max_rx_octets, dleParams.max_tx_time_us,
-                      bleParams.max_rx_time_us);
+        otLogDebgPlat(
+            "[BLE]: BLE_GAP_EVT_DATA_LENGTH_UPDATE_REQUEST: (max_tx, max_rx) octets = (%d, %d), time = (%d, %d) us",
+            bleParams.max_tx_octets, bleParams.max_rx_octets, bleParams.max_tx_time_us, bleParams.max_rx_time_us);
 
         if (retval != NRF_SUCCESS)
         {
-            otLogInfoPlat("[BLE]: sd_ble_gap_data_length_update error: 0x%x", retval);
+            otLogWarnPlat("[BLE] sd_ble_gap_data_length_update error: 0x%x", retval);
         }
 
         break;
@@ -1234,14 +1302,15 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         uint16_t                              mtuMax = OT_BLE_ATT_MTU_MAX;
         ble_gatts_evt_exchange_mtu_request_t *evtMtu = &evt->evt.gatts_evt.params.exchange_mtu_request;
 
-        otLogInfoPlat("BLE_GATTS_EVT_EXCHANGE_MTU_REQUEST, mtuMax=%d, client_rx_mtu=%d", mtuMax, evtMtu->client_rx_mtu);
+        otLogDebgPlat("[BLE] BLE_GATTS_EVT_EXCHANGE_MTU_REQUEST: mtuMax=%d, client_rx_mtu=%d", mtuMax,
+                      evtMtu->client_rx_mtu);
         if ((peer = peerFind(connectionId)) != NULL)
         {
             peer->mAttMtu = MIN(mtuMax, evtMtu->client_rx_mtu);
 
             if (sd_ble_gatts_exchange_mtu_reply(connectionId, peer->mAttMtu) != NRF_SUCCESS)
             {
-                otLogInfoPlat("[BLE]: sd_ble_gatts_exchange_mtu_reply error: 0x%x", retval);
+                otLogWarnPlat("[BLE] sd_ble_gatts_exchange_mtu_reply error: 0x%x", retval);
             }
         }
 
@@ -1254,12 +1323,11 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         otBleRadioPacket       packet;
         uint8_t                channel_index;
 
-        // otLogInfoPlat("BLE_GATTS_EVT_WRITE");
         retval = sd_ble_gap_rssi_get(connectionId, &packet.mPower, &channel_index);
 
         if (retval != NRF_SUCCESS)
         {
-            otLogInfoPlat("[BLE]: sd_ble_gap_rssi_get error: 0x%x", retval);
+            otLogWarnPlat("[BLE] sd_ble_gap_rssi_get error: 0x%x", retval);
             packet.mPower = 0;
         }
 
@@ -1306,16 +1374,14 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 
     case BLE_GATTS_EVT_HVN_TX_COMPLETE:
     {
-        // ble_gatts_evt_hvn_tx_complete_t *evtHvn = &evt->evt.gatts_evt.params.hvn_tx_complete;
-        // otLogInfoPlat("BLE_GATTS_EVT_HVN_TX_COMPLETE: connectionId=%d count=%d", connectionId, evtHvn->count);
+        ble_gatts_evt_hvn_tx_complete_t *evtHvn = &evt->evt.gatts_evt.params.hvn_tx_complete;
+        otLogDebgPlat("[BLE] BLE_GATTS_EVT_HVN_TX_COMPLETE: count=%d", connectionId, evtHvn->count);
+        OT_UNUSED_VARIABLE(evtHvn);
     }
         // Fall through
 
     case BLE_GATTS_EVT_HVC:
     {
-        // ble_gatts_evt_hvc_t *evtHvc = &evt->evt.gatts_evt.params.hvc;
-
-        // otLogInfoPlat("BLE_GATTS_EVT_HVC");
         if ((peer = peerFind(connectionId)) != NULL)
         {
             if (sDiagMode)
@@ -1342,7 +1408,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         {
             ble_uuid_t uuid;
 
-            otLogInfoPlat("BLE_GATTC_EVT_EXCHANGE_MTU_RSP, mAttMtu=%d, server_rx_mtu=%d", peer->mAttMtu,
+            otLogDebgPlat("[BLE] BLE_GATTC_EVT_EXCHANGE_MTU_RSP, mAttMtu=%d, server_rx_mtu=%d", peer->mAttMtu,
                           evtMtu->server_rx_mtu);
 
             peer->mAttMtu = MIN(peer->mAttMtu, evtMtu->server_rx_mtu);
@@ -1350,11 +1416,9 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
             retval = uuidDecode(&uuid, &sBtpServices[0].mUuid);
             otEXPECT(retval == NRF_SUCCESS);
 
-            otLogInfoPlat("sd_ble_gattc_primary_services_discover, ConnectionId=%d ", peer->mConnHandle);
-
             if (sd_ble_gattc_primary_services_discover(peer->mConnHandle, BLE_GATT_HANDLE_START, &uuid) != NRF_SUCCESS)
             {
-                otLogInfoPlat("[BLE]: sd_ble_gattc_primary_services_discover error: 0x%x", retval);
+                otLogWarnPlat("[BLE] sd_ble_gattc_primary_services_discover error: 0x%x", retval);
             }
         }
         break;
@@ -1368,11 +1432,10 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
     {
         ble_gattc_evt_hvx_t *evtHvx = &evt->evt.gattc_evt.params.hvx;
 
-        // otLogInfoPlat("BLE_GATTC_EVT_HVX");
         retval = sd_ble_gattc_hv_confirm(connectionId, evtHvx->handle);
         if (retval != NRF_SUCCESS)
         {
-            otLogInfoPlat("[BLE]: sd_ble_gattc_hv_confirm error: 0x%x", retval);
+            otLogWarnPlat("[BLE] sd_ble_gattc_hv_confirm error: 0x%x", retval);
         }
 
         if ((peer = peerFind(connectionId)) != NULL)
@@ -1391,21 +1454,15 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 
     case BLE_GATTC_EVT_WRITE_CMD_TX_COMPLETE:
     {
-        // ble_gattc_evt_write_cmd_tx_complete_t *evtWcmd = &evt->evt.gattc_evt.params.write_cmd_tx_complete;
-        // otLogInfoPlat("BLE_GATTC_EVT_WRITE_CMD_TX_COMPLETE: connectionId=%d count=%d", connectionId, evtWcmd->count);
+        ble_gattc_evt_write_cmd_tx_complete_t *evtWcmd = &evt->evt.gattc_evt.params.write_cmd_tx_complete;
+        otLogDebgPlat("[BLE] BLE_GATTC_EVT_WRITE_CMD_TX_COMPLETE: count=%d", evtWcmd->count);
+        OT_UNUSED_VARIABLE(evtWcmd);
     }
         // Fall through
 
     case BLE_GATTC_EVT_WRITE_RSP:
     {
-        // ble_gattc_evt_write_rsp_t *evtWrsp = &evt->evt.gattc_evt.params.write_rsp;
-        // otLogCritMac("BLE_GATTC_EVT_WRITE_RSP");
-
-        if (sBle.mState == kStateGattSubscribing)
-        {
-            otLogInfoPlat("BLE_GATTC_EVT_WRITE_RSP: connectionId=%d handle=%d", connectionId, evtWrsp->handle);
-        }
-        else
+        if (sBle.mState != kStateGattSubscribing)
         {
             if ((peer = peerFind(connectionId)) != NULL)
             {
@@ -1434,14 +1491,14 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
             sBle.mServiceHandleRange = evtDisc->services[0].handle_range;
             sBle.mState              = kStateGattiDiscoverUuidC1Handle;
 
-            otLogInfoPlat("BLE_GATTC_EVT_PRIM_SRVC_DISC_RSP, start_handle=%d end_handle=%d",
+            otLogDebgPlat("[BLE] BLE_GATTC_EVT_PRIM_SRVC_DISC_RSP, start_handle=%d end_handle=%d",
                           sBle.mServiceHandleRange.start_handle, sBle.mServiceHandleRange.end_handle);
             bleGattcCharValueByUuidRead(connectionId, &sBle.mServiceHandleRange,
                                         &sBtpServices[0].mCharacteristics[0].mUuid);
         }
         else
         {
-            otLogInfoPlat("BLE_GATTC_EVT_PRIM_SRVC_DISC_RSP, Not Found");
+            otLogDebgPlat("[BLE] BLE_GATTC_EVT_PRIM_SRVC_DISC_RSP, Not Found");
         }
 
         break;
@@ -1452,7 +1509,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 
         if (sBle.mState == kStateGattiDiscoverUuidC1Handle)
         {
-            otLogInfoPlat("BLE_GATTC_EVT_CHAR_VAL_BY_UUID_READ_RSP, count=%d value_len=%d UuidC1Handle=%d",
+            otLogDebgPlat("[BLE] BLE_GATTC_EVT_CHAR_VAL_BY_UUID_READ_RSP, count=%d value_len=%d UuidC1Handle=%d",
                           evtDisc->count, evtDisc->value_len, evtDisc->handle_value[0]);
             sBle.mState    = kStateGattiDiscoverUuidC2Handle;
             sBle.mC1Handle = evtDisc->handle_value[0];
@@ -1464,7 +1521,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         {
             otPlatBleUuid uuid = {.mType = OT_BLE_UUID_TYPE_16, .mValue.mUuid16 = OT_BLE_UUID_CCCD};
 
-            otLogInfoPlat("BLE_GATTC_EVT_CHAR_VAL_BY_UUID_READ_RSP, count=%d value_len=%d UuidC2Handle=%d",
+            otLogDebgPlat("[BLE] BLE_GATTC_EVT_CHAR_VAL_BY_UUID_READ_RSP, count=%d value_len=%d UuidC2Handle=%d",
                           evtDisc->count, evtDisc->value_len, evtDisc->handle_value[0]);
             sBle.mState    = kStateGattiDiscoverUuidC2CccdHandle;
             sBle.mC2Handle = evtDisc->handle_value[0];
@@ -1473,7 +1530,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         }
         else if (sBle.mState == kStateGattiDiscoverUuidC2CccdHandle)
         {
-            otLogInfoPlat("BLE_GATTC_EVT_CHAR_VAL_BY_UUID_READ_RSP, count=%d value_len=%d UuidC2CccdHandle=%d",
+            otLogDebgPlat("[BLE] BLE_GATTC_EVT_CHAR_VAL_BY_UUID_READ_RSP, count=%d value_len=%d UuidC2CccdHandle=%d",
                           evtDisc->count, evtDisc->value_len, evtDisc->handle_value[0]);
             sBle.mC2CccdHandle = evtDisc->handle_value[0];
 
@@ -1499,7 +1556,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         ble_l2cap_evt_t *                 l2capEvt       = &evt->evt.l2cap_evt;
         ble_l2cap_evt_ch_setup_request_t *chSetupRequest = &evt->evt.l2cap_evt.params.ch_setup_request;
 
-        otLogInfoPlat("BLE_L2CAP_EVT_CH_SETUP_REQUEST: mtu %d psm 0x%x local_cid=%d connectionId=%d",
+        otLogDebgPlat("[BLE] BLE_L2CAP_EVT_CH_SETUP_REQUEST: mtu %d psm 0x%x local_cid=%d connectionId=%d",
                       chSetupRequest->tx_params.tx_mtu, chSetupRequest->le_psm, l2capEvt->local_cid,
                       l2capEvt->conn_handle);
 
@@ -1521,8 +1578,8 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         ble_l2cap_evt_t *l2capEvt = &evt->evt.l2cap_evt;
         ble_data_t       sduBuf;
 
-        otLogInfoPlat("BLE_L2CAP_EVT_CH_SETUP: local_cid=%d connectionId=%d, L2CAP connected", l2capEvt->local_cid,
-                      l2capEvt->conn_handle);
+        otLogDebgPlat("[BLE] BLE_L2CAP_EVT_CH_SETUP: local_cid=%d connectionId=%d, L2CAP connected",
+                      l2capEvt->local_cid, l2capEvt->conn_handle);
 
         if (((peer = peerFind(connectionId))) != NULL && (peer->mIsPeripheral))
         {
@@ -1545,7 +1602,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 
         if (retval != NRF_SUCCESS)
         {
-            otLogInfoPlat("[BLE]: sd_ble_l2cap_ch_rx error: 0x%x", retval);
+            otLogWarnPlat("[BLE] sd_ble_l2cap_ch_rx error: 0x%x", retval);
             assert(retval == NRF_SUCCESS);
         }
 
@@ -1554,14 +1611,12 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 
     case BLE_L2CAP_EVT_CH_SETUP_REFUSED:
     {
-        otLogInfoPlat("BLE_L2CAP_EVT_CH_SETUP_REFUSED");
         sd_ble_gap_disconnect(connectionId, OT_BLE_HCI_REMOTE_USER_TERMINATED);
         break;
     }
 
     case BLE_L2CAP_EVT_CH_RELEASED:
     {
-        otLogInfoPlat("BLE_L2CAP_EVT_CH_RELEASED");
         break;
     }
 
@@ -1593,7 +1648,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         }
         else
         {
-            otLogInfoPlat("BLE_L2CAP_EVT_CH_RX: ConnectionId=%d Peer=NULL", l2capEvt->conn_handle);
+            otLogDebgPlat("[BLE] BLE_L2CAP_EVT_CH_RX: ConnectionId=%d Peer=NULL", l2capEvt->conn_handle);
         }
 
         // TODO: Currently only 1 RX buffer is available.
@@ -1604,7 +1659,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 
         if (retval != NRF_SUCCESS)
         {
-            otLogInfoPlat("[BLE]: sd_ble_l2cap_ch_rx error: 0x%x", retval);
+            otLogWarnPlat("[BLE] sd_ble_l2cap_ch_rx error: 0x%x", retval);
             assert(retval == NRF_SUCCESS);
         }
 
@@ -1630,7 +1685,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
     }
 
     default:
-        otLogInfoPlat("[BLE]: Unhandled BLE event 0x%02x", evt->header.evt_id);
+        otLogInfoPlat("[BLE] Unhandled BLE event 0x%02x", evt->header.evt_id);
         break;
     }
 
