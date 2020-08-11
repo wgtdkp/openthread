@@ -65,7 +65,7 @@ public:
 private:
     enum
     {
-        kWindowSize     = 4,
+        kWindowSize     = 5,
         kKeepAliveDelay = 2500,                                         // milliseconds
         kSegmentSizeMax = OPENTHREAD_CONFIG_TOBLE_BTP_MAX_SEGMENT_SIZE, // bytes
     };
@@ -92,6 +92,23 @@ private:
         uint8_t GetRxWindowRemaining(void) const { return mRxWindow - (mRxSeqnoCurrent - mRxSeqnoAcked); }
         uint8_t GetTxWindowRemaining(void) const { return mTxWindow - (mTxSeqnoCurrent - mTxSeqnoAcked); }
 
+        DataFrame *NewDataFrame(void)
+        {
+            DataFrame *frame = NULL;
+            for (size_t i = 0; i < OT_ARRAY_LENGTH(mTxFrames); i++)
+            {
+                if (mTxFrames[i].GetDataLength() == 0)
+                {
+                    frame = &mTxFrames[i];
+                    break;
+                }
+            }
+
+            return frame;
+        }
+
+        void FreeDataFrame(DataFrame *aFrame) { aFrame->SetDataLength(0); }
+
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
         HandshakeRequest mRequest;
 #endif
@@ -99,6 +116,11 @@ private:
 #if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
         HandshakeResponse mResponse;
 #endif
+
+        enum
+        {
+            kNumFrames = 4,
+        };
 
         State mState;
 
@@ -124,16 +146,17 @@ private:
         uint8_t mTxBuf[kSegmentSizeMax];
         uint8_t mRxBuf[OT_RADIO_TOBLE_FRAME_MAX_SIZE];
 
-        bool mIsSending : 1;
-        bool mIsTimerSet : 1;
+        DataFrame mTxFrames[kNumFrames];
+        bool      mIsSending : 1;
+        bool      mIsTimerSet : 1;
     };
 
     void Reset(Session &aSession);
 
-    void GattSend(Connection &aConn, uint8_t *aBuffer, uint16_t aLength);
-    void HandleGattSentDone(Connection &aConn, otError aError);
-    void HandleGattReceiveDone(Connection &aConn, uint8_t *aBuffer, uint16_t aLength, otError aError);
-    void ConnectionTimerRefresh(Connection &aConn);
+    otError GattSend(Connection &aConn, const uint8_t *aBuffer, uint16_t aLength);
+    void    HandleGattSentDone(Connection &aConn, otError aError);
+    void    HandleGattReceiveDone(Connection &aConn, uint8_t *aBuffer, uint16_t aLength, otError aError);
+    void    ConnectionTimerRefresh(Connection &aConn);
 
     void HandleConnectionReady(Platform::Connection *aPlatConn);
 
@@ -141,7 +164,7 @@ private:
     void HandleHandshake(Connection &aConn, const HandshakeResponse &aResponse);
 
     // Callbacks from platform
-    void HandleC1WriteDone(Platform::Connection *aPlatConn);
+    void HandleC1WriteDone(Platform::Connection *aPlatConn, const uint8_t *aFrame, uint16_t aLength);
     void HandleC2Indication(Platform::Connection *aPlatConn, const uint8_t *aFrame, uint16_t aLength);
 #endif
 
@@ -157,20 +180,24 @@ private:
     // Callbacks from platform
     void HandleC1Write(Platform::Connection *aPlatConn, const uint8_t *aFrame, uint16_t aLength);
     void HandleC2Subscribed(Platform::Connection *aPlatConn, bool aIsSubscribed);
-    void HandleC2IndicateDone(Platform::Connection *aPlatConn);
+    void HandleC2IndicateDone(Platform::Connection *aPlatConn, const uint8_t *aFrame, uint16_t aLength);
 #endif
 
-    void HandleSentData(Connection &aConn);
+    void HandleSentData(Connection &aConn, const uint8_t *aFrame, uint16_t aLength);
     void HandleDataFrame(Connection &aConn, const uint8_t *aFrame, uint16_t aLength);
 
     static void HandleTimer(Timer &aTimer);
     void        HandleTimer(void);
+
+    static void HandleTxTask(Tasklet &aTasklet);
+    void        SendNextFragment(void);
 
     void UpdateTimer(void);
 
     void SendData(Connection &aConn);
 
     TimerMilli mTimer;
+    Tasklet    mTxTask;
 };
 
 } // namespace Toble

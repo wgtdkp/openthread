@@ -76,10 +76,10 @@ public:
     void HandleScanRespReceived(otTobleAdvPacket *aAdvPacket);
     void HandleConnectionIsReady(otTobleConnection *aConn, otTobleConnectionLinkType aLinkType);
 
-    void HandleC1WriteDone(otTobleConnection *aConn);
+    void HandleC1WriteDone(otTobleConnection *aConn, const uint8_t *aBuffer, uint16_t aLength);
     void HandleC2Indication(otTobleConnection *aConn, const uint8_t *aBuffer, uint16_t aLength);
     void HandleC2Subscribed(otTobleConnection *aConn, bool aIsSubscribed);
-    void HandleC2IndicateDone(otTobleConnection *aConn);
+    void HandleC2IndicateDone(otTobleConnection *aConn, const uint8_t *aBuffer, uint16_t aLength);
     void HandleC1Write(otTobleConnection *aConn, const uint8_t *aBuffer, uint16_t aLength);
 
 #if OPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE

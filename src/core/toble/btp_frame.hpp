@@ -140,6 +140,32 @@ private:
     uint8_t  mWindowSize;
 } OT_TOOL_PACKED_END;
 
+OT_TOOL_PACKED_BEGIN
+class DataFrame : public Frame
+{
+public:
+    DataFrame(void)
+        : mLength(0)
+    {
+    }
+
+    uint16_t Init(const uint8_t *aBuffer,
+                  uint16_t       aOffset,
+                  uint16_t       aLength,
+                  uint16_t       aMtu,
+                  uint8_t        aSeqNum,
+                  bool           aAck,
+                  uint8_t        aAckNum);
+
+    const uint8_t *GetData(void) const { return &mFlags; }
+    uint16_t       GetDataLength(void) const;
+    void           SetDataLength(uint16_t aLength) { mLength = aLength; }
+
+private:
+    uint8_t  mFrame[OPENTHREAD_CONFIG_TOBLE_BTP_MAX_SEGMENT_SIZE - sizeof(mFlags)];
+    uint16_t mLength;
+} OT_TOOL_PACKED_END;
+
 } // namespace Toble
 } // namespace ot
 

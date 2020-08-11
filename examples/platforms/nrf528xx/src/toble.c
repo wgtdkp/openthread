@@ -71,7 +71,7 @@
 #define BLE_DEFAULT_CONNECTION_EVENT_LENGTH 320
 
 /// Default BLE LL PDU size [bytes] (valid range: 27 to 251)
-#define BLE_DEFAULT_PDU_SIZE 27 // 251
+#define BLE_DEFAULT_PDU_SIZE 27
 
 /// Default number of retries when no communication happens [units of connection interval]
 #define BLE_DEFAULT_CONNECTION_RETRY 10
@@ -204,6 +204,74 @@ otPlatBleGattService sBtpServices[] = {
 
 static otError bleGattServerServicesRegister(otInstance *aInstance, otPlatBleGattService *aServices);
 
+typedef struct QueueNode
+{
+    const uint8_t *   mBuffer;
+    uint16_t          mLength;
+    struct QueueNode *mNext;
+} QueueNode;
+
+typedef struct Queue
+{
+    QueueNode *mHead;
+    QueueNode *mTail;
+} Queue;
+
+static QueueNode sNodes[BLE_GATT_TX_QUEUE_SIZE];
+
+static Queue sFreeQueue;
+static Queue sTxQueue;
+
+static void QueuePush(Queue *aQueue, QueueNode *aNode)
+{
+    assert((aQueue != NULL) && (aNode != NULL));
+
+    aNode->mNext = NULL;
+    if (aQueue->mHead == NULL)
+    {
+        aQueue->mHead = aNode;
+        aQueue->mTail = aNode;
+    }
+    else
+    {
+        aQueue->mTail->mNext = aNode;
+        aQueue->mTail        = aNode;
+    }
+}
+
+static QueueNode *QueuePop(Queue *aQueue)
+{
+    QueueNode *node;
+
+    assert(aQueue != NULL);
+    if (aQueue->mHead == aQueue->mTail)
+    {
+        node          = aQueue->mHead;
+        aQueue->mHead = aQueue->mTail = NULL;
+    }
+    else
+    {
+        node          = aQueue->mHead;
+        aQueue->mHead = aQueue->mHead->mNext;
+    }
+
+    return node;
+}
+
+static void QueueInit(void)
+{
+    uint8_t i;
+
+    sTxQueue.mHead   = NULL;
+    sTxQueue.mTail   = NULL;
+    sFreeQueue.mHead = NULL;
+    sFreeQueue.mTail = NULL;
+
+    for (i = 0; i < BLE_GATT_TX_QUEUE_SIZE; i++)
+    {
+        QueuePush(&sFreeQueue, &sNodes[i]);
+    }
+}
 static void peerInit(BlePeer *aPeer)
 {
     memset(aPeer, 0, sizeof(BlePeer));
@@ -329,7 +397,7 @@ static bool isCccdHandle(uint16_t aHandle)
 
     if (retval != NRF_SUCCESS)
     {
-        otLogWarnPlat("[BLE] sd_ble_gatts_attr_get error: 0x%x", retval);
+        otLogCritPlat("[BLE] sd_ble_gatts_attr_get error: 0x%x", retval);
     }
     else
     {
@@ -380,6 +448,7 @@ void otPlatTobleInit(otInstance *aInstance)
 
     initState();
     bleGattServerServicesRegister(sInstance, sBtpServices);
+    QueueInit();
 
 #if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
     sBle.mC1Handle     = sBtpServices[0].mCharacteristics[0].mHandleValue;
@@ -449,10 +518,10 @@ otError bleGapAdvStart(otTobleAdvType aType, uint16_t aInterval)
     params.primary_phy   = BLE_GAP_PHY_1MBPS;
 
     retval = sd_ble_gap_adv_set_configure(&sBle.mAdvHandle, &sBle.mAdvDataInfo, &params);
-    otEXPECT_ACTION(retval == NRF_SUCCESS, otLogWarnPlat("[BLE]: sd_ble_gap_adv_set_configure error: 0x%x", retval));
+    otEXPECT_ACTION(retval == NRF_SUCCESS, otLogCritPlat("[BLE]: sd_ble_gap_adv_set_configure error: 0x%x", retval));
 
     retval = sd_ble_gap_adv_start(sBle.mAdvHandle, BLE_CFG_TAG);
-    otEXPECT_ACTION(retval == NRF_SUCCESS, otLogWarnPlat("[BLE]: sd_ble_gap_adv_start error: 0x%x", retval));
+    otEXPECT_ACTION(retval == NRF_SUCCESS, otLogCritPlat("[BLE]: sd_ble_gap_adv_start error: 0x%x", retval));
 
     sBle.mAdvInterval = aInterval;
     sBle.mAdvType     = aType;
@@ -492,7 +561,7 @@ otError otPlatTobleAdvStop(otInstance *aInstance)
     OT_UNUSED_VARIABLE(aInstance);
 
     retval = sd_ble_gap_adv_stop(sBle.mAdvHandle);
-    otEXPECT_ACTION(retval == NRF_SUCCESS, otLogWarnPlat("[BLE] sd_ble_gap_adv_stop error: 0x%x", retval));
+    otEXPECT_ACTION(retval == NRF_SUCCESS, otLogCritPlat("[BLE] sd_ble_gap_adv_stop error: 0x%x", retval));
 
 exit:
     return nrf5SdErrorToOtError(retval);
@@ -519,7 +588,7 @@ otError otPlatTobleScanStart(otInstance *aInstance, uint16_t aInterval, uint16_t
 
     if ((retval = sd_ble_gap_scan_start(&params, &advData)) != NRF_SUCCESS)
     {
-        otLogWarnPlat("[BLE] sd_ble_gap_scan_start error: 0x%x", retval);
+        otLogCritPlat("[BLE] sd_ble_gap_scan_start error: 0x%x", retval);
     }
 
     return nrf5SdErrorToOtError(retval);
@@ -533,7 +602,7 @@ otError otPlatTobleScanStop(otInstance *aInstance)
 
     if ((retval = sd_ble_gap_scan_stop()) != NRF_SUCCESS)
     {
-        otLogWarnPlat("[BLE] sd_ble_gap_scan_stop error: 0x%x", retval);
+        otLogCritPlat("[BLE] sd_ble_gap_scan_stop error: 0x%x", retval);
     }
 
     return nrf5SdErrorToOtError(retval);
@@ -579,7 +648,7 @@ otTobleConnection *otPlatTobleCreateConnection(otInstance *             aInstanc
     }
     else
     {
-        otLogWarnPlat("[BLE] sd_ble_gap_connect error: 0x%x", retval);
+        otLogCritPlat("[BLE] sd_ble_gap_connect error: 0x%x", retval);
     }
 
 exit:
@@ -604,7 +673,7 @@ void otPlatTobleDisconnect(otInstance *aInstance, otTobleConnection *aConn)
 
     if (retval != NRF_SUCCESS)
     {
-        otLogWarnPlat("[BLE] sd_ble_gap_disconnect error: 0x%x", retval);
+        otLogCritPlat("[BLE] sd_ble_gap_disconnect error: 0x%x", retval);
     }
 
 exit:
@@ -648,7 +717,7 @@ void otPlatTobleC2Subscribe(otInstance *aInstance, otTobleConnection *aConn, boo
 
     if (retval != NRF_SUCCESS)
     {
-        otLogWarnPlat("[BLE] sd_ble_gattc_write error: 0x%x", retval);
+        otLogCritPlat("[BLE] sd_ble_gattc_write error: 0x%x", retval);
     }
     else
     {
@@ -656,11 +725,15 @@ void otPlatTobleC2Subscribe(otInstance *aInstance, otTobleConnection *aConn, boo
     }
 }
 
-void otPlatTobleC1Write(otInstance *aInstance, otTobleConnection *aConn, const void *aBuffer, uint16_t aLength)
+otError otPlatTobleC1Write(otInstance *aInstance, otTobleConnection *aConn, const void *aBuffer, uint16_t aLength)
 {
+    otError                  error = OT_ERROR_NONE;
     uint32_t                 retval;
     ble_gattc_write_params_t params;
     BlePeer *                peer = (BlePeer *)aConn;
+    QueueNode *              node = QueuePop(&sFreeQueue);
+
+    otEXPECT_ACTION(node != NULL, error = OT_ERROR_NO_BUFS);
 
     memset(&params, 0, sizeof(ble_gattc_write_params_t));
 #if OPENTHREAD_CONFIG_TOBLE_BTP_NO_GATT_ACK
@@ -679,12 +752,20 @@ void otPlatTobleC1Write(otInstance *aInstance, otTobleConnection *aConn, const v
 
     if (retval != NRF_SUCCESS)
     {
-        otLogWarnPlat("[BLE] sd_ble_gattc_write error: 0x%x", retval);
+        otLogCritPlat("[BLE] sd_ble_gattc_write error: 0x%x", retval);
+        error = OT_ERROR_FAILED;
+        QueuePush(&sFreeQueue, node);
     }
     else
     {
+        node->mBuffer = aBuffer;
+        node->mLength = aLength;
+        QueuePush(&sTxQueue, node);
         // peer->isSubscribing = false;
     }
+
+exit:
+    return error;
 }
 
 /*******************************************************************************
@@ -710,7 +791,7 @@ static otError serviceRegister(const otPlatBleUuid *aUuid, uint16_t *aHandle)
 
     if (retval != NRF_SUCCESS)
     {
-        otLogWarnPlat("[BLE] sd_ble_gatts_service_add error: 0x%x", retval);
+        otLogCritPlat("[BLE] sd_ble_gatts_service_add error: 0x%x", retval);
     }
 
 exit:
@@ -737,7 +818,7 @@ static otError characteristicRegister(uint16_t aServiceHandle, otPlatBleGattChar
 
     if (retval != NRF_SUCCESS)
     {
-        otLogWarnPlat("[BLE] sd_ble_uuid_vs_add error: 0x%x", retval);
+        otLogCritPlat("[BLE] sd_ble_uuid_vs_add error: 0x%x", retval);
         otEXPECT(false);
     }
 
@@ -798,7 +879,7 @@ static otError characteristicRegister(uint16_t aServiceHandle, otPlatBleGattChar
 
     if (retval != NRF_SUCCESS)
     {
-        otLogWarnPlat("[BLE] sd_ble_gatts_characteristic_add error: 0x%x", retval);
+        otLogCritPlat("[BLE] sd_ble_gatts_characteristic_add error: 0x%x", retval);
     }
     else
     {
@@ -839,13 +920,17 @@ exit:
     return nrf5SdErrorToOtError(error);
 }
 
-void otPlatTobleC2Indicate(otInstance *aInstance, otTobleConnection *aConn, const void *aBuffer, uint16_t aLength)
+otError otPlatTobleC2Indicate(otInstance *aInstance, otTobleConnection *aConn, const void *aBuffer, uint16_t aLength)
 {
+    otError                error = OT_ERROR_NONE;
     uint32_t               retval;
     ble_gatts_hvx_params_t params;
     BlePeer *              peer = (BlePeer *)aConn;
+    QueueNode *            node = QueuePop(&sFreeQueue);
 
     OT_UNUSED_VARIABLE(aInstance);
+
+    otEXPECT_ACTION(node != NULL, error = OT_ERROR_NO_BUFS);
 
     // TODO: Gatt Server should also take the connection id.
 
@@ -864,10 +949,19 @@ void otPlatTobleC2Indicate(otInstance *aInstance, otTobleConnection *aConn, cons
 
     if (retval != NRF_SUCCESS)
     {
-        otLogWarnPlat("[BLE] sd_ble_gatts_hvx error: 0x%x", retval);
+        otLogCritPlat("[BLE] sd_ble_gatts_hvx error: 0x%x", retval);
+        error = OT_ERROR_FAILED;
+        QueuePush(&sFreeQueue, node);
+    }
+    else
+    {
+        node->mBuffer = aBuffer;
+        node->mLength = aLength;
+        QueuePush(&sTxQueue, node);
     }
 
-    return;
+exit:
+    return error;
 }
 
 /****************************************************************************
@@ -892,7 +986,7 @@ uint32_t bleL2capSendConnectionRequest(BlePeer *aPeer, uint16_t aPsm, uint16_t a
 
     if (retval != NRF_SUCCESS)
     {
-        otLogWarnPlat("[BLE] sd_ble_l2cap_ch_setup error: 0x%x", retval);
+        otLogCritPlat("[BLE] sd_ble_l2cap_ch_setup error: 0x%x", retval);
     }
 
 exit:
@@ -918,7 +1012,7 @@ uint32_t bleL2capSendConnectionResponse(BlePeer *aPeer, otPlatBleL2capError aErr
 
     if (retval != NRF_SUCCESS)
     {
-        otLogWarnPlat("[BLE] sd_ble_l2cap_ch_setup error: 0x%x", retval);
+        otLogCritPlat("[BLE] sd_ble_l2cap_ch_setup error: 0x%x", retval);
     }
 
 exit:
@@ -938,7 +1032,7 @@ otError otPlatTobleL2capSend(otInstance *aInstance, otTobleConnection *aConn, co
 
     if (retval != NRF_SUCCESS)
     {
-        otLogWarnPlat("[BLE] sd_ble_l2cap_ch_tx error: 0x%x", retval);
+        otLogCritPlat("[BLE] sd_ble_l2cap_ch_tx error: 0x%x", retval);
     }
 
     return nrf5SdErrorToOtError(retval);
@@ -1128,15 +1222,15 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         bleParams.max_tx_octets = BLE_DEFAULT_PDU_SIZE;
         bleParams.max_rx_octets = BLE_DEFAULT_PDU_SIZE;
 
-        otLogDebgPlat("[BLE] Requesting data Length (tx, rx) octets = (%d, %d), time = (%d, %d) us",
-                      bleParams.max_tx_octets, bleParams.max_rx_octets, bleParams.max_tx_time_us,
-                      bleParams.max_rx_time_us);
+        otLogInfoPlat("[BLE] Requesting data Length (tx, rx) octets = (%d, %d), time = (%d, %d) us",
+                     bleParams.max_tx_octets, bleParams.max_rx_octets, bleParams.max_tx_time_us,
+                     bleParams.max_rx_time_us);
 
         retval = sd_ble_gap_data_length_update(connectionId, &bleParams, NULL);
 
         if (retval != NRF_SUCCESS)
         {
-            otLogWarnPlat("[BLE] sd_ble_gap_data_length_update error: 0x%x", retval);
+            otLogInfoPlat("[BLE] sd_ble_gap_data_length_update error: 0x%x", retval);
         }
 
         // Start reporting RSSI.
@@ -1144,7 +1238,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 
         if (retval != NRF_SUCCESS)
         {
-            otLogWarnPlat("[BLE] sd_ble_gap_rssi_start error: 0x%x", retval);
+            otLogCritPlat("[BLE] sd_ble_gap_rssi_start error: 0x%x", retval);
         }
 
         break;
@@ -1178,7 +1272,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 
         if (retval != NRF_SUCCESS)
         {
-            otLogWarnPlat("[BLE] sd_ble_gap_conn_param_update error: 0x%x", retval);
+            otLogCritPlat("[BLE] sd_ble_gap_conn_param_update error: 0x%x", retval);
         }
 
         break;
@@ -1196,7 +1290,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 
         if (retval != NRF_SUCCESS)
         {
-            otLogWarnPlat("[BLE] sd_ble_gap_sec_params_reply error: 0x%x", retval);
+            otLogCritPlat("[BLE] sd_ble_gap_sec_params_reply error: 0x%x", retval);
         }
 
         break;
@@ -1250,7 +1344,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         retval = sd_ble_gap_scan_start(NULL, &advData);
         if (retval != NRF_SUCCESS)
         {
-            otLogWarnPlat("[BLE] sd_ble_gap_sec_params_reply error: 0x%x", retval);
+            otLogCritPlat("[BLE] sd_ble_gap_sec_params_reply error: 0x%x", retval);
         }
 
         break;
@@ -1271,8 +1365,8 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
     case BLE_GAP_EVT_DATA_LENGTH_UPDATE:
     {
         ble_gap_data_length_params_t *evtMtu = &evt->evt.gap_evt.params.data_length_update.effective_params;
-        otLogDebgPlat("[BLE] BLE_GAP_EVT_DATA_LENGTH_UPDATE: (max_tx, max_rx) octets = (%d, %d), time = (%d, %d) us",
-                      evtMtu->max_tx_octets, evtMtu->max_rx_octets, evtMtu->max_tx_time_us, evtMtu->max_rx_time_us);
+        otLogInfoPlat("[BLE] BLE_GAP_EVT_DATA_LENGTH_UPDATE: (max_tx, max_rx) octets = (%d, %d), time = (%d, %d) us",
+                     evtMtu->max_tx_octets, evtMtu->max_rx_octets, evtMtu->max_tx_time_us, evtMtu->max_rx_time_us);
         UNUSED_PARAMETER(evtMtu);
         break;
     }
@@ -1291,7 +1385,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 
         if (retval != NRF_SUCCESS)
         {
-            otLogWarnPlat("[BLE] sd_ble_gap_data_length_update error: 0x%x", retval);
+            otLogCritPlat("[BLE] sd_ble_gap_data_length_update error: 0x%x", retval);
         }
 
         break;
@@ -1310,7 +1404,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 
             if (sd_ble_gatts_exchange_mtu_reply(connectionId, peer->mAttMtu) != NRF_SUCCESS)
             {
-                otLogWarnPlat("[BLE] sd_ble_gatts_exchange_mtu_reply error: 0x%x", retval);
+                otLogCritPlat("[BLE] sd_ble_gatts_exchange_mtu_reply error: 0x%x", retval);
             }
         }
 
@@ -1327,7 +1421,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 
         if (retval != NRF_SUCCESS)
         {
-            otLogWarnPlat("[BLE] sd_ble_gap_rssi_get error: 0x%x", retval);
+            otLogCritPlat("[BLE] sd_ble_gap_rssi_get error: 0x%x", retval);
             packet.mPower = 0;
         }
 
@@ -1377,6 +1471,32 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         ble_gatts_evt_hvn_tx_complete_t *evtHvn = &evt->evt.gatts_evt.params.hvn_tx_complete;
         otLogDebgPlat("[BLE] BLE_GATTS_EVT_HVN_TX_COMPLETE: count=%d", connectionId, evtHvn->count);
         OT_UNUSED_VARIABLE(evtHvn);
+        if ((peer = peerFind(connectionId)) != NULL)
+        {
+            for (uint8_t i = 0; i < evtHvn->count; i++)
+            {
+                QueueNode *node = QueuePop(&sTxQueue);
+
+                if (node == NULL)
+                {
+                    otLogNotePlat("[BLE] BLE_GATTS_EVT_HVN_TX_COMPLETE: Empty Tx Queue");
+                    break;
+                }
+
+                QueuePush(&sFreeQueue, node);
+
+                if (sDiagMode)
+                {
+                    otPlatTobleDiagHandleC2IndicateDone(sInstance, (otTobleConnection *)peer, node->mBuffer,
+                                                        node->mLength);
+                }
+                else
+                {
+                    otPlatTobleHandleC2IndicateDone(sInstance, (otTobleConnection *)peer, node->mBuffer, node->mLength);
+                }
+            }
+        }
+        break;
     }
         // Fall through
 
@@ -1384,13 +1504,23 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
     {
         if ((peer = peerFind(connectionId)) != NULL)
         {
+            QueueNode *node = QueuePop(&sTxQueue);
+
+            if (node == NULL)
+            {
+                otLogNotePlat("[BLE] BLE_GATTS_EVT_HVN_TX_COMPLETE: Empty Tx Queue");
+                break;
+            }
+
+            QueuePush(&sFreeQueue, node);
+
             if (sDiagMode)
             {
-                otPlatTobleDiagHandleC2IndicateDone(sInstance, (otTobleConnection *)peer);
+                otPlatTobleDiagHandleC2IndicateDone(sInstance, (otTobleConnection *)peer, node->mBuffer, node->mLength);
             }
             else
             {
-                otPlatTobleHandleC2IndicateDone(sInstance, (otTobleConnection *)peer);
+                otPlatTobleHandleC2IndicateDone(sInstance, (otTobleConnection *)peer, node->mBuffer, node->mLength);
             }
         }
         break;
@@ -1418,7 +1548,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 
             if (sd_ble_gattc_primary_services_discover(peer->mConnHandle, BLE_GATT_HANDLE_START, &uuid) != NRF_SUCCESS)
             {
-                otLogWarnPlat("[BLE] sd_ble_gattc_primary_services_discover error: 0x%x", retval);
+                otLogCritPlat("[BLE] sd_ble_gattc_primary_services_discover error: 0x%x", retval);
             }
         }
         break;
@@ -1435,7 +1565,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         retval = sd_ble_gattc_hv_confirm(connectionId, evtHvx->handle);
         if (retval != NRF_SUCCESS)
         {
-            otLogWarnPlat("[BLE] sd_ble_gattc_hv_confirm error: 0x%x", retval);
+            otLogCritPlat("[BLE] sd_ble_gattc_hv_confirm error: 0x%x", retval);
         }
 
         if ((peer = peerFind(connectionId)) != NULL)
@@ -1457,6 +1587,39 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         ble_gattc_evt_write_cmd_tx_complete_t *evtWcmd = &evt->evt.gattc_evt.params.write_cmd_tx_complete;
         otLogDebgPlat("[BLE] BLE_GATTC_EVT_WRITE_CMD_TX_COMPLETE: count=%d", evtWcmd->count);
         OT_UNUSED_VARIABLE(evtWcmd);
+
+        if (sBle.mState != kStateGattSubscribing)
+        {
+            if ((peer = peerFind(connectionId)) != NULL)
+            {
+                for (uint8_t i = 0; i < evtWcmd->count; i++)
+                {
+                    QueueNode *node = QueuePop(&sTxQueue);
+
+                    if (node == NULL)
+                    {
+                        otLogNotePlat("[BLE] BLE_GATTC_EVT_WRITE_CMD_TX_COMPLETE: Empty Tx Queue");
+                        break;
+                    }
+
+                    QueuePush(&sFreeQueue, node);
+
+                    if (sDiagMode)
+                    {
+                        otPlatTobleDiagHandleC1WriteDone(sInstance, (otTobleConnection *)peer, node->mBuffer,
+                                                         node->mLength);
+                    }
+                    else
+                    {
+                        otPlatTobleHandleC1WriteDone(sInstance, (otTobleConnection *)peer, node->mBuffer,
+                                                     node->mLength);
+                    }
+                }
+            }
+        }
+
+        sBle.mState = kStateIdle;
+        break;
     }
         // Fall through
 
@@ -1466,13 +1629,23 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         {
             if ((peer = peerFind(connectionId)) != NULL)
             {
+                QueueNode *node = QueuePop(&sTxQueue);
+                if (node == NULL)
+                {
+                    otLogNotePlat("[BLE] BLE_GATTC_EVT_WRITE_RSP: Empty Tx Queue");
+                    break;
+                }
+
+                QueuePush(&sFreeQueue, node);
+
                 if (sDiagMode)
                 {
-                    otPlatTobleDiagHandleC1WriteDone(sInstance, (otTobleConnection *)peer);
+                    otPlatTobleDiagHandleC1WriteDone(sInstance, (otTobleConnection *)peer, node->mBuffer,
+                                                     node->mLength);
                 }
                 else
                 {
-                    otPlatTobleHandleC1WriteDone(sInstance, (otTobleConnection *)peer);
+                    otPlatTobleHandleC1WriteDone(sInstance, (otTobleConnection *)peer, node->mBuffer, node->mLength);
                 }
             }
         }
@@ -1602,7 +1775,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 
         if (retval != NRF_SUCCESS)
         {
-            otLogWarnPlat("[BLE] sd_ble_l2cap_ch_rx error: 0x%x", retval);
+            otLogCritPlat("[BLE] sd_ble_l2cap_ch_rx error: 0x%x", retval);
             assert(retval == NRF_SUCCESS);
         }
 
@@ -1659,7 +1832,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 
         if (retval != NRF_SUCCESS)
         {
-            otLogWarnPlat("[BLE] sd_ble_l2cap_ch_rx error: 0x%x", retval);
+            otLogCritPlat("[BLE] sd_ble_l2cap_ch_rx error: 0x%x", retval);
             assert(retval == NRF_SUCCESS);
         }
 
@@ -1750,10 +1923,15 @@ OT_TOOL_WEAK void otPlatTobleHandleConnectionIsReady(otInstance *              a
     OT_UNUSED_VARIABLE(aLinkType);
 }
 
-OT_TOOL_WEAK void otPlatTobleHandleC1WriteDone(otInstance *aInstance, otTobleConnection *aConn)
+OT_TOOL_WEAK void otPlatTobleHandleC1WriteDone(otInstance *       aInstance,
+                                               otTobleConnection *aConn,
+                                               const uint8_t *    aBuffer,
+                                               uint16_t           aLength)
 {
     OT_UNUSED_VARIABLE(aInstance);
     OT_UNUSED_VARIABLE(aConn);
+    OT_UNUSED_VARIABLE(aBuffer);
+    OT_UNUSED_VARIABLE(aLength);
 }
 
 OT_TOOL_WEAK void otPlatTobleHandleC2Indication(otInstance *       aInstance,
@@ -1774,10 +1952,15 @@ OT_TOOL_WEAK void otPlatTobleHandleC2Subscribed(otInstance *aInstance, otTobleCo
     OT_UNUSED_VARIABLE(aIsSubscribed);
 }
 
-OT_TOOL_WEAK void otPlatTobleHandleC2IndicateDone(otInstance *aInstance, otTobleConnection *aConn)
+OT_TOOL_WEAK void otPlatTobleHandleC2IndicateDone(otInstance *       aInstance,
+                                                  otTobleConnection *aConn,
+                                                  const uint8_t *    aBuffer,
+                                                  uint16_t           aLength)
 {
     OT_UNUSED_VARIABLE(aInstance);
     OT_UNUSED_VARIABLE(aConn);
+    OT_UNUSED_VARIABLE(aBuffer);
+    OT_UNUSED_VARIABLE(aLength);
 }
 
 OT_TOOL_WEAK void otPlatTobleHandleC1Write(otInstance *       aInstance,
@@ -1845,10 +2028,15 @@ OT_TOOL_WEAK void otPlatTobleDiagHandleConnectionIsReady(otInstance *           
     OT_UNUSED_VARIABLE(aLinkType);
 }
 
-OT_TOOL_WEAK void otPlatTobleDiagHandleC1WriteDone(otInstance *aInstance, otTobleConnection *aConn)
+OT_TOOL_WEAK void otPlatTobleDiagHandleC1WriteDone(otInstance *       aInstance,
+                                                   otTobleConnection *aConn,
+                                                   const uint8_t *    aBuffer,
+                                                   uint16_t           aLength)
 {
     OT_UNUSED_VARIABLE(aInstance);
     OT_UNUSED_VARIABLE(aConn);
+    OT_UNUSED_VARIABLE(aBuffer);
+    OT_UNUSED_VARIABLE(aLength);
 }
 
 OT_TOOL_WEAK void otPlatTobleDiagHandleC2Indication(otInstance *       aInstance,
@@ -1869,10 +2057,15 @@ OT_TOOL_WEAK void otPlatTobleDiagHandleC2Subscribed(otInstance *aInstance, otTob
     OT_UNUSED_VARIABLE(aIsSubscribed);
 }
 
-OT_TOOL_WEAK void otPlatTobleDiagHandleC2IndicateDone(otInstance *aInstance, otTobleConnection *aConn)
+OT_TOOL_WEAK void otPlatTobleDiagHandleC2IndicateDone(otInstance *       aInstance,
+                                                      otTobleConnection *aConn,
+                                                      const uint8_t *    aBuffer,
+                                                      uint16_t           aLength)
 {
     OT_UNUSED_VARIABLE(aInstance);
     OT_UNUSED_VARIABLE(aConn);
+    OT_UNUSED_VARIABLE(aBuffer);
+    OT_UNUSED_VARIABLE(aLength);
 }
 
 OT_TOOL_WEAK void otPlatTobleDiagHandleC1Write(otInstance *       aInstance,

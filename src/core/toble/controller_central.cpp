@@ -895,7 +895,7 @@ void Controller::HandleConnected(Platform::Connection *aPlatConn)
 {
     Connection *conn;
 
-    otLogCritTobleCent("%s: aPlatConn=%p ~~~~~~~~~~~~~~", __func__, aPlatConn);
+    otLogInfoTobleCent("%s: aPlatConn=%p ~~~~~~~~~~~~~~", __func__, aPlatConn);
     VerifyOrExit((conn = Get<ConnectionTable>().Find(aPlatConn)) != NULL, OT_NOOP);
     VerifyOrExit(conn->mState == Connection::kConnecting, OT_NOOP);
 
@@ -930,7 +930,7 @@ void Controller::HandleDisconnected(Platform::Connection *aPlatConn)
 {
     Connection *conn;
 
-    otLogCritTobleCent("%s: aPlatConn=%p !!!!!!!!", __func__, aPlatConn);
+    otLogInfoTobleCent("%s: aPlatConn=%p !!!!!!!!", __func__, aPlatConn);
 
     conn = Get<ConnectionTable>().Find(aPlatConn);
     VerifyOrExit(conn != NULL, OT_NOOP);
@@ -951,7 +951,6 @@ void Controller::HandleTransportConnected(Connection &aConn)
     {
         aConn.mDisconnectTime = TimerMilli::GetNow() + kConnectionTimeout;
         UpdateConnTimer();
-        // otLogNoteTobleCent("Refresh=%d", kConnectionTimeout);
         mTxTimer.Start(kConnectionTimeout);
     }
 }
@@ -962,7 +961,6 @@ void Controller::ConnectionTimerRefresh(Connection &aConn)
     {
         aConn.mDisconnectTime = TimerMilli::GetNow() + kConnectionTimeout;
         UpdateConnTimer();
-        otLogNoteTobleCent("Refresh=%d", kConnectionTimeout);
         mTxTimer.Start(kConnectionTimeout);
     }
 }

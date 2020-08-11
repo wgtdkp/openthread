@@ -200,28 +200,10 @@ otError ToblePlatform::ProcessAdv(uint8_t aArgsLength, char *aArgs[])
     {
         otTobleAdvConfig config;
 
-#if 1
-        const uint8_t advData[] = {0x02, 0x01, 0x06, 0x12, 0x16, 0xFF, 0xFB, 0x30, 0x00, 0x21, 0x00,
+        const uint8_t advData[] = {0x02, 0x01, 0x07, 0x12, 0x16, 0xFF, 0xFB, 0x30, 0x00, 0x21, 0x00,
                                    0x01, 0xAA, 0xBB, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
         const uint8_t scanRsp[] = {0x16, 0x16, 0xFF, 0xFB, 0x31, 0x08, 0x10, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
                                    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-#else
-
-#if 0
-        const uint8_t advData[] = {0x02, 0x01, 0x06, 0x04, 0x09, 0x41, 0x41, 0x41, 0x12, 0x16, 0xFF, 0xFB, 0x30, 0x00,
-                                   0x21, 0x00, 0x01, 0xAA, 0xBB, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
-        const uint8_t scanRsp[] = {0x16, 0xFF, 0xFF, 0xFB, 0x31, 0x08, 0x10, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-                                   0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-        // Sevice Data: FBFF, 8877665544332211
-
-#else
-        const uint8_t advData[] = {0x02, 0x01, 0x06, 0x04, 0x09, 0x41, 0x41, 0x41, 0x12, 0x16, 0xFF, 0xFA, 0x30, 0x00,
-                                   0x21, 0x00, 0x01, 0xAA, 0xBB, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
-        const uint8_t scanRsp[] = {0x16, 0x16, 0xFF, 0xFB, 0x31, 0x08, 0x10, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-                                   0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-        // Sevice Data: FBFF, FFFFFFFFFFFFFFFFF
-#endif
-#endif
 
         SuccessOrExit(error = Interpreter::ParseLong(aArgs[1], value));
         config.mType              = OT_TOBLE_ADV_IND;
@@ -669,10 +651,11 @@ exit:
     return;
 }
 
-void ToblePlatform::HandleC1WriteDone(otTobleConnection *aConn)
+void ToblePlatform::HandleC1WriteDone(otTobleConnection *aConn, const uint8_t *aBuffer, uint16_t aLength)
 {
     OT_UNUSED_VARIABLE(aConn);
-    mInterpreter.mServer->OutputFormat("HandleC1WriteDone: index=%d\r\n", GetConnectionId(aConn));
+    OT_UNUSED_VARIABLE(aBuffer);
+    mInterpreter.mServer->OutputFormat("HandleC1WriteDone: index=%d, length=%d\r\n", GetConnectionId(aConn), aLength);
 }
 
 void ToblePlatform::HandleC2Indication(otTobleConnection *aConn, const uint8_t *aBuffer, uint16_t aLength)
@@ -689,10 +672,12 @@ void ToblePlatform::HandleC2Subscribed(otTobleConnection *aConn, bool aIsSubscri
                                        aIsSubscribed ? "True" : "False");
 }
 
-void ToblePlatform::HandleC2IndicateDone(otTobleConnection *aConn)
+void ToblePlatform::HandleC2IndicateDone(otTobleConnection *aConn, const uint8_t *aBuffer, uint16_t aLength)
 {
     OT_UNUSED_VARIABLE(aConn);
-    mInterpreter.mServer->OutputFormat("HandleC2IndicateDone: index=%d\r\n", GetConnectionId(aConn));
+    OT_UNUSED_VARIABLE(aBuffer);
+    mInterpreter.mServer->OutputFormat("HandleC2IndicateDone: index=%d, length=%d\r\n", GetConnectionId(aConn),
+                                       aLength);
 }
 
 void ToblePlatform::HandleC1Write(otTobleConnection *aConn, const uint8_t *aBuffer, uint16_t aLength)
@@ -769,10 +754,13 @@ extern "C" void otPlatTobleDiagHandleConnectionIsReady(otInstance *             
     Server::sServer->GetInterpreter().GetToblePlatform().HandleConnectionIsReady(aConn, aLinkType);
 }
 
-extern "C" void otPlatTobleDiagHandleC1WriteDone(otInstance *aInstance, otTobleConnection *aConn)
+extern "C" void otPlatTobleDiagHandleC1WriteDone(otInstance *       aInstance,
+                                                 otTobleConnection *aConn,
+                                                 const uint8_t *    aBuffer,
+                                                 uint16_t           aLength)
 {
     OT_UNUSED_VARIABLE(aInstance);
-    Server::sServer->GetInterpreter().GetToblePlatform().HandleC1WriteDone(aConn);
+    Server::sServer->GetInterpreter().GetToblePlatform().HandleC1WriteDone(aConn, aBuffer, aLength);
 }
 
 extern "C" void otPlatTobleDiagHandleC2Indication(otInstance *       aInstance,
@@ -790,10 +778,13 @@ extern "C" void otPlatTobleDiagHandleC2Subscribed(otInstance *aInstance, otToble
     Server::sServer->GetInterpreter().GetToblePlatform().HandleC2Subscribed(aConn, aIsSubscribed);
 }
 
-extern "C" void otPlatTobleDiagHandleC2IndicateDone(otInstance *aInstance, otTobleConnection *aConn)
+extern "C" void otPlatTobleDiagHandleC2IndicateDone(otInstance *       aInstance,
+                                                    otTobleConnection *aConn,
+                                                    const uint8_t *    aBuffer,
+                                                    uint16_t           aLength)
 {
     OT_UNUSED_VARIABLE(aInstance);
-    Server::sServer->GetInterpreter().GetToblePlatform().HandleC2IndicateDone(aConn);
+    Server::sServer->GetInterpreter().GetToblePlatform().HandleC2IndicateDone(aConn, aBuffer, aLength);
 }
 
 extern "C" void otPlatTobleDiagHandleC1Write(otInstance *       aInstance,

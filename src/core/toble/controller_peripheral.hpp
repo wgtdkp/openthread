@@ -108,7 +108,7 @@ private:
         kConnectionInterval         = 30,
         kWaitBleConnectionTimeout   = 10 * kConnectionInterval,
         kWaitTobleConnectionTimeout = (7 + 2) * 2 * kConnectionInterval,
-        kConnectionTimeout          = Timer::kMaxDelay, //(kWaitBleConnectionTimeout + kWaitTobleConnectionTimeout),
+        kConnectionTimeout          = (kWaitBleConnectionTimeout + kWaitTobleConnectionTimeout), // Timer::kMaxDelay,
     };
 
     void SetState(State aState);

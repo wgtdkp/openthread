@@ -447,7 +447,7 @@ void Controller::HandleTimer(void)
 
 void Controller::HandleConnected(Platform::Connection *aPlatConn)
 {
-    otLogCritToblePeri("%s: aPlatConn=%p ~~~~~~~~~~~~~~", __func__, aPlatConn);
+    otLogInfoToblePeri("%s: aPlatConn=%p ~~~~~~~~~~~~~~", __func__, aPlatConn);
 
     switch (mState)
     {
@@ -507,7 +507,6 @@ void Controller::HandleTransportConnected(Connection &aConn)
     OT_UNUSED_VARIABLE(aConn);
     if (mState == kStateConnected)
     {
-        // otLogNoteToblePeri("Refresh=%d", kConnectionTimeout);
         TimerStart(kConnectionTimeout);
     }
 }
@@ -519,7 +518,6 @@ void Controller::ConnectionTimerRefresh(Connection &aConn)
     if ((mState == kStateConnected) || (mState == kStateTxSending))
     {
         // Push back the timeout for this connection.
-        otLogNoteToblePeri("Refresh=%d", kConnectionTimeout);
         TimerStart(kConnectionTimeout);
     }
 }
@@ -528,7 +526,7 @@ void Controller::HandleDisconnected(Platform::Connection *aPlatConn)
 {
     Connection *conn = Get<ConnectionTable>().Find(aPlatConn);
 
-    otLogCritToblePeri("%s: aPlatConn=%p !!!!!!!!", __func__, aPlatConn);
+    otLogInfoToblePeri("%s: aPlatConn=%p !!!!!!!!", __func__, aPlatConn);
 
     VerifyOrExit((conn != NULL) && (conn == mConn), OT_NOOP);
 

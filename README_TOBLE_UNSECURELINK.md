@@ -1,11 +1,12 @@
-# OpenThread TOBLE MeshCop Commissioning Demo
+# OpenThread TOBLE Unsecure Link Demo
 
-This README shows how to do a ToBLE MeshCop Commissioning demo based on ToBLE link.
+This README shows how to do a unsecure link demo based on ToBLE link.
 
 ## Quick Start
+
 ### Build
 ```
-make -f ./examples/Makefile-nrf52840 TOBLE=1 DISABLE_BUILTIN_MBEDTLS=0 JOINER=1 COMMISSIONER=1
+make -f ./examples/Makefile-nrf52840 TOBLE=1 DISABLE_BUILTIN_MBEDTLS=0
 ```
 
 ### Donwload nRF5 SDK
@@ -40,50 +41,39 @@ nrfjprog -f nrf52 -s ${device_sn} --reset
 
 ### On Node 1
 
-Start FTD.
+Start IPv6 interface and open UDP server.
 ```
-> toble linkmode central
+>ifconfig up
 Done
-> 
-> panid 1
+> ipaddr
+fe80:0:0:0:e47b:1166:48e9:738e
 Done
-> 
-> ifconfig up
+> unsecureport add 1234
 Done
-> 
-> thread start
+> udp open
 Done
-> 
-> state
-leader
->
-> commissioner start
-Commissioner: petitioning
+> udp bind :: 1234
 Done
-> Commissioner: active
->
-> commissioner joiner add * J01NME
-Done
->
 ```
 
 ### On Node 2
 
-Start joiner.
+Start IPv6 interface and send a UDP packet to the peer.
 ```
-ifconfig up
+>toble linkmode central
 Done
-> joiner start J01NME
+> ifconfig up
 Done
-Join success
-> 
+> udp linksecurity disable
+Done
+> udp open
+Done
+> udp send fe80:0:0:0:e47b:1166:48e9:738e 1234 hello
+Done
 ```
 
-Wait about 100 seconds.
+### On Node 1
+The UDP server receives a packet.
 ```
-> thread start
-Done
-> state
-child
-Done
+> 5 bytes from fe80:0:0:0:b881:ed10:9a25:b889 49152 hello
 ```

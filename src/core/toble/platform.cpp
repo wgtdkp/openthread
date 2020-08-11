@@ -105,9 +105,9 @@ Platform::Connection *Platform::CreateConnection(const Address &aPeerAddress, Co
     return otPlatTobleCreateConnection(GetInstance(), &aPeerAddress, &aConfig);
 }
 
-void Platform::WriteC1(Connection *aConn, const void *aBuf, uint16_t aLength)
+otError Platform::WriteC1(Connection *aConn, const void *aBuf, uint16_t aLength)
 {
-    otPlatTobleC1Write(GetInstance(), aConn, aBuf, aLength);
+    return otPlatTobleC1Write(GetInstance(), aConn, aBuf, aLength);
 }
 
 void Platform::SubscribeC2(Connection *aConn, bool aSubscribe)
@@ -138,14 +138,14 @@ void Platform::Callbacks::HandleConnectionReady(Connection *aConn, otTobleConnec
     }
 }
 
-void Platform::Callbacks::HandleC1WriteDone(Connection *aConn)
+void Platform::Callbacks::HandleC1WriteDone(Connection *aConn, const uint8_t *aFrame, uint16_t aLength)
 {
-    Get<Btp>().HandleC1WriteDone(aConn);
+    Get<Btp>().HandleC1WriteDone(aConn, aFrame, aLength);
 }
 
-void Platform::Callbacks::HandleC2Indication(Connection *aConn, const uint8_t *aBuf, uint16_t aLength)
+void Platform::Callbacks::HandleC2Indication(Connection *aConn, const uint8_t *aFrame, uint16_t aLength)
 {
-    Get<Btp>().HandleC2Indication(aConn, aBuf, aLength);
+    Get<Btp>().HandleC2Indication(aConn, aFrame, aLength);
 }
 
 #endif // OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
@@ -161,9 +161,9 @@ otError Platform::StopAdv(void)
     return otPlatTobleAdvStop(GetInstance());
 }
 
-void Platform::IndicateC2(Connection *aConn, const void *aFrame, uint16_t aLength)
+otError Platform::IndicateC2(Connection *aConn, const void *aFrame, uint16_t aLength)
 {
-    otPlatTobleC2Indicate(GetInstance(), aConn, aFrame, aLength);
+    return otPlatTobleC2Indicate(GetInstance(), aConn, aFrame, aLength);
 }
 
 void Platform::Callbacks::HandleC2Subscribed(Connection *aConn, bool aIsSubscribed)
@@ -171,9 +171,9 @@ void Platform::Callbacks::HandleC2Subscribed(Connection *aConn, bool aIsSubscrib
     Get<Btp>().HandleC2Subscribed(aConn, aIsSubscribed);
 }
 
-void Platform::Callbacks::HandleC2IndicateDone(Connection *aConn)
+void Platform::Callbacks::HandleC2IndicateDone(Connection *aConn, const uint8_t *aFrame, uint16_t aLength)
 {
-    Get<Btp>().HandleC2IndicateDone(aConn);
+    Get<Btp>().HandleC2IndicateDone(aConn, aFrame, aLength);
 }
 
 void Platform::Callbacks::HandleC1Write(Connection *aConn, const uint8_t *aFrame, uint16_t aLength)
@@ -225,11 +225,14 @@ extern "C" void otPlatTobleHandleConnectionIsReady(otInstance *              aIn
     instance.Get<ot::Toble::Platform::Callbacks>().HandleConnectionReady(aConn, aLinkType);
 }
 
-extern "C" void otPlatTobleHandleC1WriteDone(otInstance *aInstance, otTobleConnection *aConn)
+extern "C" void otPlatTobleHandleC1WriteDone(otInstance *       aInstance,
+                                             otTobleConnection *aConn,
+                                             const uint8_t *    aBuffer,
+                                             uint16_t           aLength)
 {
     ot::Instance &instance = *static_cast<ot::Instance *>(aInstance);
 
-    instance.Get<ot::Toble::Platform::Callbacks>().HandleC1WriteDone(aConn);
+    instance.Get<ot::Toble::Platform::Callbacks>().HandleC1WriteDone(aConn, aBuffer, aLength);
 }
 
 extern "C" void otPlatTobleHandleC2Indication(otInstance *       aInstance,
@@ -263,11 +266,14 @@ extern "C" void otPlatTobleHandleC2Subscribed(otInstance *aInstance, otTobleConn
     instance.Get<ot::Toble::Platform::Callbacks>().HandleC2Subscribed(aConn, aIsSubscribed);
 }
 
-extern "C" void otPlatTobleHandleC2IndicateDone(otInstance *aInstance, otTobleConnection *aConn)
+extern "C" void otPlatTobleHandleC2IndicateDone(otInstance *       aInstance,
+                                                otTobleConnection *aConn,
+                                                const uint8_t *    aBuffer,
+                                                uint16_t           aLength)
 {
     ot::Instance &instance = *static_cast<ot::Instance *>(aInstance);
 
-    instance.Get<ot::Toble::Platform::Callbacks>().HandleC2IndicateDone(aConn);
+    instance.Get<ot::Toble::Platform::Callbacks>().HandleC2IndicateDone(aConn, aBuffer, aLength);
 }
 
 #endif // #if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE

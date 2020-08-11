@@ -244,6 +244,7 @@ SOURCES_COMMON                             = \
     toble/adv_data.cpp                       \
     toble/btp.cpp                            \
     toble/btp_client.cpp                     \
+    toble/btp_frame.cpp                      \
     toble/btp_server.cpp                     \
     toble/conn_table.cpp                     \
     toble/controller_central.cpp             \

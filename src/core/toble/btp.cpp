@@ -52,6 +52,7 @@ using ot::Encoding::LittleEndian::WriteUint16;
 Btp::Btp(Instance &aInstance)
     : InstanceLocator(aInstance)
     , mTimer(aInstance, &Btp::HandleTimer, this)
+    , mTxTask(aInstance, &Btp::HandleTxTask, this)
 {
 }
 
@@ -99,20 +100,19 @@ void Btp::Send(Connection &aConn, const uint8_t *aBuf, uint16_t aLength)
     aConn.mSession.mSendBuf    = aBuf;
     aConn.mSession.mSendLength = aLength;
     aConn.mSession.mSendOffset = 0;
+    aConn.mSession.mIsSending  = true;
 
     SendData(aConn);
 }
 
 void Btp::SendData(Connection &aConn)
 {
-    Session &session = aConn.mSession;
-    uint8_t *cur     = &session.mTxBuf[1];
-    uint16_t frameLength;
+    Session &  session = aConn.mSession;
+    DataFrame *frame   = session.NewDataFrame();
+    uint16_t   segmentLength;
+    bool       ack = false;
 
-    OT_UNUSED_VARIABLE(frameLength);
-    VerifyOrExit(!session.mIsSending && session.mState == kStateConnected, OT_NOOP);
-
-    session.mTxBuf[0] = 0;
+    VerifyOrExit((session.mState == kStateConnected) && (frame != NULL), OT_NOOP);
 
     otLogNoteBtp("BTP send");
 
@@ -122,74 +122,63 @@ void Btp::SendData(Connection &aConn)
     }
     else
     {
-        session.mTxBuf[0] |= Frame::kAckFlag;
-        otLogNoteBtp("  ack=%u", session.mRxSeqnoCurrent);
+        ack = true;
+    }
 
-        *cur++                = session.mRxSeqnoCurrent;
+    segmentLength = frame->Init(session.mSendBuf, session.mSendOffset, session.mSendLength, session.mMtu,
+                                session.mTxSeqnoCurrent + 1, ack, session.mRxSeqnoCurrent);
+
+    otLogNoteBtp("BTP::Send Length=%d", frame->GetDataLength());
+
+    VerifyOrExit(GattSend(aConn, frame->GetData(), frame->GetDataLength()) == OT_ERROR_NONE,
+                 session.FreeDataFrame(frame));
+
+    session.mSendOffset += segmentLength;
+    session.mTxSeqnoCurrent += 1;
+
+    mTimer.Stop();
+
+    if (ack)
+    {
         session.mRxSeqnoAcked = session.mRxSeqnoCurrent;
     }
 
-    *cur++ = ++session.mTxSeqnoCurrent;
-    otLogNoteBtp("  seq=%u ", cur[-1]);
-
-    if (session.mSendBuf != NULL)
+    if ((session.mSendOffset != session.mSendLength) || session.GetRxWindowRemaining() <= 1)
     {
-        uint16_t segmentLength;
-        uint16_t segmentRemaining;
-
-        if (session.mSendOffset == 0)
-        {
-            session.mTxBuf[0] |= Frame::kBeginFlag;
-            otLogNoteBtp("  start ------------>");
-            otLogNoteBtp("  len=%u", session.mSendLength);
-
-            WriteUint16(session.mSendLength, cur);
-            cur += sizeof(uint16_t);
-        }
-        else
-        {
-            session.mTxBuf[0] |= Frame::kContinueFlag;
-            otLogNoteBtp("  off=%u", session.mSendOffset);
-        }
-
-        segmentRemaining = session.mMtu - (cur - session.mTxBuf);
-        segmentLength    = session.mSendLength - session.mSendOffset;
-
-        if (segmentLength > segmentRemaining)
-        {
-            segmentLength = segmentRemaining;
-        }
-
-        otLogNoteBtp("  segLen=%u", segmentLength);
-        memcpy(cur, session.mSendBuf + session.mSendOffset, segmentLength);
-        cur += segmentLength;
-        session.mSendOffset += segmentLength;
-
-        if (session.mSendOffset >= session.mSendLength)
-        {
-            session.mTxBuf[0] |= Frame::kEndFlag;
-            // otLogNoteBtp("  end");
-            otLogNoteBtp("  end -------------->");
-            otLogNoteBtp("BTP::Send Done %d", session.mSendLength);
-        }
+        mTxTask.Post();
     }
-
-    frameLength = cur - session.mTxBuf;
-
-    mTimer.Stop();
-    session.mIsSending = true;
-
-    GattSend(aConn, session.mTxBuf, frameLength);
 
 exit:
     return;
 }
 
-void Btp::HandleSentData(Connection &aConn)
+void Btp::HandleTxTask(Tasklet &aTasklet)
 {
-    Session &session = aConn.mSession;
+    aTasklet.GetOwner<Btp>().SendNextFragment();
+}
 
-    session.mIsSending = false;
+void Btp::SendNextFragment(void)
+{
+    for (Connection *conn = Get<ConnectionTable>().GetFirst(); conn != NULL;
+         conn             = Get<ConnectionTable>().GetNext(conn))
+    {
+        Session &session = conn->mSession;
+
+        if (session.mIsSending && ((session.mSendOffset != session.mSendLength) || session.GetRxWindowRemaining() <= 1))
+        {
+            SendData(*conn);
+        }
+    }
+}
+
+void Btp::HandleSentData(Connection &aConn, const uint8_t *aFrame, uint16_t aLength)
+{
+    Session &  session = aConn.mSession;
+    DataFrame *frame   = reinterpret_cast<DataFrame *>(const_cast<uint8_t *>(aFrame));
+
+    OT_UNUSED_VARIABLE(aLength);
+
+    session.FreeDataFrame(frame);
 
     if ((session.mSendOffset != session.mSendLength) || session.GetRxWindowRemaining() <= 1)
     {
@@ -205,6 +194,7 @@ void Btp::HandleSentData(Connection &aConn)
     {
         session.mSendBuf = NULL;
 
+        session.mIsSending = false;
         HandleGattSentDone(aConn, OT_ERROR_NONE);
     }
 }
@@ -367,24 +357,28 @@ void Btp::Reset(Session &aSession)
     UpdateTimer();
 }
 
-void Btp::GattSend(Connection &aConn, uint8_t *aBuffer, uint16_t aLength)
+otError Btp::GattSend(Connection &aConn, const uint8_t *aBuffer, uint16_t aLength)
 {
+    otError error = OT_ERROR_FAILED;
+
     ConnectionTimerRefresh(aConn);
 
     if (Get<Toble>().IsCentral())
     {
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
         otLogNoteBtp("Btp::SendData: WriteC1");
-        Get<Platform>().WriteC1(aConn.mPlatConn, aBuffer, aLength);
+        error = Get<Platform>().WriteC1(aConn.mPlatConn, aBuffer, aLength);
 #endif
     }
     else
     {
 #if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
         otLogNoteBtp("Btp::SendData: IndicateC2");
-        Get<Platform>().IndicateC2(aConn.mPlatConn, aBuffer, aLength);
+        error = Get<Platform>().IndicateC2(aConn.mPlatConn, aBuffer, aLength);
 #endif
     }
+
+    return error;
 }
 
 void Btp::HandleGattSentDone(Connection &aConn, otError aError)

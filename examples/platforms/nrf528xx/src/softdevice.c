@@ -159,7 +159,7 @@ void otSysSoftdeviceInit(void)
     memset(&bleCfg, 0, sizeof(bleCfg));
     bleCfg.conn_cfg.conn_cfg_tag                     = BLE_CFG_TAG;
     bleCfg.conn_cfg.params.gap_conn_cfg.conn_count   = BLE_GAP_ROLE_COUNT_PERIPHERAL + BLE_GAP_ROLE_COUNT_CENTRAL;
-    bleCfg.conn_cfg.params.gap_conn_cfg.event_length = BLE_GAP_EVENT_LENGTH_DEFAULT;
+    bleCfg.conn_cfg.params.gap_conn_cfg.event_length = 5;//BLE_GAP_EVENT_LENGTH_DEFAULT;
 
     error = sd_ble_cfg_set(BLE_CONN_CFG_GAP, &bleCfg, ramStart);
     assert(error == NRF_SUCCESS);

@@ -123,7 +123,7 @@ private:
         kWaitBleConnectionTimeout   = 10 * kConnectionInterval,
         kWaitTobleConnectionTimeout = (7 + 2) * 2 * kConnectionInterval,
         kScanPeersTimeout           = 10 * kConnectionInterval,
-        kConnectionTimeout          = Timer::kMaxDelay, // (kWaitBleConnectionTimeout + kWaitTobleConnectionTimeout),
+        kConnectionTimeout          = (kWaitBleConnectionTimeout + kWaitTobleConnectionTimeout), // Timer::kMaxDelay,
 
         kAckFrameLength = 5,
         kMaxPeers       = 4,

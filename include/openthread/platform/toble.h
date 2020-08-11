@@ -314,7 +314,7 @@ extern void otPlatTobleHandleConnectionIsReady(otInstance *              aInstan
  * @param[in] aLength     Length of buffer (number of bytes).
  *
  */
-void otPlatTobleC1Write(otInstance *aInstance, otTobleConnection *aConn, const void *aBuffer, uint16_t aLength);
+otError otPlatTobleC1Write(otInstance *aInstance, otTobleConnection *aConn, const void *aBuffer, uint16_t aLength);
 
 /**
  * This is a callback to notify that a C1 write request was done.
@@ -323,7 +323,10 @@ void otPlatTobleC1Write(otInstance *aInstance, otTobleConnection *aConn, const v
  * @param[in] aConn       A pointer to a BLE connection..
  *
  */
-extern void otPlatTobleHandleC1WriteDone(otInstance *aInstance, otTobleConnection *aConn);
+extern void otPlatTobleHandleC1WriteDone(otInstance *       aInstance,
+                                         otTobleConnection *aConn,
+                                         const uint8_t *    aBuffer,
+                                         uint16_t           aLength);
 
 /**
  * This function requests a subscription change to C2 (BTP) on a given connection.
@@ -413,7 +416,7 @@ extern void otPlatTobleHandleC2Subscribed(otInstance *aInstance, otTobleConnecti
  * @param[in] aLength     Length of buffer (number of bytes).
  *
  */
-void otPlatTobleC2Indicate(otInstance *aInstance, otTobleConnection *aConn, const void *aBuffer, uint16_t aLength);
+otError otPlatTobleC2Indicate(otInstance *aInstance, otTobleConnection *aConn, const void *aBuffer, uint16_t aLength);
 
 /**
  * This is a callback to notify that a C2 indicate request was done.
@@ -422,7 +425,10 @@ void otPlatTobleC2Indicate(otInstance *aInstance, otTobleConnection *aConn, cons
  * @param[in] aConn      A pointer to a BLE connection..
  *
  */
-extern void otPlatTobleHandleC2IndicateDone(otInstance *aInstance, otTobleConnection *aConn);
+extern void otPlatTobleHandleC2IndicateDone(otInstance *       aInstance,
+                                            otTobleConnection *aConn,
+                                            const uint8_t *    aBuffer,
+                                            uint16_t           aLength);
 
 /**
  * This is callback to notify that peer has written to C1 (BTP) on a given connection.
@@ -537,13 +543,19 @@ extern void otPlatTobleDiagHandleAdv(otInstance *          aInstance,
 extern void otPlatTobleDiagHandleConnectionIsReady(otInstance *              aInstance,
                                                    otTobleConnection *       aConn,
                                                    otTobleConnectionLinkType aLinkType);
-extern void otPlatTobleDiagHandleC1WriteDone(otInstance *aInstance, otTobleConnection *aConn);
+extern void otPlatTobleDiagHandleC1WriteDone(otInstance *       aInstance,
+                                             otTobleConnection *aConn,
+                                             const uint8_t *    aBuffer,
+                                             uint16_t           aLength);
 extern void otPlatTobleDiagHandleC2Indication(otInstance *       aInstance,
                                               otTobleConnection *aConn,
                                               const uint8_t *    aBuffer,
                                               uint16_t           aLength);
 extern void otPlatTobleDiagHandleC2Subscribed(otInstance *aInstance, otTobleConnection *aConn, bool aIsSubscribed);
-extern void otPlatTobleDiagHandleC2IndicateDone(otInstance *aInstance, otTobleConnection *aConn);
+extern void otPlatTobleDiagHandleC2IndicateDone(otInstance *       aInstance,
+                                                otTobleConnection *aConn,
+                                                const uint8_t *    aBuffer,
+                                                uint16_t           aLength);
 extern void otPlatTobleDiagHandleC1Write(otInstance *       aInstance,
                                          otTobleConnection *aConn,
                                          const uint8_t *    aBuffer,

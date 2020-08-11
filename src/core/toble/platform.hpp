@@ -122,13 +122,13 @@ public:
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
         void HandleAdv(AdvType aAdvType, AdvPacket &aAdvPacket);
         void HandleScanResponse(AdvPacket &aAdvPacket);
-        void HandleC1WriteDone(Connection *aConn);
-        void HandleC2Indication(Connection *aConn, const uint8_t *aBuf, uint16_t aLength);
+        void HandleC1WriteDone(Connection *aConn, const uint8_t *aFrame, uint16_t aLength);
+        void HandleC2Indication(Connection *aConn, const uint8_t *aFrame, uint16_t aLength);
 #endif
 
 #if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
         void HandleC2Subscribed(Connection *aConn, bool aIsSubscribed);
-        void HandleC2IndicateDone(Connection *aConn);
+        void HandleC2IndicateDone(Connection *aConn, const uint8_t *aFrame, uint16_t aLength);
         void HandleC1Write(Connection *aConn, const uint8_t *aFrame, uint16_t aLength);
 #endif
 
@@ -158,14 +158,14 @@ public:
     otError     StartScan(uint16_t aInterval, uint16_t aWindow);
     otError     StopScan(void);
     Connection *CreateConnection(const Address &aPeerAddress, ConnectionConfig &aConfig);
-    void        WriteC1(Connection *aConn, const void *aBuf, uint16_t aLength);
+    otError     WriteC1(Connection *aConn, const void *aBuf, uint16_t aLength);
     void        SubscribeC2(Connection *aConn, bool aSubscribe);
 #endif // OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
 
 #if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
     otError StartAdv(const AdvConfig &aConfig);
     otError StopAdv(void);
-    void    IndicateC2(Connection *aConn, const void *aFrame, uint16_t aLength);
+    otError IndicateC2(Connection *aConn, const void *aFrame, uint16_t aLength);
 #endif // OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
 
 private:

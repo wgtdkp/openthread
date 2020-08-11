@@ -44,7 +44,7 @@
 namespace ot {
 namespace Toble {
 
-void Btp::HandleC1WriteDone(Platform::Connection *aPlatConn)
+void Btp::HandleC1WriteDone(Platform::Connection *aPlatConn, const uint8_t *aFrame, uint16_t aLength)
 {
     Connection *conn = Get<ConnectionTable>().Find(aPlatConn);
 
@@ -68,7 +68,7 @@ void Btp::HandleC1WriteDone(Platform::Connection *aPlatConn)
         break;
 
     case kStateConnected:
-        HandleSentData(*conn);
+        HandleSentData(*conn, aFrame, aLength);
         break;
     }
 
