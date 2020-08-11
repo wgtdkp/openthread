@@ -3,6 +3,12 @@
 This README shows how to do a unsecure link demo based on ToBLE link.
 
 ## Quick Start
+### Get Source Code
+```
+git clone --branch toble-1 sso://user/zhanglongxia/my-openthread
+cd my-openthread/
+git checkout -b unsecure-link 00c15050439d9ced02a1a9584240ebf33ff8ebe7
+```
 
 ### Build
 ```
