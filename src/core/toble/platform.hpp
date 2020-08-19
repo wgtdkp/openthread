@@ -122,13 +122,13 @@ public:
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
         void HandleAdv(AdvType aAdvType, AdvPacket &aAdvPacket);
         void HandleScanResponse(AdvPacket &aAdvPacket);
-        void HandleC1WriteDone(Connection *aConn, const uint8_t *aFrame, uint16_t aLength);
-        void HandleC2Indication(Connection *aConn, const uint8_t *aFrame, uint16_t aLength);
+        void HandleC1WriteDone(Connection *aConn);
+        void HandleC2Notification(Connection *aConn, const uint8_t *aFrame, uint16_t aLength);
 #endif
 
 #if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
         void HandleC2Subscribed(Connection *aConn, bool aIsSubscribed);
-        void HandleC2IndicateDone(Connection *aConn, const uint8_t *aFrame, uint16_t aLength);
+        void HandleC2NotificateDone(Connection *aConn);
         void HandleC1Write(Connection *aConn, const uint8_t *aFrame, uint16_t aLength);
 #endif
 

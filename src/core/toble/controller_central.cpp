@@ -381,7 +381,9 @@ otError Controller::Transmit(Mac::TxFrame &aFrame)
     VerifyOrExit(mTxFrame == NULL, error = OT_ERROR_INVALID_STATE);
     VerifyOrExit(mTxConn == NULL, error = OT_ERROR_INVALID_STATE);
 
+#if (OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_NOTE) && (OPENTHREAD_CONFIG_LOG_MAC == 1)
     otLogInfoTobleCent("Transmit([%s])", aFrame.ToInfoString().AsCString());
+#endif
 
     mTxFrame = &aFrame;
     SetTxState(kStateIdle);
@@ -951,7 +953,7 @@ void Controller::HandleTransportConnected(Connection &aConn)
     {
         aConn.mDisconnectTime = TimerMilli::GetNow() + kConnectionTimeout;
         UpdateConnTimer();
-        mTxTimer.Start(kConnectionTimeout);
+        mConnTimer.Start(kConnectionTimeout);
     }
 }
 
@@ -961,7 +963,7 @@ void Controller::ConnectionTimerRefresh(Connection &aConn)
     {
         aConn.mDisconnectTime = TimerMilli::GetNow() + kConnectionTimeout;
         UpdateConnTimer();
-        mTxTimer.Start(kConnectionTimeout);
+        mConnTimer.Start(kConnectionTimeout);
     }
 }
 
@@ -1038,8 +1040,10 @@ void Controller::HandleTransportReceiveDone(Connection &aConn, uint8_t *aFrame, 
         }
     }
 
+#if (OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_NOTE) && (OPENTHREAD_CONFIG_LOG_MAC == 1)
     otLogInfoTobleCent("HandleTransportReceiveDone(err:%s, frame:[%s])", otThreadErrorToString(aError),
                        rxFrame.ToInfoString().AsCString());
+#endif
 
     Get<Radio::Callbacks>().HandleReceiveDone(&rxFrame, aError);
 }
@@ -1081,8 +1085,10 @@ void Controller::InvokeRadioTxDone(otError aError)
         ackFrame.SetFramePending(true);
         ackFrame.SetSequence(txFrame->GetSequence());
 
+#if (OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_NOTE) && (OPENTHREAD_CONFIG_LOG_MAC == 1)
         otLogInfoTobleCent("InvokeRadioTxDone(err:%s, ack:[%s])", otThreadErrorToString(aError),
                            ackFrame.ToInfoString().AsCString());
+#endif
 
         Get<Radio::Callbacks>().HandleTransmitDone(*txFrame, &ackFrame, aError);
     }

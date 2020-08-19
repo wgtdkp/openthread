@@ -44,11 +44,27 @@
 namespace ot {
 namespace Toble {
 
-void Btp::HandleC1WriteDone(Platform::Connection *aPlatConn, const uint8_t *aFrame, uint16_t aLength)
+void Btp::HandleConnectionReady(Platform::Connection *aPlatConn)
+{
+    HandshakeRequest handshakeRequest(Get<Platform>().GetConnMtu(aPlatConn), kWindowSize);
+    Connection *     conn = Get<ConnectionTable>().Find(aPlatConn);
+
+    otLogDebgBtp("HandleConnectionReady");
+    VerifyOrExit((conn != NULL) && Get<Toble>().IsCentral(), OT_NOOP);
+
+    otLogInfoBtp("Send Handshake Request: Mtu=%d, Window=%d", Get<Platform>().GetConnMtu(aPlatConn), kWindowSize);
+    GattSend(*conn, reinterpret_cast<uint8_t *>(&handshakeRequest), sizeof(handshakeRequest));
+    conn->mSession.mState = kStateHandshake;
+
+exit:
+    return;
+}
+
+void Btp::HandleC1WriteDone(Platform::Connection *aPlatConn)
 {
     Connection *conn = Get<ConnectionTable>().Find(aPlatConn);
 
-    otLogNoteBtp("Btp::HandleC1WriteDone");
+    otLogDebgBtp("HandleC1WriteDone");
     OT_ASSERT(Get<Toble>().IsCentral());
 
     VerifyOrExit(conn != NULL, OT_NOOP);
@@ -56,19 +72,19 @@ void Btp::HandleC1WriteDone(Platform::Connection *aPlatConn, const uint8_t *aFra
     switch (conn->mSession.mState)
     {
     case kStateIdle:
-        break;
-
-    case kStateHandshake:
-        otLogNoteBtp("Btp::SubscribeC2");
-        Get<Platform>().SubscribeC2(aPlatConn, true);
-        conn->mSession.mState = kStateSubscribe;
-        break;
+        // fall through
 
     case kStateSubscribe:
         break;
 
+    case kStateHandshake:
+        otLogInfoBtp("GATT Subscribe to C2");
+        Get<Platform>().SubscribeC2(aPlatConn, true);
+        conn->mSession.mState = kStateSubscribe;
+        break;
+
     case kStateConnected:
-        HandleSentData(*conn, aFrame, aLength);
+        HandleSentData(*conn);
         break;
     }
 
@@ -76,12 +92,12 @@ exit:
     return;
 }
 
-void Btp::HandleC2Indication(Platform::Connection *aPlatConn, const uint8_t *aFrame, uint16_t aLength)
+void Btp::HandleC2Notification(Platform::Connection *aPlatConn, const uint8_t *aFrame, uint16_t aLength)
 {
-    Connection * conn  = Get<ConnectionTable>().Find(aPlatConn);
-    const Frame *frame = reinterpret_cast<const Frame *>(aFrame);
+    Connection *  conn   = Get<ConnectionTable>().Find(aPlatConn);
+    const Header *header = reinterpret_cast<const Header *>(aFrame);
 
-    otLogNoteBtp("Btp::HandleC2Indication");
+    otLogDebgBtp("HandleC2Notification");
     OT_ASSERT(Get<Toble>().IsCentral());
 
     VerifyOrExit(conn != NULL, OT_NOOP);
@@ -90,14 +106,14 @@ void Btp::HandleC2Indication(Platform::Connection *aPlatConn, const uint8_t *aFr
 
     VerifyOrExit(aLength > 0, OT_NOOP);
 
-    if (frame->IsHandshake())
+    if (header->GetFlag(Header::kHandshakeFlag))
     {
         VerifyOrExit(aLength >= sizeof(HandshakeResponse), OT_NOOP);
-        HandleHandshake(*conn, static_cast<const HandshakeResponse &>(*frame));
+        HandleHandshake(*conn, static_cast<const HandshakeResponse &>(*header));
     }
     else
     {
-        HandleDataFrame(*conn, aFrame, aLength);
+        HandleFrame(*conn, aFrame, aLength);
     }
 
 exit:
@@ -108,12 +124,13 @@ void Btp::HandleHandshake(Connection &aConn, const HandshakeResponse &aResponse)
 {
     Session &session = aConn.mSession;
 
-    otLogNoteBtp("Btp::HandleHandshake");
     VerifyOrExit(session.mState == kStateSubscribe, OT_NOOP);
 
-    session.mState = kStateConnected;
+    otLogInfoBtp("Receive Handshake Request: FragSize=%d, Window=%d", aResponse.GetSegmentSize(),
+                 aResponse.GetWindowSize());
 
-    session.mMtu = aResponse.GetSegmentSize();
+    session.mState = kStateConnected;
+    session.mMtu   = aResponse.GetSegmentSize();
 
     session.mTxSeqnoCurrent = 255;
     session.mTxSeqnoAcked   = 255;
@@ -123,19 +140,9 @@ void Btp::HandleHandshake(Connection &aConn, const HandshakeResponse &aResponse)
     session.mRxSeqnoAcked   = 255;
     session.mRxWindow       = kWindowSize;
 
-    otLogNoteBtp("BTP connected: MTU=%d, TxWindow = %d", session.mMtu, session.mTxWindow);
+    otLogNoteBtp("BTP connected: MTU=%d, TxWindow=%d, RxWindow=%d", session.mMtu, session.mTxWindow, session.mRxWindow);
 
-    Get<Central::Controller>().HandleTransportConnected(aConn);
-
-    if ((session.mSendOffset != session.mSendLength) || session.GetRxWindowRemaining() <= 1)
-    {
-        SendData(aConn);
-    }
-    else
-    {
-        session.SetTimer(kKeepAliveDelay);
-        UpdateTimer();
-    }
+    HandleSessionReady(aConn);
 
 exit:
     return;

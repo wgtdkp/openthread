@@ -281,7 +281,9 @@ otError Controller::Transmit(Mac::TxFrame &aFrame)
 {
     otError error = OT_ERROR_NONE;
 
+#if (OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_NOTE) && (OPENTHREAD_CONFIG_LOG_MAC == 1)
     otLogInfoToblePeri("Transmit([%s]) -------------->\r\n", aFrame.ToInfoString().AsCString());
+#endif
 
     VerifyOrExit(mState != kStateSleep, error = OT_ERROR_INVALID_STATE);
     VerifyOrExit(mTxFrame == NULL, error = OT_ERROR_INVALID_STATE);
@@ -351,36 +353,46 @@ otError Controller::Transmit(Mac::TxFrame &aFrame)
                            kWaitBleConnectionTimeout);
         TimerStart(kWaitBleConnectionTimeout);
     }
-    else if (((mDestAddr.GetType() == Mac::Address::kTypeShort) &&
-              (mDestAddr.GetShort() == mConn->mPeerAddr.GetShort())) ||
-             ((mDestAddr.GetType() == Mac::Address::kTypeExtended) &&
-              (mDestAddr.GetExtended() == mConn->mPeerAddr.GetExtended())))
-    {
-        // All ToBLE transports strip MAC FCS.
-        uint16_t length = mTxFrame->GetPsduLength() - Mac::Frame::GetFcsSize();
-
-        // If we already have a connection, send it using BTP and wait for callback
-        // or a timeout.
-
-        SetState(kStateTxSending);
-        otLogNoteToblePeri("%s: mConn!=NULL, TimerStart(kConnectionTimeout=%d)", __func__, kConnectionTimeout);
-        TimerStart(kConnectionTimeout);
-
-        otLogNoteToblePeri("Transmit: Found an existing connection");
-        Get<Btp>().Send(*mConn, mTxFrame->GetPsdu(), length);
-    }
     else
     {
-        // The existing connection doesn't match the destination address of the packet.
-        // Disconnect existing connection and wait for `HandleDisconnected()` to start
-        // sending TX advertisement.
+        if (mDestAddr.IsShort())
+        {
+            Neighbor *neighbor = Get<Mle::MleRouter>().GetNeighbor(mDestAddr);
 
-        otLogNoteToblePeri("Transmit: Disconnect the existing connection. mDestAddr=%d, mConn->mPeerAddr=%d ",
-                           mDestAddr.ToString().AsCString(), mConn->mPeerAddr.ToString().AsCString());
-        Disconnect();
-        otLogNoteToblePeri("%s: mConn!=NULL, TimerStart(kWaitBleConnectionTimeout=%d)", __func__,
-                           kWaitBleConnectionTimeout);
-        TimerStart(kWaitBleConnectionTimeout);
+            if (neighbor != NULL)
+            {
+                mDestAddr.SetExtended(neighbor->GetExtAddress());
+            }
+        }
+
+        if ((mDestAddr.IsExtended()) && (mDestAddr.GetExtended() == mConn->mPeerAddr.GetExtended()))
+        {
+            // All ToBLE transports strip MAC FCS.
+            uint16_t length = mTxFrame->GetPsduLength() - Mac::Frame::GetFcsSize();
+
+            // If we already have a connection, send it using BTP and wait for callback
+            // or timeout.
+
+            SetState(kStateTxSending);
+            otLogNoteToblePeri("%s: mConn!=NULL, TimerStart(kConnectionTimeout=%d)", __func__, kConnectionTimeout);
+            TimerStart(kConnectionTimeout);
+
+            otLogNoteToblePeri("Transmit: Found an existing connection");
+            Get<Btp>().Send(*mConn, mTxFrame->GetPsdu(), length);
+        }
+        else
+        {
+            // The existing connection doesn't match the destination address of the packet.
+            // Disconnect existing connection and wait for `HandleDisconnected()` to start
+            // sending TX advertisement.
+
+            otLogNoteToblePeri("Transmit: Disconnect the existing connection. mDestAddr=%s, mConn->mPeerAddr=%s",
+                               mDestAddr.ToString().AsCString(), mConn->mPeerAddr.ToString().AsCString());
+            Disconnect();
+            otLogNoteToblePeri("%s: mConn!=NULL, TimerStart(kWaitBleConnectionTimeout=%d)", __func__,
+                               kWaitBleConnectionTimeout);
+            TimerStart(kWaitBleConnectionTimeout);
+        }
     }
 
 exit:
@@ -468,7 +480,7 @@ void Controller::HandleConnected(Platform::Connection *aPlatConn)
         OT_ASSERT(mConn != NULL);
 
         mConn->mPlatConn = aPlatConn;
-        if (mState == kStateTxAdvertising)
+        if ((mState == kStateTxAdvertising) && mDestAddr.IsExtended())
         {
             mConn->mPeerAddr = mDestAddr;
         }
@@ -586,15 +598,17 @@ void Controller::HandleTransportReceiveDone(Connection &aConn, uint8_t *aFrame, 
     {
         Mac::Address addr;
 
-        if ((rxFrame.GetSrcAddr(addr) == OT_ERROR_NONE) && !addr.IsNone() && !addr.IsBroadcast())
+        if ((rxFrame.GetSrcAddr(addr) == OT_ERROR_NONE) && !addr.IsNone() && !addr.IsBroadcast() && !addr.IsShort())
         {
             mConn->mPeerAddr = addr;
             otLogInfoToblePeri("%s:Update PeerAddr=%s ", __func__, mConn->mPeerAddr.ToString().AsCString());
         }
     }
 
+#if (OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_NOTE) && (OPENTHREAD_CONFIG_LOG_MAC == 1)
     otLogInfoToblePeri("HandleBtpReceiveDone(err:%s, [%s])", otThreadErrorToString(aError),
                        rxFrame.ToInfoString().AsCString());
+#endif
 
     Get<Radio::Callbacks>().HandleReceiveDone(&rxFrame, aError);
 
@@ -636,8 +650,10 @@ void Controller::InvokeRadioTxDone(otError aError)
         ackFrame.SetFramePending(true);
         ackFrame.SetSequence(txFrame->GetSequence());
 
+#if (OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_NOTE) && (OPENTHREAD_CONFIG_LOG_MAC == 1)
         otLogInfoToblePeri("InvokeRadioTxDone(err:%s, ack:[%s])", otThreadErrorToString(aError),
                            ackFrame.ToInfoString().AsCString());
+#endif
 
         Get<Radio::Callbacks>().HandleTransmitDone(*txFrame, &ackFrame, aError);
     }

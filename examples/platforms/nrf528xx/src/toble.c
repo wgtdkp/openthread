@@ -204,74 +204,6 @@ otPlatBleGattService sBtpServices[] = {
 
 static otError bleGattServerServicesRegister(otInstance *aInstance, otPlatBleGattService *aServices);
 
-typedef struct QueueNode
-{
-    const uint8_t *   mBuffer;
-    uint16_t          mLength;
-    struct QueueNode *mNext;
-} QueueNode;
-
-typedef struct Queue
-{
-    QueueNode *mHead;
-    QueueNode *mTail;
-} Queue;
-
-static QueueNode sNodes[BLE_GATT_TX_QUEUE_SIZE];
-
-static Queue sFreeQueue;
-static Queue sTxQueue;
-
-static void QueuePush(Queue *aQueue, QueueNode *aNode)
-{
-    assert((aQueue != NULL) && (aNode != NULL));
-
-    aNode->mNext = NULL;
-    if (aQueue->mHead == NULL)
-    {
-        aQueue->mHead = aNode;
-        aQueue->mTail = aNode;
-    }
-    else
-    {
-        aQueue->mTail->mNext = aNode;
-        aQueue->mTail        = aNode;
-    }
-}
-
-static QueueNode *QueuePop(Queue *aQueue)
-{
-    QueueNode *node;
-
-    assert(aQueue != NULL);
-    if (aQueue->mHead == aQueue->mTail)
-    {
-        node          = aQueue->mHead;
-        aQueue->mHead = aQueue->mTail = NULL;
-    }
-    else
-    {
-        node          = aQueue->mHead;
-        aQueue->mHead = aQueue->mHead->mNext;
-    }
-
-    return node;
-}
-
-static void QueueInit(void)
-{
-    uint8_t i;
-
-    sTxQueue.mHead   = NULL;
-    sTxQueue.mTail   = NULL;
-    sFreeQueue.mHead = NULL;
-    sFreeQueue.mTail = NULL;
-
-    for (i = 0; i < BLE_GATT_TX_QUEUE_SIZE; i++)
-    {
-        QueuePush(&sFreeQueue, &sNodes[i]);
-    }
-}
 static void peerInit(BlePeer *aPeer)
 {
     memset(aPeer, 0, sizeof(BlePeer));
@@ -448,7 +380,6 @@ void otPlatTobleInit(otInstance *aInstance)
 
     initState();
     bleGattServerServicesRegister(sInstance, sBtpServices);
-    QueueInit();
 
 #if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
     sBle.mC1Handle     = sBtpServices[0].mCharacteristics[0].mHandleValue;
@@ -700,7 +631,7 @@ void otPlatTobleC2Subscribe(otInstance *aInstance, otTobleConnection *aConn, boo
 #if OPENTHREAD_CONFIG_TOBLE_BTP_NO_GATT_ACK
     cccdVal[0] = aSubscribe ? BLE_GATT_HVX_NOTIFICATION : 0;
 #else
-    cccdVal[0]      = aSubscribe ? BLE_GATT_HVX_INDICATION : 0;
+    cccdVal[0] = aSubscribe ? BLE_GATT_HVX_INDICATION : 0;
 #endif
 
     cccdVal[1] = 0;
@@ -731,40 +662,24 @@ otError otPlatTobleC1Write(otInstance *aInstance, otTobleConnection *aConn, cons
     uint32_t                 retval;
     ble_gattc_write_params_t params;
     BlePeer *                peer = (BlePeer *)aConn;
-    QueueNode *              node = QueuePop(&sFreeQueue);
-
-    otEXPECT_ACTION(node != NULL, error = OT_ERROR_NO_BUFS);
 
     memset(&params, 0, sizeof(ble_gattc_write_params_t));
-#if OPENTHREAD_CONFIG_TOBLE_BTP_NO_GATT_ACK
     params.write_op = BLE_GATT_OP_WRITE_CMD;
-#else
-    params.write_op = BLE_GATT_OP_WRITE_REQ;
-#endif
-    params.flags   = BLE_GATT_EXEC_WRITE_FLAG_PREPARED_WRITE;
-    params.handle  = sBle.mC1Handle;
-    params.offset  = 0;
-    params.p_value = aBuffer;
-    params.len     = aLength;
+    params.flags    = BLE_GATT_EXEC_WRITE_FLAG_PREPARED_WRITE;
+    params.handle   = sBle.mC1Handle;
+    params.offset   = 0;
+    params.p_value  = aBuffer;
+    params.len      = aLength;
 
     otLogInfoPlat("[BLE] otPlatTobleC1Write(ConnectionId=%d)", peer->mConnHandle);
     retval = sd_ble_gattc_write(peer->mConnHandle, &params);
 
     if (retval != NRF_SUCCESS)
     {
-        otLogCritPlat("[BLE] sd_ble_gattc_write error: 0x%x", retval);
+        // otLogCritPlat("[BLE] sd_ble_gattc_write error: 0x%x", retval);
         error = OT_ERROR_FAILED;
-        QueuePush(&sFreeQueue, node);
-    }
-    else
-    {
-        node->mBuffer = aBuffer;
-        node->mLength = aLength;
-        QueuePush(&sTxQueue, node);
-        // peer->isSubscribing = false;
     }
 
-exit:
     return error;
 }
 
@@ -920,17 +835,14 @@ exit:
     return nrf5SdErrorToOtError(error);
 }
 
-otError otPlatTobleC2Indicate(otInstance *aInstance, otTobleConnection *aConn, const void *aBuffer, uint16_t aLength)
+otError otPlatTobleC2Notificate(otInstance *aInstance, otTobleConnection *aConn, const void *aBuffer, uint16_t aLength)
 {
     otError                error = OT_ERROR_NONE;
     uint32_t               retval;
     ble_gatts_hvx_params_t params;
     BlePeer *              peer = (BlePeer *)aConn;
-    QueueNode *            node = QueuePop(&sFreeQueue);
 
     OT_UNUSED_VARIABLE(aInstance);
-
-    otEXPECT_ACTION(node != NULL, error = OT_ERROR_NO_BUFS);
 
     // TODO: Gatt Server should also take the connection id.
 
@@ -938,29 +850,17 @@ otError otPlatTobleC2Indicate(otInstance *aInstance, otTobleConnection *aConn, c
     params.handle = sBle.mC2Handle;
     params.p_data = aBuffer;
     params.p_len  = &aLength;
-#if OPENTHREAD_CONFIG_TOBLE_BTP_NO_GATT_ACK
-    params.type = BLE_GATT_HVX_NOTIFICATION;
-#else
-    params.type     = BLE_GATT_HVX_INDICATION;
-#endif
+    params.type   = BLE_GATT_HVX_NOTIFICATION;
 
-    otLogInfoPlat("[BLE] otPlatTobleC2Indicate(ConnectionId=%d)", peer->mConnHandle);
+    otLogInfoPlat("[BLE] otPlatTobleC2Notificate(ConnectionId=%d)", peer->mConnHandle);
     retval = sd_ble_gatts_hvx(peer->mConnHandle, &params);
 
     if (retval != NRF_SUCCESS)
     {
-        otLogCritPlat("[BLE] sd_ble_gatts_hvx error: 0x%x", retval);
+        // otLogCritPlat("[BLE] sd_ble_gatts_hvx error: 0x%x", retval);
         error = OT_ERROR_FAILED;
-        QueuePush(&sFreeQueue, node);
-    }
-    else
-    {
-        node->mBuffer = aBuffer;
-        node->mLength = aLength;
-        QueuePush(&sTxQueue, node);
     }
 
-exit:
     return error;
 }
 
@@ -1223,8 +1123,8 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         bleParams.max_rx_octets = BLE_DEFAULT_PDU_SIZE;
 
         otLogInfoPlat("[BLE] Requesting data Length (tx, rx) octets = (%d, %d), time = (%d, %d) us",
-                     bleParams.max_tx_octets, bleParams.max_rx_octets, bleParams.max_tx_time_us,
-                     bleParams.max_rx_time_us);
+                      bleParams.max_tx_octets, bleParams.max_rx_octets, bleParams.max_tx_time_us,
+                      bleParams.max_rx_time_us);
 
         retval = sd_ble_gap_data_length_update(connectionId, &bleParams, NULL);
 
@@ -1366,7 +1266,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
     {
         ble_gap_data_length_params_t *evtMtu = &evt->evt.gap_evt.params.data_length_update.effective_params;
         otLogInfoPlat("[BLE] BLE_GAP_EVT_DATA_LENGTH_UPDATE: (max_tx, max_rx) octets = (%d, %d), time = (%d, %d) us",
-                     evtMtu->max_tx_octets, evtMtu->max_rx_octets, evtMtu->max_tx_time_us, evtMtu->max_rx_time_us);
+                      evtMtu->max_tx_octets, evtMtu->max_rx_octets, evtMtu->max_tx_time_us, evtMtu->max_rx_time_us);
         UNUSED_PARAMETER(evtMtu);
         break;
     }
@@ -1475,24 +1375,13 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         {
             for (uint8_t i = 0; i < evtHvn->count; i++)
             {
-                QueueNode *node = QueuePop(&sTxQueue);
-
-                if (node == NULL)
-                {
-                    otLogNotePlat("[BLE] BLE_GATTS_EVT_HVN_TX_COMPLETE: Empty Tx Queue");
-                    break;
-                }
-
-                QueuePush(&sFreeQueue, node);
-
                 if (sDiagMode)
                 {
-                    otPlatTobleDiagHandleC2IndicateDone(sInstance, (otTobleConnection *)peer, node->mBuffer,
-                                                        node->mLength);
+                    otPlatTobleDiagHandleC2NotificateDone(sInstance, (otTobleConnection *)peer);
                 }
                 else
                 {
-                    otPlatTobleHandleC2IndicateDone(sInstance, (otTobleConnection *)peer, node->mBuffer, node->mLength);
+                    otPlatTobleHandleC2NotificateDone(sInstance, (otTobleConnection *)peer);
                 }
             }
         }
@@ -1504,23 +1393,13 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
     {
         if ((peer = peerFind(connectionId)) != NULL)
         {
-            QueueNode *node = QueuePop(&sTxQueue);
-
-            if (node == NULL)
-            {
-                otLogNotePlat("[BLE] BLE_GATTS_EVT_HVN_TX_COMPLETE: Empty Tx Queue");
-                break;
-            }
-
-            QueuePush(&sFreeQueue, node);
-
             if (sDiagMode)
             {
-                otPlatTobleDiagHandleC2IndicateDone(sInstance, (otTobleConnection *)peer, node->mBuffer, node->mLength);
+                otPlatTobleDiagHandleC2NotificateDone(sInstance, (otTobleConnection *)peer);
             }
             else
             {
-                otPlatTobleHandleC2IndicateDone(sInstance, (otTobleConnection *)peer, node->mBuffer, node->mLength);
+                otPlatTobleHandleC2NotificateDone(sInstance, (otTobleConnection *)peer);
             }
         }
         break;
@@ -1572,11 +1451,11 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         {
             if (sDiagMode)
             {
-                otPlatTobleDiagHandleC2Indication(sInstance, (otTobleConnection *)peer, evtHvx->data, evtHvx->len);
+                otPlatTobleDiagHandleC2Notification(sInstance, (otTobleConnection *)peer, evtHvx->data, evtHvx->len);
             }
             else
             {
-                otPlatTobleHandleC2Indication(sInstance, (otTobleConnection *)peer, evtHvx->data, evtHvx->len);
+                otPlatTobleHandleC2Notification(sInstance, (otTobleConnection *)peer, evtHvx->data, evtHvx->len);
             }
         }
         break;
@@ -1594,25 +1473,13 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
             {
                 for (uint8_t i = 0; i < evtWcmd->count; i++)
                 {
-                    QueueNode *node = QueuePop(&sTxQueue);
-
-                    if (node == NULL)
-                    {
-                        otLogNotePlat("[BLE] BLE_GATTC_EVT_WRITE_CMD_TX_COMPLETE: Empty Tx Queue");
-                        break;
-                    }
-
-                    QueuePush(&sFreeQueue, node);
-
                     if (sDiagMode)
                     {
-                        otPlatTobleDiagHandleC1WriteDone(sInstance, (otTobleConnection *)peer, node->mBuffer,
-                                                         node->mLength);
+                        otPlatTobleDiagHandleC1WriteDone(sInstance, (otTobleConnection *)peer);
                     }
                     else
                     {
-                        otPlatTobleHandleC1WriteDone(sInstance, (otTobleConnection *)peer, node->mBuffer,
-                                                     node->mLength);
+                        otPlatTobleHandleC1WriteDone(sInstance, (otTobleConnection *)peer);
                     }
                 }
             }
@@ -1629,23 +1496,13 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         {
             if ((peer = peerFind(connectionId)) != NULL)
             {
-                QueueNode *node = QueuePop(&sTxQueue);
-                if (node == NULL)
-                {
-                    otLogNotePlat("[BLE] BLE_GATTC_EVT_WRITE_RSP: Empty Tx Queue");
-                    break;
-                }
-
-                QueuePush(&sFreeQueue, node);
-
                 if (sDiagMode)
                 {
-                    otPlatTobleDiagHandleC1WriteDone(sInstance, (otTobleConnection *)peer, node->mBuffer,
-                                                     node->mLength);
+                    otPlatTobleDiagHandleC1WriteDone(sInstance, (otTobleConnection *)peer);
                 }
                 else
                 {
-                    otPlatTobleHandleC1WriteDone(sInstance, (otTobleConnection *)peer, node->mBuffer, node->mLength);
+                    otPlatTobleHandleC1WriteDone(sInstance, (otTobleConnection *)peer);
                 }
             }
         }
@@ -1923,21 +1780,16 @@ OT_TOOL_WEAK void otPlatTobleHandleConnectionIsReady(otInstance *              a
     OT_UNUSED_VARIABLE(aLinkType);
 }
 
-OT_TOOL_WEAK void otPlatTobleHandleC1WriteDone(otInstance *       aInstance,
-                                               otTobleConnection *aConn,
-                                               const uint8_t *    aBuffer,
-                                               uint16_t           aLength)
+OT_TOOL_WEAK void otPlatTobleHandleC1WriteDone(otInstance *aInstance, otTobleConnection *aConn)
 {
     OT_UNUSED_VARIABLE(aInstance);
     OT_UNUSED_VARIABLE(aConn);
-    OT_UNUSED_VARIABLE(aBuffer);
-    OT_UNUSED_VARIABLE(aLength);
 }
 
-OT_TOOL_WEAK void otPlatTobleHandleC2Indication(otInstance *       aInstance,
-                                                otTobleConnection *aConn,
-                                                const uint8_t *    aBuffer,
-                                                uint16_t           aLength)
+OT_TOOL_WEAK void otPlatTobleHandleC2Notification(otInstance *       aInstance,
+                                                  otTobleConnection *aConn,
+                                                  const uint8_t *    aBuffer,
+                                                  uint16_t           aLength)
 {
     OT_UNUSED_VARIABLE(aInstance);
     OT_UNUSED_VARIABLE(aConn);
@@ -1952,15 +1804,10 @@ OT_TOOL_WEAK void otPlatTobleHandleC2Subscribed(otInstance *aInstance, otTobleCo
     OT_UNUSED_VARIABLE(aIsSubscribed);
 }
 
-OT_TOOL_WEAK void otPlatTobleHandleC2IndicateDone(otInstance *       aInstance,
-                                                  otTobleConnection *aConn,
-                                                  const uint8_t *    aBuffer,
-                                                  uint16_t           aLength)
+OT_TOOL_WEAK void otPlatTobleHandleC2NotificateDone(otInstance *aInstance, otTobleConnection *aConn)
 {
     OT_UNUSED_VARIABLE(aInstance);
     OT_UNUSED_VARIABLE(aConn);
-    OT_UNUSED_VARIABLE(aBuffer);
-    OT_UNUSED_VARIABLE(aLength);
 }
 
 OT_TOOL_WEAK void otPlatTobleHandleC1Write(otInstance *       aInstance,
@@ -2028,21 +1875,16 @@ OT_TOOL_WEAK void otPlatTobleDiagHandleConnectionIsReady(otInstance *           
     OT_UNUSED_VARIABLE(aLinkType);
 }
 
-OT_TOOL_WEAK void otPlatTobleDiagHandleC1WriteDone(otInstance *       aInstance,
-                                                   otTobleConnection *aConn,
-                                                   const uint8_t *    aBuffer,
-                                                   uint16_t           aLength)
+OT_TOOL_WEAK void otPlatTobleDiagHandleC1WriteDone(otInstance *aInstance, otTobleConnection *aConn)
 {
     OT_UNUSED_VARIABLE(aInstance);
     OT_UNUSED_VARIABLE(aConn);
-    OT_UNUSED_VARIABLE(aBuffer);
-    OT_UNUSED_VARIABLE(aLength);
 }
 
-OT_TOOL_WEAK void otPlatTobleDiagHandleC2Indication(otInstance *       aInstance,
-                                                    otTobleConnection *aConn,
-                                                    const uint8_t *    aBuffer,
-                                                    uint16_t           aLength)
+OT_TOOL_WEAK void otPlatTobleDiagHandleC2Notification(otInstance *       aInstance,
+                                                      otTobleConnection *aConn,
+                                                      const uint8_t *    aBuffer,
+                                                      uint16_t           aLength)
 {
     OT_UNUSED_VARIABLE(aInstance);
     OT_UNUSED_VARIABLE(aConn);
@@ -2057,15 +1899,10 @@ OT_TOOL_WEAK void otPlatTobleDiagHandleC2Subscribed(otInstance *aInstance, otTob
     OT_UNUSED_VARIABLE(aIsSubscribed);
 }
 
-OT_TOOL_WEAK void otPlatTobleDiagHandleC2IndicateDone(otInstance *       aInstance,
-                                                      otTobleConnection *aConn,
-                                                      const uint8_t *    aBuffer,
-                                                      uint16_t           aLength)
+OT_TOOL_WEAK void otPlatTobleDiagHandleC2NotificateDone(otInstance *aInstance, otTobleConnection *aConn)
 {
     OT_UNUSED_VARIABLE(aInstance);
     OT_UNUSED_VARIABLE(aConn);
-    OT_UNUSED_VARIABLE(aBuffer);
-    OT_UNUSED_VARIABLE(aLength);
 }
 
 OT_TOOL_WEAK void otPlatTobleDiagHandleC1Write(otInstance *       aInstance,

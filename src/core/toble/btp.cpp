@@ -39,6 +39,7 @@
 #include "common/debug.hpp"
 #include "common/locator-getters.hpp"
 #include "common/logging.hpp"
+#include "common/random.hpp"
 #include "utils/wrap_string.h"
 
 #if OPENTHREAD_CONFIG_TOBLE_ENABLE
@@ -58,95 +59,117 @@ Btp::Btp(Instance &aInstance)
 
 void Btp::Start(Connection &aConn)
 {
-    otLogNoteBtp("Btp::Start");
+    otLogInfoBtp("Start");
 
     aConn.mSession.mState = kStateIdle;
 }
 
-void Btp::HandleConnectionReady(Platform::Connection *aPlatConn)
-{
-    Connection *conn = Get<ConnectionTable>().Find(aPlatConn);
-
-    otLogNoteBtp("Btp::ConnectionReady (%p -> %p)", aPlatConn, conn);
-
-    VerifyOrExit(conn != NULL, OT_NOOP);
-    VerifyOrExit(Get<Toble>().IsCentral(), OT_NOOP);
-
-#if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
-    otLogNoteBtp("Btp::HandleConnectionReady: WriteC1(CONNECT_REQ)");
-    conn->mSession.mRequest.Init(Get<Platform>().GetConnMtu(aPlatConn), kWindowSize);
-    GattSend(*conn, reinterpret_cast<uint8_t *>(&conn->mSession.mRequest), sizeof(conn->mSession.mRequest));
-    conn->mSession.mState = kStateHandshake;
-#endif
-
-exit:
-    return;
-}
-
 void Btp::Stop(Connection &aConn)
 {
-    otLogNoteBtp("Btp::Stop");
+    otLogInfoBtp("Stop");
 
-    // Optional future enhancement: On central we can consider
-    // unsubscribe from C2.
-
+    Get<Platform>().SubscribeC2(aConn.mPlatConn, false);
     Reset(aConn.mSession);
 }
 
-void Btp::Send(Connection &aConn, const uint8_t *aBuf, uint16_t aLength)
+void Btp::Send(Connection &aConn, const uint8_t *aBuffer, uint16_t aLength)
 {
-    otLogNoteBtp("Btp::Send");
+    otLogInfoBtp("Send");
 
-    aConn.mSession.mSendBuf    = aBuf;
+    aConn.mSession.mSendBuf    = aBuffer;
     aConn.mSession.mSendLength = aLength;
     aConn.mSession.mSendOffset = 0;
-    aConn.mSession.mIsSending  = true;
+    aConn.mSession.mIsSending  = false;
 
     SendData(aConn);
 }
 
-void Btp::SendData(Connection &aConn)
+void Btp::HandleSessionReady(Connection &aConn)
 {
-    Session &  session = aConn.mSession;
-    DataFrame *frame   = session.NewDataFrame();
-    uint16_t   segmentLength;
-    bool       ack = false;
+    Session &session = aConn.mSession;
 
-    VerifyOrExit((session.mState == kStateConnected) && (frame != NULL), OT_NOOP);
-
-    otLogNoteBtp("BTP send");
-
-    if (session.mRxSeqnoCurrent == session.mRxSeqnoAcked)
+    if (session.HasFragmentToSend() || session.GetRxWindowRemaining() <= 1)
     {
-        VerifyOrExit(session.GetTxWindowRemaining() > 1, OT_NOOP);
+        SendData(aConn);
     }
     else
     {
-        ack = true;
+        StartTimer(session, kKeepAliveDelay);
     }
 
-    segmentLength = frame->Init(session.mSendBuf, session.mSendOffset, session.mSendLength, session.mMtu,
-                                session.mTxSeqnoCurrent + 1, ack, session.mRxSeqnoCurrent);
+    ConnectionTimerRefresh(aConn);
+}
 
-    otLogNoteBtp("BTP::Send Length=%d", frame->GetDataLength());
+void Btp::SendData(Connection &aConn)
+{
+    Session &session = aConn.mSession;
+    Frame &  frame   = mTxFrame;
+    uint8_t  frameLength;
+    uint16_t segmentLength;
 
-    VerifyOrExit(GattSend(aConn, frame->GetData(), frame->GetDataLength()) == OT_ERROR_NONE,
-                 session.FreeDataFrame(frame));
+    VerifyOrExit(session.mState == kStateConnected, OT_NOOP);
 
-    session.mSendOffset += segmentLength;
-    session.mTxSeqnoCurrent += 1;
+    frameLength = frame.Init();
 
-    mTimer.Stop();
+    if ((session.mRxSeqnoCurrent != session.mRxSeqnoAcked) || session.mSendAck)
+    {
+        frameLength = frame.AppendAck(session.mRxSeqnoCurrent);
+    }
 
-    if (ack)
+    if (session.HasFragmentToSend() && (session.GetTxWindowRemaining() > 1))
+    {
+        frameLength = frame.AppendPayload(frameLength, session.mTxSeqnoCurrent + 1, session.mSendBuf,
+                                          session.mSendOffset, session.mSendLength, session.mMtu, segmentLength);
+    }
+
+    VerifyOrExit(!frame.IsEmpty(), OT_NOOP);
+
+    if (frame.IsAck())
+    {
+        otLogInfoBtp("SendData(ackNum=%d)", session.mRxSeqnoCurrent);
+    }
+    else if (frame.IsData())
+    {
+        otLogInfoBtp("SendData(seqNum=%d offset=%d length=%d)", session.mTxSeqnoCurrent + 1, session.mSendOffset,
+                     segmentLength);
+    }
+    else
+    {
+        otLogInfoBtp("SendData(ackNum=%d seqNum=%d offset=%d length=%d)", session.mRxSeqnoCurrent,
+                     session.mTxSeqnoCurrent + 1, session.mSendOffset, segmentLength);
+    }
+
+    VerifyOrExit(GattSend(aConn, reinterpret_cast<uint8_t *>(&frame), frameLength) == OT_ERROR_NONE, OT_NOOP);
+
+    otLogNoteBtp("Send BTP msg, %s", frame.ToString().AsCString());
+
+    if (frame.IsAck())
     {
         session.mRxSeqnoAcked = session.mRxSeqnoCurrent;
+        session.mSendAck      = false;
     }
 
-    if ((session.mSendOffset != session.mSendLength) || session.GetRxWindowRemaining() <= 1)
+    if (frame.IsData())
     {
-        mTxTask.Post();
+        if (!session.mIsSending)
+        {
+            session.mIsSending  = true;
+            session.mIsTimerSet = false;
+        }
+
+        session.mQueue.Push(session.mTxSeqnoCurrent + 1, session.mSendOffset);
+
+        session.mSendOffset += segmentLength;
+        session.mTxSeqnoCurrent += 1;
+
+        if (!session.mIsTimerSet)
+        {
+            otLogInfoBtp("StartTimer(kAckTimeout)");
+            StartTimer(session, kAckTimeout);
+        }
     }
+
+    mTxTask.Post();
 
 exit:
     return;
@@ -164,105 +187,168 @@ void Btp::SendNextFragment(void)
     {
         Session &session = conn->mSession;
 
-        if (session.mIsSending && ((session.mSendOffset != session.mSendLength) || session.GetRxWindowRemaining() <= 1))
+        if ((session.HasFragmentToSend() && (session.GetTxWindowRemaining() > 1)) ||
+            session.GetRxWindowRemaining() <= 1 || session.mSendAck)
         {
             SendData(*conn);
         }
     }
 }
 
-void Btp::HandleSentData(Connection &aConn, const uint8_t *aFrame, uint16_t aLength)
+void Btp::HandleSentData(Connection &aConn)
 {
-    Session &  session = aConn.mSession;
-    DataFrame *frame   = reinterpret_cast<DataFrame *>(const_cast<uint8_t *>(aFrame));
-
-    OT_UNUSED_VARIABLE(aLength);
-
-    session.FreeDataFrame(frame);
-
-    if ((session.mSendOffset != session.mSendLength) || session.GetRxWindowRemaining() <= 1)
-    {
-        SendData(aConn);
-    }
-    else
-    {
-        session.SetTimer(kKeepAliveDelay);
-        UpdateTimer();
-    }
-
-    if ((session.mSendOffset >= session.mSendLength) && (session.mSendBuf != NULL))
-    {
-        session.mSendBuf = NULL;
-
-        session.mIsSending = false;
-        HandleGattSentDone(aConn, OT_ERROR_NONE);
-    }
+    OT_UNUSED_VARIABLE(aConn);
+    mTxTask.Post();
 }
 
-void Btp::HandleDataFrame(Connection &aConn, const uint8_t *aFrame, uint16_t aLength)
+void Btp::HandleFrame(Connection &aConn, const uint8_t *aFrame, uint16_t aLength)
 {
-    Session &      session = aConn.mSession;
     const Frame &  frame(*reinterpret_cast<const Frame *>(aFrame));
-    const uint8_t *cur = &aFrame[1];
+    Session &      session = aConn.mSession;
+    const uint8_t *cur     = &aFrame[1];
+    uint8_t        ackNum  = 0;
+    uint8_t        seqNum  = 0;
+
+#if 1
+    //    if (Get<Toble>().IsCentral())
+    {
+        if (Random::NonCrypto::GetUint8() % 10 == 0)
+        {
+            if (frame.IsAck())
+            {
+                ackNum = *cur++;
+            }
+
+            if (frame.IsData())
+            {
+                seqNum = cur[0];
+            }
+
+            otLogInfoBtp("Drop (seqNum=%d, AckNum=%d)~~~~~~~~~~~~~~~~~~~~~~~~~~~", seqNum, ackNum);
+            ExitNow();
+        }
+    }
+#endif
 
     VerifyOrExit(session.mState == kStateConnected, OT_NOOP);
+    VerifyOrExit(frame.IsValid(), OT_NOOP);
+
+    otLogNoteBtp("Received BTP msg, %s", frame.ToString().AsCString());
 
     ConnectionTimerRefresh(aConn);
 
-    otLogNoteBtp("BTP receive");
-
-    if (frame.IsBegin())
-    {
-        otLogNoteBtp("  start <------------");
-    }
-
     if (frame.IsAck())
     {
-        session.mTxSeqnoAcked = *cur++;
-        otLogNoteBtp("  ack=%d", session.mTxSeqnoAcked);
+        ackNum = *cur++;
+
+        if (CompareUint8(ackNum, session.mTxSeqnoAcked) < 0)
+        {
+            // the received ACK Number is smaller than Acked sequence number.
+            ExitNow();
+        }
+        else if (ackNum == session.mTxSeqnoAcked)
+        {
+            // receives a duplicated ACK frame.
+            session.mAckCount++;
+            if (session.mAckCount >= 2)
+            {
+                uint16_t offset = 0;
+
+                session.mAckCount = 0;
+
+                // find the message offset based on the sequence number.
+                VerifyOrExit(session.mQueue.Find(ackNum + 1, offset) == OT_ERROR_NONE, OT_NOOP);
+                session.mSendOffset     = offset;
+                session.mTxSeqnoCurrent = ackNum;
+
+                session.mQueue.FreeAll();
+                StartTimer(session, kAckTimeout);
+                otLogInfoBtp("mAckCount >= 2: ackNum=%d mTxSeqnoCurrent=%d offset=%d", ackNum, session.mTxSeqnoCurrent,
+                             offset);
+
+                mTxTask.Post();
+                ExitNow();
+            }
+        }
+        else
+        {
+            session.mTxSeqnoAcked    = ackNum;
+            session.mAckCount        = 0;
+            session.mTransmitRetries = 0;
+            session.mQueue.Free(ackNum);
+
+            otLogInfoBtp("Start(kAckTimeout) 1");
+            StartTimer(session, kAckTimeout);
+        }
+
+        if ((session.mQueue.Size() == 0) && (session.mSendOffset >= session.mSendLength) && (session.mSendBuf != NULL))
+        {
+            session.mSendBuf = NULL;
+            // session.mState   = kStateConnected;
+            session.mIsSending = false;
+
+            otLogInfoBtp("HandleGattSentDone");
+            otLogInfoBtp("Start(kKeepAliveDelay) 2");
+            StartTimer(session, kKeepAliveDelay);
+
+            HandleGattSentDone(aConn, OT_ERROR_NONE);
+        }
     }
 
-    OT_ASSERT(static_cast<uint8_t>(session.mRxSeqnoCurrent + 1) == cur[0]);
-
-    session.mRxSeqnoCurrent = *cur++;
-    otLogNoteBtp("  seq=%d ", session.mRxSeqnoCurrent);
-
-    if (frame.IsBegin())
+    if (frame.IsData())
     {
-        session.mReceiveOffset = 0;
-        session.mReceiveLength = ReadUint16(cur);
-        cur += sizeof(uint16_t);
-        otLogNoteBtp("  len=%u", session.mReceiveLength);
+        // Received a data frame.
+        seqNum = *cur++;
+
+        if (static_cast<uint8_t>(session.mRxSeqnoCurrent + 1) != seqNum)
+        {
+            // Receive a wrong BTP fragment, send ACK to the peer to notify it.
+            session.mSendAck = true;
+
+            otLogInfoBtp("SendAck: mRxSeqnoCurrent=%d, seqNum=%d", session.mRxSeqnoCurrent, seqNum);
+            mTxTask.Post();
+            ExitNow();
+        }
+
+        if (frame.GetFlag(Header::kBeginFlag))
+        {
+            otLogInfoBtp("BtpReceiveStart");
+            session.mReceiveOffset = 0;
+            session.mReceiveLength = ReadUint16(cur);
+            cur += sizeof(uint16_t);
+        }
+
+        VerifyOrExit(session.mReceiveLength != 0, OT_NOOP);
+
+        session.mRxSeqnoCurrent = seqNum;
+
+        aLength -= cur - aFrame;
+        otLogInfoBtp("ReceiveFrag: seqNum:%d offset:%d length:%d", seqNum, session.mReceiveOffset, aLength);
+
+        memcpy(session.mRxBuf + session.mReceiveOffset, cur, aLength);
+        session.mReceiveOffset += aLength;
+
+        if (frame.GetFlag(Header::kEndFlag))
+        {
+            uint16_t length;
+
+            otLogInfoBtp("kEndFlag: mReceiveOffset=%d session.mReceiveLength=%d", session.mReceiveOffset,
+                         session.mReceiveLength);
+
+            VerifyOrExit(session.mReceiveOffset == session.mReceiveLength, session.mReceiveLength = 0);
+
+            // All ToBLE transports strip MAC FCS.
+            length = session.mReceiveLength + Mac::Frame::GetFcsSize();
+
+            session.mReceiveLength = 0;
+            session.mSendAck       = true;
+
+            otLogInfoBtp("HandleGattReceiveDone");
+            HandleGattReceiveDone(aConn, session.mRxBuf, length, OT_ERROR_NONE);
+        }
     }
 
-    aLength -= cur - aFrame;
-
-    memcpy(session.mRxBuf + session.mReceiveOffset, cur, aLength);
-    session.mReceiveOffset += aLength;
-
-    if (session.mSendOffset < session.mSendLength || session.GetRxWindowRemaining() <= 1)
-    {
-        SendData(aConn);
-    }
-    else
-    {
-        session.SetTimer(kKeepAliveDelay);
-        UpdateTimer();
-    }
-
-    if (frame.IsEnd())
-    {
-        uint16_t length;
-
-        OT_ASSERT(session.mReceiveOffset == session.mReceiveLength);
-        otLogNoteBtp("  end <--------------");
-        otLogNoteBtp("BTP received %d", session.mReceiveOffset);
-
-        // All ToBLE transports strip MAC FCS.
-        length = session.mReceiveLength + Mac::Frame::GetFcsSize();
-
-        HandleGattReceiveDone(aConn, session.mRxBuf, length, OT_ERROR_NONE);
-    }
+    mTxTask.Post();
 
 exit:
     return;
@@ -275,6 +361,8 @@ void Btp::HandleTimer(Timer &aTimer)
 
 void Btp::HandleTimer(void)
 {
+    otLogInfoBtp("BTP timer fired");
+
     for (Connection *conn = Get<ConnectionTable>().GetFirst(); conn != NULL;
          conn             = Get<ConnectionTable>().GetNext(conn))
     {
@@ -284,8 +372,6 @@ void Btp::HandleTimer(void)
         {
             continue;
         }
-
-        otLogNoteBtp("BTP timer fired");
 
         session.mIsTimerSet = false;
 
@@ -301,14 +387,37 @@ void Btp::HandleTimer(void)
             break;
 
         case kStateConnected:
-            if (session.GetRxWindowRemaining())
+            if (session.mIsSending)
             {
-                SendData(*conn);
+                // ACK timeout, retransmit the fragment.
+                if (session.mTransmitRetries < kMaxTransmitRetries)
+                {
+                    otLogInfoBtp("mTransmitRetries=%d", session.mTransmitRetries);
+                    session.mTransmitRetries++;
+                    session.mQueue.Front(session.mTxSeqnoCurrent, session.mSendOffset);
+                    session.mTxSeqnoCurrent--;
+                    session.mQueue.FreeAll();
+                    SendData(*conn);
+                }
+                else
+                {
+                    Reset(session);
+                }
             }
             else
             {
-                // did not receive an ACK, close the connection
-                Reset(session);
+                if (session.GetRxWindowRemaining())
+                {
+                    otLogInfoBtp("SendData(*conn)");
+                    session.mSendAck = true;
+                    SendData(*conn);
+                    StartTimer(session, kKeepAliveDelay);
+                }
+                else
+                {
+                    // did not receive an ACK, close the connection
+                    Reset(session);
+                }
             }
             break;
         }
@@ -350,8 +459,8 @@ void Btp::Reset(Session &aSession)
     aSession.mSendBuf    = NULL;
     aSession.mSendOffset = 0;
     aSession.mSendLength = 0;
-    aSession.mIsSending  = false;
     aSession.mIsTimerSet = false;
+    aSession.mIsSending  = false;
     aSession.mState      = kStateIdle;
 
     UpdateTimer();
@@ -366,14 +475,14 @@ otError Btp::GattSend(Connection &aConn, const uint8_t *aBuffer, uint16_t aLengt
     if (Get<Toble>().IsCentral())
     {
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
-        otLogNoteBtp("Btp::SendData: WriteC1");
+        otLogDebgBtp("WriteC1");
         error = Get<Platform>().WriteC1(aConn.mPlatConn, aBuffer, aLength);
 #endif
     }
     else
     {
 #if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
-        otLogNoteBtp("Btp::SendData: IndicateC2");
+        otLogDebgBtp("IndicateC2");
         error = Get<Platform>().IndicateC2(aConn.mPlatConn, aBuffer, aLength);
 #endif
     }
@@ -429,6 +538,67 @@ void Btp::ConnectionTimerRefresh(Connection &aConn)
     }
 }
 
+void Btp::Queue::Push(uint8_t aSeqNum, uint16_t aOffset)
+{
+    mEntries[mSize].mSeqNum = aSeqNum;
+    mEntries[mSize].mOffset = aOffset;
+    mSize++;
+
+    otLogInfoBtp("%s: i=%d, Offset=%d, SeqNum=%d", __func__, mSize - 1, aOffset, aSeqNum);
+}
+
+void Btp::Queue::Front(uint8_t &aSeqNum, uint16_t &aOffset)
+{
+    OT_ASSERT(mSize != 0);
+    aSeqNum = mEntries[0].mSeqNum;
+    aOffset = mEntries[0].mOffset;
+}
+
+otError Btp::Queue::Find(uint8_t aSeqNum, uint16_t &aOffset)
+{
+    otError error = OT_ERROR_NOT_FOUND;
+
+    for (size_t i = 0; i < mSize; i++)
+    {
+        if (aSeqNum == mEntries[i].mSeqNum)
+        {
+            aOffset = mEntries[i].mOffset;
+            ExitNow(error = OT_ERROR_NONE);
+        }
+    }
+
+exit:
+    return error;
+}
+
+void Btp::Queue::Free(uint8_t aAckNum)
+{
+    Entry *entry = NULL;
+
+    for (size_t i = 0; i < mSize; i++)
+    {
+        if (CompareUint8(aAckNum, mEntries[i].mSeqNum) >= 0)
+        {
+            otLogInfoBtp("%s: i=%d, Offset=%d, SeqNum=%d", __func__, i, mEntries[i].mOffset, mEntries[i].mSeqNum);
+            entry = &mEntries[i];
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    if (entry != NULL)
+    {
+        mSize = mEntries + mSize - (entry + 1);
+
+        if (mSize != 0)
+        {
+            memmove(mEntries, entry + 1, mSize * sizeof(Entry));
+            otLogInfoBtp("%s: memove size=%d", __func__, mSize * sizeof(Entry));
+        }
+    }
+}
 } // namespace Toble
 } // namespace ot
 

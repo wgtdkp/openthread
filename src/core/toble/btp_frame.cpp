@@ -44,80 +44,87 @@ namespace Toble {
 
 using ot::Encoding::LittleEndian::ReadUint16;
 using ot::Encoding::LittleEndian::WriteUint16;
-uint16_t DataFrame::GetDataLength(void) const
+
+Frame::InfoString Frame::ToString(void) const
 {
-    return mLength;
+    const uint8_t *cur = mBuffer;
+    InfoString     str("H:%d M:%d A:%d E:%d C:%d B:%d", GetFlag(kHandshakeFlag), GetFlag(kManagementFlag),
+                   GetFlag(kAckFlag), GetFlag(kEndFlag), GetFlag(kContinueFlag), GetFlag(kBeginFlag));
+
+    if (GetFlag(kAckFlag))
+    {
+        SuccessOrExit(str.Append(", AckNum:%d", *cur++));
+    }
+
+    if (IsData())
+    {
+        SuccessOrExit(str.Append(", SeqNum:%d", *cur++));
+    }
+
+    if (GetFlag(kBeginFlag))
+    {
+        SuccessOrExit(str.Append(", MsgLen:%d", ReadUint16(cur)));
+    }
+
+exit:
+    return str;
 }
 
-uint16_t DataFrame::Init(const uint8_t *aBuffer,
-                         uint16_t       aOffset,
-                         uint16_t       aLength,
-                         uint16_t       aMtu,
-                         uint8_t        aSeqNum,
-                         bool           aAck,
-                         uint8_t        aAckNum)
+uint16_t Frame::AppendAck(uint8_t aAckNum)
 {
-    uint8_t *cur           = &mFrame[0];
-    uint16_t segmentLength = 0;
+    uint8_t *cur = mBuffer;
+
+    SetFlag(kAckFlag);
+
+    *cur++ = aAckNum;
+
+    return cur - mBuffer + sizeof(mFlags);
+}
+
+uint16_t Frame::AppendPayload(uint8_t        aFrameOffset,
+                              uint8_t        aSeqNum,
+                              const uint8_t *aBuffer,
+                              uint16_t       aBufferOffset,
+                              uint16_t       aBufferLength,
+                              uint16_t       aMtu,
+                              uint16_t &     aPayloadLength)
+{
+    uint8_t *cur = mBuffer + aFrameOffset - sizeof(mFlags);
     uint16_t segmentRemaining;
-
-    mFlags = 0;
-
-    if (aAck)
-    {
-        mFlags |= Frame::kAckFlag;
-        otLogNoteBtp("  ack=%u", aAckNum);
-
-        *cur++ = aAckNum;
-    }
 
     *cur++ = aSeqNum;
 
-    if (aBuffer != NULL)
+    if (aBufferOffset == 0)
     {
-        if (aOffset == 0)
-        {
-            mFlags |= Frame::kBeginFlag;
-            otLogNoteBtp("  start ------------>");
-            otLogNoteBtp("  len=%u", aLength);
+        SetFlag(kBeginFlag);
 
-            WriteUint16(aLength, cur);
-            cur += sizeof(uint16_t);
-        }
-        else
-        {
-            mFlags |= Frame::kContinueFlag;
-            otLogNoteBtp("  off=%u", aOffset);
-        }
-
-        segmentRemaining = aMtu - (cur - mFrame + sizeof(mFlags));
-        segmentLength    = aLength - aOffset;
-
-        if (segmentLength > segmentRemaining)
-        {
-            segmentLength = segmentRemaining;
-        }
-
-        otLogNoteBtp("  segLen=%u", segmentLength);
-
-        memcpy(cur, aBuffer + aOffset, segmentLength);
-        cur += segmentLength;
-        aOffset += segmentLength;
-
-        if (aOffset >= aLength)
-        {
-            mFlags |= Frame::kEndFlag;
-            otLogNoteBtp("  end -------------->");
-        }
+        WriteUint16(aBufferLength, cur);
+        cur += sizeof(uint16_t);
+    }
+    else
+    {
+        SetFlag(kContinueFlag);
     }
 
-    mLength = cur - mFrame + sizeof(mFlags);
+    segmentRemaining = aMtu - (cur - mBuffer + sizeof(mFlags));
+    aPayloadLength   = aBufferLength - aBufferOffset;
 
-    otLogNoteBtp("BtpFrameLength=%d", mLength);
+    if (aPayloadLength > segmentRemaining)
+    {
+        aPayloadLength = segmentRemaining;
+    }
 
-    return segmentLength;
+    memcpy(cur, aBuffer + aBufferOffset, aPayloadLength);
+    cur += aPayloadLength;
+    aBufferOffset += aPayloadLength;
+
+    if (aBufferOffset >= aBufferLength)
+    {
+        SetFlag(kEndFlag);
+    }
+
+    return cur - mBuffer + sizeof(mFlags);
 }
-
 } // namespace Toble
 } // namespace ot
 

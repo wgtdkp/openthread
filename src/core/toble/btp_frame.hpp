@@ -39,6 +39,7 @@
 #include <openthread/platform/toolchain.h>
 
 #include "common/encoding.hpp"
+#include "common/string.hpp"
 
 #if OPENTHREAD_CONFIG_TOBLE_ENABLE
 
@@ -48,8 +49,12 @@ namespace Toble {
 using ot::Encoding::LittleEndian::HostSwap16;
 using ot::Encoding::LittleEndian::HostSwap32;
 
+/**
+ * This class implements BTP frame header generation and parsing.
+ *
+ */
 OT_TOOL_PACKED_BEGIN
-class Frame
+class Header
 {
 public:
     enum
@@ -62,15 +67,22 @@ public:
         kBeginFlag      = 1 << 0,
     };
 
-    void Init(void) { mFlags = 0; }
+    /**
+     * This method sets the flag.
+     *
+     * @param[in]  aFlag  The flag.
+     *
+     */
+    bool GetFlag(uint8_t aFlag) const { return (mFlags & aFlag) != 0; }
 
-    bool IsHandshake(void) const { return (mFlags & kHandshakeFlag) != 0; }
-
-    bool IsAck(void) const { return (mFlags & kAckFlag) != 0; }
-
-    bool IsBegin(void) const { return (mFlags & kBeginFlag) != 0; }
-
-    bool IsEnd(void) const { return (mFlags & kEndFlag) != 0; }
+    /**
+     * This method indicates whether or not the flag is set.
+     *
+     * @retval TRUE   If the flag present.
+     * @retval FALSE  If no flag present.
+     *
+     */
+    void SetFlag(uint8_t aFlag) { mFlags |= aFlag; }
 
 protected:
     void SetFlags(uint8_t aFlags) { mFlags = aFlags; }
@@ -78,21 +90,41 @@ protected:
     uint8_t mFlags;
 } OT_TOOL_PACKED_END;
 
+/**
+ * This class implements BTP handshake request frame generation and parsing.
+ *
+ */
 OT_TOOL_PACKED_BEGIN
-class HandshakeRequest : public Frame
+class HandshakeRequest : public Header
 {
 public:
-    void Init(uint16_t aMtu, uint8_t aWindowSize)
+    /**
+     * This constructor initializes the object.
+     *
+     */
+    HandshakeRequest(uint16_t aMtu, uint8_t aWindowSize)
+        : mOpcode(kOpcode)
+        , mVersions(HostSwap32(kVersions))
+        , mMtu(HostSwap16(aMtu))
+        , mWindowSize(aWindowSize)
     {
         SetFlags(kFlags);
-        mOpcode     = kOpcode;
-        mVersions   = HostSwap32(kVersions);
-        mMtu        = HostSwap16(aMtu);
-        mWindowSize = aWindowSize;
     }
 
+    /**
+     * This method returns the MTU.
+     *
+     * @returns the MTU.
+     *
+     */
     uint16_t GetMtu(void) const { return HostSwap16(mMtu); }
 
+    /**
+     * This method returns the window size.
+     *
+     * @returns the window size.
+     *
+     */
     uint8_t GetWindowSize(void) const { return mWindowSize; }
 
 private:
@@ -109,21 +141,41 @@ private:
     uint8_t  mWindowSize;
 } OT_TOOL_PACKED_END;
 
+/**
+ * This class implements BTP handshake response frame generation and parsing.
+ *
+ */
 OT_TOOL_PACKED_BEGIN
-class HandshakeResponse : public Frame
+class HandshakeResponse : public Header
 {
 public:
-    void Init(uint16_t aSegmentSize, uint8_t aWindowSize)
+    /**
+     * This constructor initializes the object.
+     *
+     */
+    HandshakeResponse(uint16_t aSegmentSize, uint8_t aWindowSize)
+        : mOpcode(kOpcode)
+        , mVersion(kVersion)
+        , mSegmentSize(HostSwap16(aSegmentSize))
+        , mWindowSize(aWindowSize)
     {
         SetFlags(kFlags);
-        mOpcode      = kOpcode;
-        mVersion     = kVersion;
-        mSegmentSize = HostSwap16(aSegmentSize);
-        mWindowSize  = aWindowSize;
     }
 
+    /**
+     * This method returns the segment size.
+     *
+     * @returns the segment size.
+     *
+     */
     uint16_t GetSegmentSize(void) const { return HostSwap16(mSegmentSize); }
 
+    /**
+     * This method returns the window size.
+     *
+     * @returns the window size.
+     *
+     */
     uint8_t GetWindowSize(void) const { return mWindowSize; }
 
 private:
@@ -140,30 +192,120 @@ private:
     uint8_t  mWindowSize;
 } OT_TOOL_PACKED_END;
 
+/**
+ * This class implements BTP frame generation and parsing.
+ *
+ */
 OT_TOOL_PACKED_BEGIN
-class DataFrame : public Frame
+class Frame : public Header
 {
 public:
-    DataFrame(void)
-        : mLength(0)
+    enum
     {
+        kInfoStringSize = 70, ///< Recommended buffer size to use with `ToString()`.
+    };
+
+    /**
+     * This type defines the fixed-length `String` object returned from `ToString()`.
+     *
+     */
+    typedef String<kInfoStringSize> InfoString;
+
+    /**
+     * This method converts the advertising info into a human-readable string.
+     *
+     * @returns  An `InfoString` object representing the advertising info.
+     *
+     */
+    InfoString ToString(void) const;
+
+    /**
+     * This method indicates whether the frame contains ACK fields.
+     *
+     * @retval TRUE  The frame contains ACK fields.
+     * @retval FALSE The frame doesn't contain ACK fields
+     *
+     */
+    bool IsAck(void) const { return (mFlags & kAckFlag) != 0; }
+
+    /**
+     * This method indicates whether the frame contains PDU payload.
+     *
+     * @retval TRUE  The frame contains PDU payload.
+     * @retval FALSE The frame doesn't contain PDU payload.
+     *
+     */
+    bool IsData(void) const { return (mFlags & (kBeginFlag | kContinueFlag | kEndFlag)) != 0; }
+
+    /**
+     * This method indicates whether the frame is empty (no ACK fields and PDU payload).
+     *
+     * @retval TRUE  The frame is empty (no ACK fields and PDU payload).
+     * @retval FALSE The frame is not empty.
+     *
+     */
+    bool IsEmpty(void) const { return (mFlags == 0); }
+
+    /**
+     * This method indicates whether the frame is valid.
+     *
+     * @retval TRUE  The frame is valid.
+     * @retval FALSE The frame is not valid.
+     *
+     */
+    bool IsValid(void) const { return ((mFlags & (kHandshakeFlag | kManagementFlag)) == 0) && (IsAck() || IsData()); }
+
+    /**
+     * This method initializes the frame.
+     *
+     * @retval the frame length.
+     *
+     */
+    uint16_t Init(void)
+    {
+        SetFlags(0);
+        return 1;
     }
 
-    uint16_t Init(const uint8_t *aBuffer,
-                  uint16_t       aOffset,
-                  uint16_t       aLength,
-                  uint16_t       aMtu,
-                  uint8_t        aSeqNum,
-                  bool           aAck,
-                  uint8_t        aAckNum);
+    /**
+     * This method appends ACK fields to the frame.
+     *
+     * @param[in]  aAckNum  The ACK number.
+     *
+     * @retval the frame length.
+     *
+     */
+    uint16_t AppendAck(uint8_t aAckNum);
 
-    const uint8_t *GetData(void) const { return &mFlags; }
-    uint16_t       GetDataLength(void) const;
-    void           SetDataLength(uint16_t aLength) { mLength = aLength; }
+    /**
+     * This method appends PDU payload to the frame.
+     *
+     * @param[in]  aframeoffset   byte offset within the frame to begin writing.
+     * @param[in]  aseqnum        a sequence number.
+     * @param[in]  aBuffer        A pointer to a buffer contianing the toble frame.
+     * @param[in]  aBufferOffset  Byte offset within the buffer to fill the frame.
+     * @param[in]  aBufferLength  Length of buffer.
+     * @param[in]  aMtu           The maximum transmit unit of the frame.
+     * @param[out] aPayloadLength Payload length.
+     *
+     * @retval the frame length.
+     *
+     */
+    uint16_t AppendPayload(uint8_t        aFrameOffset,
+                           uint8_t        aSeqNum,
+                           const uint8_t *aBuffer,
+                           uint16_t       aBufferOffset,
+                           uint16_t       aBufferLength,
+                           uint16_t       aMtu,
+                           uint16_t &     aPayloadLength);
 
 private:
-    uint8_t  mFrame[OPENTHREAD_CONFIG_TOBLE_BTP_MAX_SEGMENT_SIZE - sizeof(mFlags)];
-    uint16_t mLength;
+    enum
+    {
+        kFrameSize = OPENTHREAD_CONFIG_TOBLE_BTP_MAX_SEGMENT_SIZE,
+    };
+
+    uint8_t mBuffer[kFrameSize - sizeof(mFlags)];
 } OT_TOOL_PACKED_END;
 
 } // namespace Toble

@@ -53,19 +53,21 @@ void Btp::HandleC2Subscribed(Platform::Connection *aPlatConn, bool aIsSubscribed
 
     if (aIsSubscribed)
     {
+        HandshakeResponse handshakeResponse(conn->mSession.mMtu, kWindowSize);
+
         VerifyOrExit(conn->mSession.mState == kStateHandshake, OT_NOOP);
-        otLogNoteBtp("Btp::HandleC2Subscribed(subscribed) IndicateC2(CONNECT_RSP)");
-        GattSend(*conn, reinterpret_cast<uint8_t *>(&conn->mSession.mResponse), sizeof(HandshakeResponse));
+        otLogDebgBtp("HandleC2Subscribed: subscribed");
+        otLogInfoBtp("Send Handshake Response: SegSize=%d, Window=%d", handshakeResponse.GetSegmentSize(),
+                     handshakeResponse.GetWindowSize());
+        GattSend(*conn, reinterpret_cast<uint8_t *>(&handshakeResponse), sizeof(handshakeResponse));
         conn->mSession.mState = kStateSubscribe;
     }
     else
     {
         VerifyOrExit(conn->mSession.mState != kStateIdle, OT_NOOP);
-        otLogNoteBtp("Btp::HandleC2Subscribed(unsubscribed)");
+        otLogDebgBtp("HandleC2Subscribed: unsubscribed");
 
         // Optional future enhancement: Trigger a BLE disconnect on un-subscribe.
-
-        mTimer.Stop();
 
         conn->mSession.mState = kStateIdle;
     }
@@ -74,39 +76,31 @@ exit:
     return;
 }
 
-void Btp::HandleC2IndicateDone(Platform::Connection *aPlatConn, const uint8_t *aFrame, uint16_t aLength)
+void Btp::HandleC2NotificateDone(Platform::Connection *aPlatConn)
 {
     Connection *conn = Get<ConnectionTable>().Find(aPlatConn);
 
     OT_ASSERT(!Get<Toble>().IsCentral());
 
-    otLogNoteBtp("Btp::HandleC2IndicateDone");
+    otLogDebgBtp("HandleC2NotificateDone");
     VerifyOrExit(conn != NULL, OT_NOOP);
 
     switch (conn->mSession.mState)
     {
     case kStateIdle:
+        // fall through
+
     case kStateHandshake:
         break;
+
     case kStateSubscribe:
+        otLogInfoBtp("BTP connected: MTU=%d, TxWindow = %d", conn->mSession.mMtu, conn->mSession.mTxWindow);
         conn->mSession.mState = kStateConnected;
-        otLogNoteBtp("BTP connected: MTU=%d, TxWindow = %d", conn->mSession.mMtu, conn->mSession.mTxWindow);
-
-        Get<Peripheral::Controller>().HandleTransportConnected(*conn);
-
-        if ((conn->mSession.mSendOffset != conn->mSession.mSendLength) || conn->mSession.GetRxWindowRemaining() <= 1)
-        {
-            SendData(*conn);
-        }
-        else
-        {
-            conn->mSession.SetTimer(kKeepAliveDelay);
-            UpdateTimer();
-        }
-
+        HandleSessionReady(*conn);
         break;
+
     case kStateConnected:
-        HandleSentData(*conn, aFrame, aLength);
+        HandleSentData(*conn);
         break;
     }
 
@@ -116,24 +110,24 @@ exit:
 
 void Btp::HandleC1Write(Platform::Connection *aPlatConn, const uint8_t *aFrame, uint16_t aLength)
 {
-    Connection * conn  = Get<ConnectionTable>().Find(aPlatConn);
-    const Frame *frame = reinterpret_cast<const Frame *>(aFrame);
+    Connection *  conn   = Get<ConnectionTable>().Find(aPlatConn);
+    const Header *header = reinterpret_cast<const Header *>(aFrame);
 
-    otLogNoteBtp("Btp::HandleC1Write");
+    otLogDebgBtp("HandleC1Write");
     OT_ASSERT(!Get<Toble>().IsCentral());
 
     VerifyOrExit(aLength > 0, OT_NOOP);
 
     VerifyOrExit(conn != NULL, OT_NOOP);
 
-    if (frame->IsHandshake())
+    if (header->GetFlag(Header::kHandshakeFlag))
     {
         VerifyOrExit(aLength >= sizeof(HandshakeRequest), OT_NOOP);
-        HandleHandshake(*conn, static_cast<const HandshakeRequest &>(*frame));
+        HandleHandshake(*conn, static_cast<const HandshakeRequest &>(*header));
     }
     else
     {
-        HandleDataFrame(*conn, aFrame, aLength);
+        HandleFrame(*conn, aFrame, aLength);
     }
 
 exit:
@@ -146,7 +140,7 @@ void Btp::HandleHandshake(Connection &aConn, const HandshakeRequest &aRequest)
 
     VerifyOrExit(session.mState == kStateIdle, OT_NOOP);
 
-    otLogNoteBtp("Btp::HandleHandshake");
+    otLogInfoBtp("Receive Handshake Request: Mtu=%d, Window=%d", aRequest.GetMtu(), aRequest.GetWindowSize());
 
     session.mMtu = aRequest.GetMtu();
 
@@ -169,8 +163,6 @@ void Btp::HandleHandshake(Connection &aConn, const HandshakeRequest &aRequest)
         }
     }
 
-    session.mResponse.Init(session.mMtu, kWindowSize);
-
     session.mState = kStateHandshake;
 
     session.mTxSeqnoCurrent = 0;
@@ -180,6 +172,8 @@ void Btp::HandleHandshake(Connection &aConn, const HandshakeRequest &aRequest)
     session.mRxSeqnoCurrent = 255;
     session.mRxSeqnoAcked   = 255;
     session.mRxWindow       = kWindowSize;
+
+    otLogNoteBtp("BTP connected: MTU=%d, TxWindow=%d, RxWindow=%d", session.mMtu, session.mTxWindow, session.mRxWindow);
 
     session.SetTimer(kKeepAliveDelay);
     UpdateTimer();

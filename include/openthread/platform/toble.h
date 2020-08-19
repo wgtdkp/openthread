@@ -302,9 +302,9 @@ extern void otPlatTobleHandleConnectionIsReady(otInstance *              aInstan
                                                otTobleConnectionLinkType aLinkType);
 
 /**
- * This function requests a C1 write (BTP) on a given connection.
+ * This function requests a C1 (BTP) write command on a given connection.
  *
- * The platform notifies that the write request is done by calling `otPlatTobleHandleC1WriteDone()`.
+ * The platform notifies that the write command is done by calling `otPlatTobleHandleC1WriteDone()`.
  *
  * This can be called only after callback `otPlatTobleHandleConnectionIsReady()` is received for the connection.
  *
@@ -317,16 +317,13 @@ extern void otPlatTobleHandleConnectionIsReady(otInstance *              aInstan
 otError otPlatTobleC1Write(otInstance *aInstance, otTobleConnection *aConn, const void *aBuffer, uint16_t aLength);
 
 /**
- * This is a callback to notify that a C1 write request was done.
+ * This is a callback to notify that a C1 (BTP) write command was done.
  *
  * @param[in] aInstance   A pointer to OpenThread instance.
  * @param[in] aConn       A pointer to a BLE connection..
  *
  */
-extern void otPlatTobleHandleC1WriteDone(otInstance *       aInstance,
-                                         otTobleConnection *aConn,
-                                         const uint8_t *    aBuffer,
-                                         uint16_t           aLength);
+extern void otPlatTobleHandleC1WriteDone(otInstance *aInstance, otTobleConnection *aConn);
 
 /**
  * This function requests a subscription change to C2 (BTP) on a given connection.
@@ -347,14 +344,14 @@ void otPlatTobleC2Subscribe(otInstance *aInstance, otTobleConnection *aConn, boo
  *
  * @param[in] aInstance   A pointer to OpenThread instance.
  * @param[in] aConn       A pointer to a BLE connection..
- * @param[in] aBuffer     A pointer to buffer (from C2 indication).
+ * @param[in] aBuffer     A pointer to buffer (from C2 notification).
  * @param[in] aLength     Length of buffer (number of bytes).
  *
  */
-extern void otPlatTobleHandleC2Indication(otInstance *       aInstance,
-                                          otTobleConnection *aConn,
-                                          const uint8_t *    aBuffer,
-                                          uint16_t           aLength);
+extern void otPlatTobleHandleC2Notification(otInstance *       aInstance,
+                                            otTobleConnection *aConn,
+                                            const uint8_t *    aBuffer,
+                                            uint16_t           aLength);
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  * Central APIs for L2CAP transport support
@@ -404,31 +401,28 @@ otError otPlatTobleAdvStop(otInstance *aInstance);
 extern void otPlatTobleHandleC2Subscribed(otInstance *aInstance, otTobleConnection *aConn, bool aIsSubscribed);
 
 /**
- * This function request a C2 indicate on a connection.
+ * This function requests a C2 (BTP) notificate request on a connection.
  *
- * The platform notifies that the indicate request is done by calling `otPlatTobleHandleC2IndicateDone()`.
+ * The platform notifies that the notification is done by calling `otPlatTobleHandleC2NotificateDone()`.
  *
  * This can be called only after `otPlatTobleHandleC2Subscribed() callback is received on the same connection.
  *
  * @param[in] aInstance   A pointer to OpenThread instance.
  * @param[in] aConn       A pointer to a BLE connection..
- * @param[in] aBuffer     A pointer to buffer (from C2 indication)
+ * @param[in] aBuffer     A pointer to buffer (from C2 notification)
  * @param[in] aLength     Length of buffer (number of bytes).
  *
  */
-otError otPlatTobleC2Indicate(otInstance *aInstance, otTobleConnection *aConn, const void *aBuffer, uint16_t aLength);
+otError otPlatTobleC2Notificate(otInstance *aInstance, otTobleConnection *aConn, const void *aBuffer, uint16_t aLength);
 
 /**
- * This is a callback to notify that a C2 indicate request was done.
+ * This is a callback to notify that a C2 notificate request was done.
  *
  * @param[in] aInstance  A pointer to OpenThread instance.
  * @param[in] aConn      A pointer to a BLE connection..
  *
  */
-extern void otPlatTobleHandleC2IndicateDone(otInstance *       aInstance,
-                                            otTobleConnection *aConn,
-                                            const uint8_t *    aBuffer,
-                                            uint16_t           aLength);
+extern void otPlatTobleHandleC2NotificateDone(otInstance *aInstance, otTobleConnection *aConn);
 
 /**
  * This is callback to notify that peer has written to C1 (BTP) on a given connection.
@@ -543,19 +537,13 @@ extern void otPlatTobleDiagHandleAdv(otInstance *          aInstance,
 extern void otPlatTobleDiagHandleConnectionIsReady(otInstance *              aInstance,
                                                    otTobleConnection *       aConn,
                                                    otTobleConnectionLinkType aLinkType);
-extern void otPlatTobleDiagHandleC1WriteDone(otInstance *       aInstance,
-                                             otTobleConnection *aConn,
-                                             const uint8_t *    aBuffer,
-                                             uint16_t           aLength);
-extern void otPlatTobleDiagHandleC2Indication(otInstance *       aInstance,
-                                              otTobleConnection *aConn,
-                                              const uint8_t *    aBuffer,
-                                              uint16_t           aLength);
-extern void otPlatTobleDiagHandleC2Subscribed(otInstance *aInstance, otTobleConnection *aConn, bool aIsSubscribed);
-extern void otPlatTobleDiagHandleC2IndicateDone(otInstance *       aInstance,
+extern void otPlatTobleDiagHandleC1WriteDone(otInstance *aInstance, otTobleConnection *aConn);
+extern void otPlatTobleDiagHandleC2Notification(otInstance *       aInstance,
                                                 otTobleConnection *aConn,
                                                 const uint8_t *    aBuffer,
                                                 uint16_t           aLength);
+extern void otPlatTobleDiagHandleC2Subscribed(otInstance *aInstance, otTobleConnection *aConn, bool aIsSubscribed);
+extern void otPlatTobleDiagHandleC2NotificateDone(otInstance *aInstance, otTobleConnection *aConn);
 extern void otPlatTobleDiagHandleC1Write(otInstance *       aInstance,
                                          otTobleConnection *aConn,
                                          const uint8_t *    aBuffer,
