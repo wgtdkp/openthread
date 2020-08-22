@@ -92,102 +92,18 @@ public:
 private:
     enum
     {
-        kMaxTransmitRetries = 4,                                            ///< Number of retransmit times.
-        kWindowSize         = 5,                                            ///< Receive window size.
-        kKeepAliveDelay     = 2500,                                         ///< Keep alive delay, in milliseconds.
-        kAckTimeout         = kWindowSize * 30,                             ///< Ack timeout time, in milliseconds.
-        kSegmentSizeMax     = OPENTHREAD_CONFIG_TOBLE_BTP_MAX_SEGMENT_SIZE, ///< Maximum segment size.
-        kTobleFrameSize     = OT_RADIO_TOBLE_FRAME_MAX_SIZE,                ///< ToBLE frame size.
+        kWindowSize     = 5,                                            ///< Receive window size.
+        kKeepAliveDelay = 2500,                                         ///< Keep alive delay, in milliseconds.
+        kSegmentSizeMax = OPENTHREAD_CONFIG_TOBLE_BTP_MAX_SEGMENT_SIZE, ///< Maximum segment size.
+        kTobleFrameSize = OT_RADIO_TOBLE_FRAME_MAX_SIZE,                ///< ToBLE frame size.
     };
 
     enum State
     {
         kStateIdle,      ///< BTP is idle.
-        kStateSubscribe, ///< BTP is in suscribe state.
+        kStateSubscribe, ///< BTP is in subscribe state.
         kStateHandshake, ///< BTP is in handshake state.
         kStateConnected, ///< BTP connection has established.
-    };
-
-    /**
-     * This class implements a queue to store the information of the fragments that have been send but not acked.
-     *
-     */
-    class Queue
-    {
-    public:
-        /**
-         * This constructor initializes the object.
-         *
-         */
-        Queue()
-            : mSize(0)
-        {
-        }
-
-        /**
-         * This method pushs the sequence number and segment offset tuple to the queue.
-         *
-         * @param[in]  aSeqNum  Segment sequence number.
-         * @param[in]  aOffset  Segment offset.
-         *
-         */
-        void Push(uint8_t aSeqNum, uint16_t aOffset);
-
-        /**
-         * This method gets the front item of the the queue.
-         *
-         * @param[out]  aSeqNum  Segment sequence number.
-         * @param[out]  aOffset  Segment offset.
-         *
-         */
-        void Front(uint8_t &aSeqNum, uint16_t &aOffset);
-
-        /**
-         * This method removes all iterms whose sequence number is less than or equals to the given ACK number from
-         * the queue.
-         *
-         * @param[in]  aAckNum  ACK number.
-         *
-         */
-        void Free(uint8_t aAckNum);
-
-        /**
-         * This method removes all iterms from the queue.
-         *
-         * @param[in]  aAckNum  ACK number.
-         *
-         */
-        void FreeAll(void) { mSize = 0; }
-
-        /**
-         * This method finds the segment offset for the given sequence number.
-         *
-         * @param[in]   aSeqNum  Fragment sequence number.
-         * @param[out]  aOffset  Fragment offset.
-         *
-         * @retval OT_ERROR_NONE       Successfully found the fragment offset.
-         * @retval OT_ERROR_NOT_FOUND  Failed to find the fragment offset.
-         *
-         */
-        otError Find(uint8_t aSeqNum, uint16_t &aOffset);
-
-        /**
-         * This method returns queue size.
-         *
-         * @retval the queue size.
-         *
-         */
-        uint8_t Size(void) { return mSize; }
-
-    private:
-        typedef struct Entry
-        {
-            uint16_t mOffset;
-            uint8_t  mSeqNum;
-        } Entry;
-
-        Entry   mEntries[kWindowSize];
-        uint8_t mSize;
     };
 
     /**
@@ -243,7 +159,7 @@ private:
         uint8_t GetTxWindowRemaining(void) const { return mTxWindow - (mTxSeqnoCurrent - mTxSeqnoAcked); }
 
         /**
-         * This method indicates if there are fragments need to be sent.
+         * This method indicates if there is a fragment need to be sent.
          *
          * @retval TRUE   Has fragment to send.
          * @retval FALSE  Dosen't have fragment to send.
@@ -251,8 +167,16 @@ private:
          */
         bool HasFragmentToSend(void) { return (mSendBuf != NULL) && (mSendOffset < mSendLength); }
 
+        /**
+         * This method indicates if there is an ACK need to be sent.
+         *
+         * @retval TRUE   Has ACK to send.
+         * @retval FALSE  Dosen't have ACK to send.
+         *
+         */
+        bool HasPendingAckToSend(void) { return (mRxSeqnoCurrent != mRxSeqnoAcked); }
+
         State mState;
-        Queue mQueue;
 
         uint16_t mMtu;
 
@@ -272,11 +196,9 @@ private:
         uint16_t mReceiveOffset;
         uint8_t  mRxBuf[kTobleFrameSize];
 
-        bool      mIsSending : 1;
+        bool      mTransmitRequest : 1;
+        bool      mTransmitKeepAliveAck : 1;
         bool      mIsTimerSet : 1;
-        bool      mSendAck : 1;
-        uint8_t   mAckCount;
-        uint8_t   mTransmitRetries;
         TimeMilli mTimerExpire;
     };
 
@@ -286,20 +208,16 @@ private:
         UpdateTimer();
     }
 
-    static int CompareUint8(uint8_t aValueA, uint8_t aValueB)
-    {
-        return (aValueA == aValueB) ? 0 : ((((aValueA - aValueB) & (1 << 7)) == 0) ? 1 : -1);
-    }
-
     void    Reset(Session &aSession);
     void    SendData(Connection &aConn);
+    void    TransmitTaskPost(Session &aSession);
     otError GattSend(Connection &aConn, const uint8_t *aBuffer, uint16_t aLength);
     void    HandleGattSentDone(Connection &aConn, otError aError);
     void    HandleGattReceiveDone(Connection &aConn, uint8_t *aBuffer, uint16_t aLength, otError aError);
     void    ConnectionTimerRefresh(Connection &aConn);
     void    HandleSessionReady(Connection &aConn);
     void    HandleSentData(Connection &aConn);
-    void    HandleFrame(Connection &aConn, const uint8_t *aFrame, uint16_t aLength);
+    void    HandleDataFrame(Connection &aConn, const uint8_t *aFrame, uint16_t aLength);
 
     static void HandleTimer(Timer &aTimer);
     void        HandleTimer(void);

@@ -113,7 +113,7 @@ void Btp::HandleC2Notification(Platform::Connection *aPlatConn, const uint8_t *a
     }
     else
     {
-        HandleFrame(*conn, aFrame, aLength);
+        HandleDataFrame(*conn, aFrame, aLength);
     }
 
 exit:

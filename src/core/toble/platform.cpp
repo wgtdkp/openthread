@@ -161,7 +161,7 @@ otError Platform::StopAdv(void)
     return otPlatTobleAdvStop(GetInstance());
 }
 
-otError Platform::IndicateC2(Connection *aConn, const void *aFrame, uint16_t aLength)
+otError Platform::NotifyC2(Connection *aConn, const void *aFrame, uint16_t aLength)
 {
     return otPlatTobleC2Notificate(GetInstance(), aConn, aFrame, aLength);
 }

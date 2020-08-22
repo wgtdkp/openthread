@@ -127,7 +127,7 @@ void Btp::HandleC1Write(Platform::Connection *aPlatConn, const uint8_t *aFrame, 
     }
     else
     {
-        HandleFrame(*conn, aFrame, aLength);
+        HandleDataFrame(*conn, aFrame, aLength);
     }
 
 exit:

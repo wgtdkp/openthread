@@ -68,6 +68,24 @@ public:
     };
 
     /**
+     * This method indicates whether the frame contains ACK fields.
+     *
+     * @retval TRUE  The frame contains ACK fields.
+     * @retval FALSE The frame doesn't contain ACK fields
+     *
+     */
+    bool IsAck(void) const { return (mFlags & kAckFlag) != 0; }
+
+    /**
+     * This method indicates whether the frame contains PDU payload.
+     *
+     * @retval TRUE  The frame contains PDU payload.
+     * @retval FALSE The frame doesn't contain PDU payload.
+     *
+     */
+    bool IsData(void) const { return (mFlags & (kBeginFlag | kContinueFlag | kEndFlag)) != 0; }
+
+    /**
      * This method sets the flag.
      *
      * @param[in]  aFlag  The flag.
@@ -200,6 +218,8 @@ OT_TOOL_PACKED_BEGIN
 class Frame : public Header
 {
 public:
+    typedef uint16_t Iterator; ///< Used to iterate through bytes of the frame.
+
     enum
     {
         kInfoStringSize = 70, ///< Recommended buffer size to use with `ToString()`.
@@ -220,33 +240,6 @@ public:
     InfoString ToString(void) const;
 
     /**
-     * This method indicates whether the frame contains ACK fields.
-     *
-     * @retval TRUE  The frame contains ACK fields.
-     * @retval FALSE The frame doesn't contain ACK fields
-     *
-     */
-    bool IsAck(void) const { return (mFlags & kAckFlag) != 0; }
-
-    /**
-     * This method indicates whether the frame contains PDU payload.
-     *
-     * @retval TRUE  The frame contains PDU payload.
-     * @retval FALSE The frame doesn't contain PDU payload.
-     *
-     */
-    bool IsData(void) const { return (mFlags & (kBeginFlag | kContinueFlag | kEndFlag)) != 0; }
-
-    /**
-     * This method indicates whether the frame is empty (no ACK fields and PDU payload).
-     *
-     * @retval TRUE  The frame is empty (no ACK fields and PDU payload).
-     * @retval FALSE The frame is not empty.
-     *
-     */
-    bool IsEmpty(void) const { return (mFlags == 0); }
-
-    /**
      * This method indicates whether the frame is valid.
      *
      * @retval TRUE  The frame is valid.
@@ -258,48 +251,54 @@ public:
     /**
      * This method initializes the frame.
      *
-     * @retval the frame length.
+     * @param[inout]  aIterator  A reference to iterator. After the method returns, the iterator will
+     *                           be updated to the length of the frame.
      *
      */
-    uint16_t Init(void)
-    {
-        SetFlags(0);
-        return 1;
-    }
+    void Init(Iterator &aIterator);
 
     /**
      * This method appends ACK fields to the frame.
      *
-     * @param[in]  aAckNum  The ACK number.
-     *
-     * @retval the frame length.
+     * @param[inout]  aIterator  A reference to iterator. After the method returns, the iterator will
+     *                           be updated to the length of the frame.
+     * @param[in]     aAckNum    The ACK number.
      *
      */
-    uint16_t AppendAck(uint8_t aAckNum);
+    void AppendAck(Iterator &aIterator, uint8_t aAckNum);
+
+    /**
+     * This method appends sequence number to the frame.
+     *
+     * @param[inout]  aIterator  A reference to iterator. After the method returns, the iterator will
+     *                           be updated to the length of the frame.
+     * @param[in]     aSeqNum    Sequence number.
+     *
+     */
+    void AppendSeqNum(Iterator &aIterator, uint8_t aSeqNum);
 
     /**
      * This method appends PDU payload to the frame.
      *
-     * @param[in]  aframeoffset   byte offset within the frame to begin writing.
-     * @param[in]  aseqnum        a sequence number.
-     * @param[in]  aBuffer        A pointer to a buffer contianing the toble frame.
-     * @param[in]  aBufferOffset  Byte offset within the buffer to fill the frame.
-     * @param[in]  aBufferLength  Length of buffer.
-     * @param[in]  aMtu           The maximum transmit unit of the frame.
-     * @param[out] aPayloadLength Payload length.
-     *
-     * @retval the frame length.
+     * @param[inout]  aIterator      A reference to iterator. After the method returns, the iterator will
+     *                               be updated to the length of the frame.
+     * @param[in]     aBuffer        A pointer to a buffer contianing the toble frame.
+     * @param[in]     aBufferOffset  Byte offset within the buffer to fill the frame.
+     * @param[in]     aBufferLength  Length of buffer.
+     * @param[in]     aMtu           The maximum transmit unit of the frame.
+     * @param[out]    aPayloadLength Payload length.
      *
      */
-    uint16_t AppendPayload(uint8_t        aFrameOffset,
-                           uint8_t        aSeqNum,
-                           const uint8_t *aBuffer,
-                           uint16_t       aBufferOffset,
-                           uint16_t       aBufferLength,
-                           uint16_t       aMtu,
-                           uint16_t &     aPayloadLength);
+    void AppendPayload(Iterator &     aIterator,
+                       const uint8_t *aBuffer,
+                       uint16_t       aBufferOffset,
+                       uint16_t       aBufferLength,
+                       uint16_t       aMtu,
+                       uint16_t &     aPayloadLength);
 
 private:
+    uint8_t *GetFrameStart(void) { return mBuffer - sizeof(mFlags); }
+
     enum
     {
         kFrameSize = OPENTHREAD_CONFIG_TOBLE_BTP_MAX_SEGMENT_SIZE,

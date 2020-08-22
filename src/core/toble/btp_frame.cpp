@@ -34,6 +34,7 @@
 #include <string.h>
 
 #include "common/code_utils.hpp"
+#include "common/debug.hpp"
 #include "common/logging.hpp"
 #include "toble/btp_frame.hpp"
 
@@ -56,10 +57,7 @@ Frame::InfoString Frame::ToString(void) const
         SuccessOrExit(str.Append(", AckNum:%d", *cur++));
     }
 
-    if (IsData())
-    {
-        SuccessOrExit(str.Append(", SeqNum:%d", *cur++));
-    }
+    SuccessOrExit(str.Append(", SeqNum:%d", *cur++));
 
     if (GetFlag(kBeginFlag))
     {
@@ -70,29 +68,44 @@ exit:
     return str;
 }
 
-uint16_t Frame::AppendAck(uint8_t aAckNum)
+void Frame::Init(Iterator &aIterator)
 {
-    uint8_t *cur = mBuffer;
-
-    SetFlag(kAckFlag);
-
-    *cur++ = aAckNum;
-
-    return cur - mBuffer + sizeof(mFlags);
+    SetFlags(0);
+    aIterator = 1;
 }
 
-uint16_t Frame::AppendPayload(uint8_t        aFrameOffset,
-                              uint8_t        aSeqNum,
-                              const uint8_t *aBuffer,
-                              uint16_t       aBufferOffset,
-                              uint16_t       aBufferLength,
-                              uint16_t       aMtu,
-                              uint16_t &     aPayloadLength)
+void Frame::AppendAck(Iterator &aIterator, uint8_t aAckNum)
 {
-    uint8_t *cur = mBuffer + aFrameOffset - sizeof(mFlags);
-    uint16_t segmentRemaining;
+    uint8_t *cur = GetFrameStart() + aIterator;
+
+    OT_ASSERT(aIterator < (kFrameSize - 1));
+
+    SetFlag(kAckFlag);
+    *cur++ = aAckNum;
+
+    aIterator = static_cast<Iterator>(cur - GetFrameStart());
+}
+
+void Frame::AppendSeqNum(Iterator &aIterator, uint8_t aSeqNum)
+{
+    uint8_t *cur = GetFrameStart() + aIterator;
+
+    OT_ASSERT(aIterator < (kFrameSize - 1));
 
     *cur++ = aSeqNum;
+
+    aIterator = static_cast<Iterator>(cur - GetFrameStart());
+}
+
+void Frame::AppendPayload(Iterator &     aIterator,
+                          const uint8_t *aBuffer,
+                          uint16_t       aBufferOffset,
+                          uint16_t       aBufferLength,
+                          uint16_t       aMtu,
+                          uint16_t &     aPayloadLength)
+{
+    uint8_t *cur = GetFrameStart() + aIterator;
+    uint16_t segmentRemaining;
 
     if (aBufferOffset == 0)
     {
@@ -106,13 +119,15 @@ uint16_t Frame::AppendPayload(uint8_t        aFrameOffset,
         SetFlag(kContinueFlag);
     }
 
-    segmentRemaining = aMtu - (cur - mBuffer + sizeof(mFlags));
+    segmentRemaining = aMtu - (cur - GetFrameStart());
     aPayloadLength   = aBufferLength - aBufferOffset;
 
     if (aPayloadLength > segmentRemaining)
     {
         aPayloadLength = segmentRemaining;
     }
+
+    OT_ASSERT(aPayloadLength <= (kFrameSize - (cur - GetFrameStart())));
 
     memcpy(cur, aBuffer + aBufferOffset, aPayloadLength);
     cur += aPayloadLength;
@@ -123,7 +138,7 @@ uint16_t Frame::AppendPayload(uint8_t        aFrameOffset,
         SetFlag(kEndFlag);
     }
 
-    return cur - mBuffer + sizeof(mFlags);
+    aIterator = static_cast<Iterator>(cur - GetFrameStart());
 }
 } // namespace Toble
 } // namespace ot

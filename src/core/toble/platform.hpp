@@ -165,7 +165,7 @@ public:
 #if OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
     otError StartAdv(const AdvConfig &aConfig);
     otError StopAdv(void);
-    otError IndicateC2(Connection *aConn, const void *aFrame, uint16_t aLength);
+    otError NotifyC2(Connection *aConn, const void *aFrame, uint16_t aLength);
 #endif // OPENTHREAD_CONFIG_TOBLE_PERIPHERAL_ENABLE
 
 private:
