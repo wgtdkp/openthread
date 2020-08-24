@@ -314,5 +314,9 @@ ifeq ($(L2CAP),1)
 COMMONCFLAGS                   += -DOPENTHREAD_CONFIG_TOBLE_L2CAP_ENABLE=1
 endif
 
+ifeq ($(BLE_HOST),bluez)
+configure_OPTIONS              += --with-ble-host=bluez
+endif
+
 CFLAGS += ${LOG_FLAGS}
 CXXFLAGS += ${LOG_FLAGS}

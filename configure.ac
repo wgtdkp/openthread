@@ -658,23 +658,31 @@ AM_CONDITIONAL([OPENTHREAD_ENABLE_NCP], [test "${enable_ncp}" = "yes"])
 
 AC_MSG_CHECKING([whether to build BLE host])
 AC_ARG_WITH(ble-host,
-    [AS_HELP_STRING([--with-ble-host=TARGET], [Build BLE host for one of: nimble @<:@default=no@:>@.])],
+    [AS_HELP_STRING([--with-ble-host], [Build BLE host for one of: bluez @<:@default=no@:>@.])],
     [
         case "${with_ble_host}" in
         no)
             ;;
-        nimble)
+        bluez)
             ;;
         *)
             AC_MSG_RESULT(ERROR)
-            AC_MSG_ERROR([Invalid value given for --with-blehost: ${with_ble_host}])
+            AC_MSG_ERROR([Invalid value given for --with-ble-host: ${with_ble_host}])
             ;;
         esac
     ],
     [with_ble_host=no])
 
-AM_CONDITIONAL([OPENTHREAD_CONFIG_BLE_ENABLE], [test ${with_ble_host} != "no"])
-AM_CONDITIONAL([OPENTHREAD_CONFIG_BLE_HOST_NIMBLE_ENABLE],[test "${with_ble_host}" = "nimble"])
+AM_CONDITIONAL([OPENTHREAD_CONFIG_BLE_HOST_BLUEZ_ENABLE],[test "${with_ble_host}" = "bluez"])
+
+if test "${enable_toble}" = "yes" && test "${with_ble_host}" = "bluez"; then
+    PKG_CHECK_MODULES(GLIB, glib-2.0 >= 2.28, dummy=yes,
+				AC_MSG_ERROR(GLib >= 2.28 is required))
+    AC_SUBST(GLIB_CFLAGS)
+
+    AX_CHECK_COMPILER_OPTIONS([C],   ${GLIB_CFLAGS})
+    AX_CHECK_COMPILER_OPTIONS([C++], ${GLIB_CFLAGS})
+fi
 
 #
 # Readline - readline library to use for POSIX CLI
@@ -1087,6 +1095,7 @@ src/lib/hdlc/Makefile
 src/lib/platform/Makefile
 src/lib/spinel/Makefile
 third_party/Makefile
+third_party/bluez/Makefile
 third_party/jlink/Makefile
 third_party/mbedtls/Makefile
 third_party/mynewt-nimble/Makefile

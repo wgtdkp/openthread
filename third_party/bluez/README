@@ -1,0 +1,24 @@
+# Bluez 
+
+## URL
+
+http://www.bluez.org/
+
+## Version
+
+5.54
+
+## Update Bluez Repo
+```
+wget http://www.kernel.org/pub/linux/bluetooth/bluez-5.54.tar.xz
+tar -xvf bluez-5.54.tar.xz
+mv bluez-5.54 ./repo
+cd repo
+./configure && make
+cp ./config.h ./../
+make clean
+```
+
+## License File
+
+[LICENSE](repo/COPYING)

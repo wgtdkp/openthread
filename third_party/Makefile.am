@@ -108,10 +108,12 @@ SUBDIRS                                += \
     $(NULL)
 endif # OPENTHREAD_ENABLE_BUILTIN_MBEDTLS
 
-if OPENTHREAD_CONFIG_BLE_HOST_NIMBLE_ENABLE
+if OPENTHREAD_CONFIG_TOBLE_ENABLE
+if OPENTHREAD_CONFIG_BLE_HOST_BLUEZ_ENABLE
 SUBDIRS                                += \
-    mynewt-nimble                         \
+    bluez                                 \
     $(NULL)
+endif
 endif
 
 include $(abs_top_nlbuild_autotools_dir)/automake/post.am
