@@ -156,6 +156,14 @@ int otSysMainloopPoll(otSysMainloopContext *aMainloop);
  */
 void otSysMainloopProcess(otInstance *aInstance, const otSysMainloopContext *aMainloop);
 
+/**
+ * This function indicates whether to exit the application.
+ *
+ * @returns value returned from select().
+ *
+ */
+bool otSysMainloopExitRequest(void);
+
 #ifdef __cplusplus
 } // end of extern "C"
 #endif

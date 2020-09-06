@@ -123,6 +123,7 @@ private:
     uint8_t     GetConnectionId(Connection *aConn) { return static_cast<uint8_t>(aConn - &mConns[0]); }
     uint8_t     GetConnectionId(otTobleConnection *aConn);
     uint8_t     GetNumValidConnections(void);
+    int16_t     WhitelistFind(otTobleAddress &aAddress);
 
     otError ProcessHelp(uint8_t aArgsLength, char *aArgs[]);
     otError ProcessAdv(uint8_t aArgsLength, char *aArgs[]);
@@ -136,6 +137,7 @@ private:
     otError ProcessLink(uint8_t aArgsLength, char *aArgs[]);
     otError ProcessMtu(uint8_t aArgsLength, char *aArgs[]);
     otError ProcessDiag(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessWhitelist(uint8_t aArgsLength, char *aArgs[]);
 
     const char *StateToString(State aState);
     const char *AdvTypeToString(otTobleAdvType aType);
@@ -148,6 +150,10 @@ private:
     Connection                mConns[kNumConnections];
     otTobleConnectionLinkType mLinkType;
     otTobleRole               mRole;
+
+    otTobleAddress mWhitelist[kNumConnections];
+    uint8_t        mWhitelistSize;
+    bool           mWhitelistEnabled;
 };
 
 } // namespace Cli

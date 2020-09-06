@@ -42,8 +42,19 @@ libopenthread_posix_a_CPPFLAGS                                = \
     -DOPENTHREAD_RADIO=0                                        \
     $(NULL)
 
+
+if OPENTHREAD_CONFIG_TOBLE_ENABLE
+if OPENTHREAD_CONFIG_BLE_HOST_BLUEZ_ENABLE
+libopenthread_posix_a_CPPFLAGS                               += \
+    -I$(top_srcdir)/src/posix/platform/bluez                    \
+    -I$(top_srcdir)/third_party/bluez/repo                      \
+    $(NULL)
+endif
+endif
+
 libopenthread_posix_a_SOURCES             = \
     alarm.cpp                               \
+    bluez/toble.cpp                         \
     entropy.cpp                             \
     hdlc_interface.cpp                      \
     logging.cpp                             \

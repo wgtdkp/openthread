@@ -70,7 +70,6 @@ public:
     // Callbacks from `Transport`
     void HandleTransportSendDone(Connection &aConn, otError aError);
     void HandleTransportReceiveDone(Connection &aConn, uint8_t *aFrame, uint16_t aLength, otError aError);
-    void HandleTransportConnected(Connection &aConn);
     void ConnectionTimerRefresh(Connection &aConn);
 
     void SetJoiningPermitted(bool aEnabled, otSteeringData *aSteeringData);
@@ -106,8 +105,8 @@ private:
 
         kAdvInterval                = 30,
         kConnectionInterval         = 30,
-        kWaitBleConnectionTimeout   = 10 * kConnectionInterval,
-        kWaitTobleConnectionTimeout = (7 + 2) * 2 * kConnectionInterval,
+        kWaitBleConnectionTimeout   = 5000, // 10 * kConnectionInterval,
+        kWaitTobleConnectionTimeout = 5000, //(7 + 2) * 2 * kConnectionInterval,
         kConnectionTimeout =
             Timer::kMaxDelay, //(kWaitBleConnectionTimeout + kWaitTobleConnectionTimeout), // Timer::kMaxDelay,
     };

@@ -674,6 +674,11 @@ AC_ARG_WITH(ble-host,
     [with_ble_host=no])
 
 AM_CONDITIONAL([OPENTHREAD_CONFIG_BLE_HOST_BLUEZ_ENABLE],[test "${with_ble_host}" = "bluez"])
+if test "$with_ble_host" = "bluez"; then
+    CPPFLAGS="${CPPFLAGS} -DOPENTHREAD_CONFIG_BLE_HOST_BLUEZ_ENABLE=1"
+else
+    CPPFLAGS="${CPPFLAGS} -DOPENTHREAD_CONFIG_BLE_HOST_BLUEZ_ENABLE=0"
+fi
 
 if test "${enable_toble}" = "yes" && test "${with_ble_host}" = "bluez"; then
     PKG_CHECK_MODULES(GLIB, glib-2.0 >= 2.28, dummy=yes,

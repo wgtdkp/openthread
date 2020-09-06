@@ -60,6 +60,16 @@ LDADD_COMMON                                                           = \
     -lutil                                                               \
     $(NULL)
 
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+#if OPENTHREAD_CONFIG_BLE_HOST_BLUEZ_ENABLE
+LDADD_COMMON                                                          += \
+    -lpthread                                                            \
+    $(top_builddir)/third_party/bluez/libbluetooth-internal.a            \
+    $(top_builddir)/third_party/bluez/libshared_mainloop.a               \
+    $(NULL)
+#endif
+#endif
+
 if OPENTHREAD_ENABLE_BUILTIN_MBEDTLS
 LDADD_COMMON                                                          += \
     $(top_builddir)/third_party/mbedtls/libmbedcrypto.a                  \

@@ -58,14 +58,14 @@ Btp::Btp(Instance &aInstance)
 
 void Btp::Start(Connection &aConn)
 {
-    otLogNoteBtp("Btp::Start");
+    otLogNoteBtp("Start");
 
     aConn.mSession.mState = kStateIdle;
 }
 
 void Btp::Stop(Connection &aConn)
 {
-    otLogNoteBtp("Btp::Stop");
+    otLogNoteBtp("Stop");
 
     Get<Platform>().SubscribeC2(aConn.mPlatConn, false);
     Reset(aConn.mSession);
@@ -73,7 +73,7 @@ void Btp::Stop(Connection &aConn)
 
 void Btp::Send(Connection &aConn, const uint8_t *aBuf, uint16_t aLength)
 {
-    otLogNoteBtp("Btp::Send");
+    otLogNoteBtp("Send");
 
     aConn.mSession.mSendBuf    = aBuf;
     aConn.mSession.mSendLength = aLength;
@@ -97,7 +97,7 @@ void Btp::SendData(Connection &aConn)
 
     VerifyOrExit(session.mState == kStateConnected, OT_NOOP);
 
-    otLogNoteBtp("BTP send");
+    otLogNoteBtp("BTP send data");
 
     frame.Init(iterator);
 
@@ -327,7 +327,7 @@ void Btp::UpdateTimer(void)
 
 void Btp::Reset(Session &aSession)
 {
-    otLogNoteBtp("BTP::Reset");
+    otLogNoteBtp("Reset");
 
     aSession.mSendBuf              = NULL;
     aSession.mSendOffset           = 0;

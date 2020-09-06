@@ -36,13 +36,42 @@
 #include "platform-posix.h"
 
 #include <assert.h>
+#include <signal.h>
 
 #include <openthread-core-config.h>
 #include <openthread/tasklet.h>
 #include <openthread/platform/alarm-milli.h>
 #include <openthread/platform/radio.h>
 
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+#include <openthread/platform/toble.h>
+#endif
+
 uint64_t gNodeId = 0;
+
+static volatile bool sExit = false;
+
+bool otSysMainloopExitRequest(void)
+{
+    return sExit;
+}
+
+void SignalHandler(int aSignal)
+{
+    OT_UNUSED_VARIABLE(aSignal);
+    sExit = true;
+}
+
+void SignalInit(void)
+{
+    struct sigaction sigIntHandler;
+
+    sigIntHandler.sa_handler = SignalHandler;
+    sigemptyset(&sigIntHandler.sa_mask);
+    sigIntHandler.sa_flags = 0;
+
+    sigaction(SIGINT, &sigIntHandler, NULL);
+}
 
 otInstance *otSysInit(otPlatformConfig *aPlatformConfig)
 {
@@ -52,7 +81,11 @@ otInstance *otSysInit(otPlatformConfig *aPlatformConfig)
     virtualTimeInit(static_cast<uint16_t>(atoi(aPlatformConfig->mRadioConfig)));
 #endif
     platformAlarmInit(aPlatformConfig->mSpeedUpFactor);
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    platformTobleInit(aPlatformConfig);
+#else
     platformRadioInit(aPlatformConfig);
+#endif
     platformRandomInit();
 
     instance = otInstanceInitSingle();
@@ -64,15 +97,21 @@ otInstance *otSysInit(otPlatformConfig *aPlatformConfig)
     platformUdpInit(aPlatformConfig->mInterfaceName);
 #endif
 
+    SignalInit();
+
     return instance;
 }
 
 void otSysDeinit(void)
 {
+#if !OPENTHREAD_CONFIG_TOBLE_ENABLE
 #if OPENTHREAD_POSIX_VIRTUAL_TIME
     virtualTimeDeinit();
 #endif
     platformRadioDeinit();
+#else
+    platformTobleDeinit();
+#endif
 #if OPENTHREAD_CONFIG_PLATFORM_NETIF_ENABLE
     platformNetifDeinit();
 #endif
@@ -123,13 +162,16 @@ void otSysMainloopUpdate(otInstance *aInstance, otSysMainloopContext *aMainloop)
     platformNetifUpdateFdSet(&aMainloop->mReadFdSet, &aMainloop->mWriteFdSet, &aMainloop->mErrorFdSet,
                              &aMainloop->mMaxFd);
 #endif
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    platformTobleUpdateFdSet(&aMainloop->mReadFdSet, &aMainloop->mErrorFdSet, &aMainloop->mMaxFd);
+#else
 #if OPENTHREAD_POSIX_VIRTUAL_TIME
     virtualTimeUpdateFdSet(&aMainloop->mReadFdSet, &aMainloop->mWriteFdSet, &aMainloop->mErrorFdSet, &aMainloop->mMaxFd,
                            &aMainloop->mTimeout);
 #else
     platformRadioUpdateFdSet(&aMainloop->mReadFdSet, &aMainloop->mWriteFdSet, &aMainloop->mMaxFd, &aMainloop->mTimeout);
 #endif
-
+#endif
     if (otTaskletsArePending(aInstance))
     {
         aMainloop->mTimeout.tv_sec  = 0;
@@ -182,10 +224,14 @@ int otSysMainloopPoll(otSysMainloopContext *aMainloop)
 
 void otSysMainloopProcess(otInstance *aInstance, const otSysMainloopContext *aMainloop)
 {
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    platformTobleProcess(&aMainloop->mReadFdSet, &aMainloop->mErrorFdSet);
+#else
 #if OPENTHREAD_POSIX_VIRTUAL_TIME
     virtualTimeProcess(aInstance, &aMainloop->mReadFdSet, &aMainloop->mWriteFdSet, &aMainloop->mErrorFdSet);
 #else
     platformRadioProcess(aInstance, &aMainloop->mReadFdSet, &aMainloop->mWriteFdSet);
+#endif
 #endif
     platformUartProcess(&aMainloop->mReadFdSet, &aMainloop->mWriteFdSet, &aMainloop->mErrorFdSet);
     platformAlarmProcess(aInstance);

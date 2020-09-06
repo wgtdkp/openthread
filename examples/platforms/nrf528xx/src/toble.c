@@ -76,11 +76,6 @@
 /// Default number of retries when no communication happens [units of connection interval]
 #define BLE_DEFAULT_CONNECTION_RETRY 10
 
-/// Default advertising handle
-#ifndef BLE_DEFAULT_ADVERTISING_HANDLE
-#define BLE_DEFAULT_ADVERTISING_HANDLE BLE_GAP_ADV_SET_HANDLE_NOT_SET
-#endif
-
 /// BLE time unit.
 #define BLE_TIME_UNIT_USEC 625
 #define USEC_PER_MSEC 1000
@@ -355,7 +350,7 @@ static void initState()
     sBle.mConnParams.max_conn_interval = BLE_DEFAULT_CONNECTION_INTERVAL_MAX;
     sBle.mConnParams.slave_latency     = BLE_DEFAULT_SLAVE_LATENCY;
     sBle.mConnParams.conn_sup_timeout  = BLE_DEFAULT_CONNECTIION_TIMEOUT;
-    sBle.mAdvHandle                    = BLE_DEFAULT_ADVERTISING_HANDLE;
+    sBle.mAdvHandle                    = BLE_GAP_ADV_SET_HANDLE_NOT_SET;
 
     for (index = 0; index < NRF_SDH_BLE_TOTAL_LINK_COUNT; index++)
     {
@@ -487,9 +482,11 @@ otError otPlatTobleAdvStart(otInstance *aInstance, const otTobleAdvConfig *aConf
 
 otError otPlatTobleAdvStop(otInstance *aInstance)
 {
-    uint32_t retval;
+    uint32_t retval = NRF_ERROR_INVALID_STATE;
 
     OT_UNUSED_VARIABLE(aInstance);
+
+    otEXPECT(sBle.mAdvHandle != BLE_GAP_ADV_SET_HANDLE_NOT_SET);
 
     retval = sd_ble_gap_adv_stop(sBle.mAdvHandle);
     otEXPECT_ACTION(retval == NRF_SUCCESS, otLogCritPlat("[BLE] sd_ble_gap_adv_stop error: 0x%x", retval));
@@ -1075,7 +1072,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 
     otEXPECT(nrf5SoftDeviceBleIsEnabled());
 
-    if (evt->header.evt_id != BLE_GAP_EVT_ADV_REPORT)
+    if ((evt->header.evt_id != BLE_GAP_EVT_ADV_REPORT) && (evt->header.evt_id != BLE_GAP_EVT_RSSI_CHANGED))
     {
         otLogInfoPlat("[BLE] Event: ConnectionId=%d %s", connectionId, bleEvtToString(evt->header.evt_id));
     }
@@ -1293,7 +1290,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 
     case BLE_GATTS_EVT_EXCHANGE_MTU_REQUEST:
     {
-        uint16_t                              mtuMax = OT_BLE_ATT_MTU_MAX;
+        uint16_t                              mtuMax = BLE_GATT_ATT_MTU;
         ble_gatts_evt_exchange_mtu_request_t *evtMtu = &evt->evt.gatts_evt.params.exchange_mtu_request;
 
         otLogDebgPlat("[BLE] BLE_GATTS_EVT_EXCHANGE_MTU_REQUEST: mtuMax=%d, client_rx_mtu=%d", mtuMax,
@@ -1302,7 +1299,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         {
             peer->mAttMtu = MIN(mtuMax, evtMtu->client_rx_mtu);
 
-            if (sd_ble_gatts_exchange_mtu_reply(connectionId, peer->mAttMtu) != NRF_SUCCESS)
+            if ((retval = sd_ble_gatts_exchange_mtu_reply(connectionId, peer->mAttMtu)) != NRF_SUCCESS)
             {
                 otLogCritPlat("[BLE] sd_ble_gatts_exchange_mtu_reply error: 0x%x", retval);
             }
@@ -1533,9 +1530,12 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 
         break;
     }
+
     case BLE_GATTC_EVT_CHAR_VAL_BY_UUID_READ_RSP:
     {
         ble_gattc_evt_char_val_by_uuid_read_rsp_t *evtDisc = &evt->evt.gattc_evt.params.char_val_by_uuid_read_rsp;
+
+        otEXPECT(evtDisc->count > 0);
 
         if (sBle.mState == kStateGattiDiscoverUuidC1Handle)
         {

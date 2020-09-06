@@ -113,6 +113,7 @@ HandleC1Write: index=0, length=20
 - [send](#send)
 - [show](#show)
 - [subscribe](#subscribe)
+- [whitelist](#whitelist)
 
 ## Command Details
 
@@ -340,5 +341,63 @@ Set or show the BLE role.
 Done
 > tobleplat role
 central
+Done
+```
+
+### whitelist
+
+Usage: `tobleplat whitelist`
+
+Show whitelist.
+
+```bash
+> tobleplat whitelist
+
+| index | addrType |   address    |
+| 0     |    1     | 22ef951da7dc |
+Done
+```
+
+### whitelist add
+
+Usage: `tobleplat whitelist add <addressType> <address>`
+
+Add given address to the whitelist.
+
+```bash
+> tobleplat whitelist add 1 22ef951da7dc
+Done
+```
+
+### whitelist remove
+
+Usage: `tobleplat whitelist remove <addressType> <address>`
+
+Remove given address from the whitelist.
+
+```bash
+> tobleplat whitelist remove 1 22ef951da7dc
+Done
+```
+
+### whitelist enable
+
+Usage: `tobleplat whitelist enable`
+
+Enable the whitelist.
+
+```bash
+> tobleplat whitelist enable
+Done
+```
+
+### whitelist disable
+
+Usage: `tobleplat whitelist disable`
+
+Disable the whitelist.
+
+```bash
+> tobleplat whitelist disable
 Done
 ```

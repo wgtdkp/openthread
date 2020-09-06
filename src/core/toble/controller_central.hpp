@@ -77,7 +77,6 @@ public:
                                          uint16_t aDiscoverCcittIndex,
                                          uint16_t aDiscoverAnsiIndex);
 
-    void HandleTransportConnected(Connection &aConn);
     void ConnectionTimerRefresh(Connection &aConn);
 
     void SetJoiningPermitted(bool aEnabled, otSteeringData *aSteeringData);
@@ -120,9 +119,9 @@ private:
 
         kScanInterval               = kConnectionInterval,
         kScanWindow                 = kConnectionScanWindow,
-        kWaitBleConnectionTimeout   = 10 * kConnectionInterval,
-        kWaitTobleConnectionTimeout = (7 + 2) * 2 * kConnectionInterval,
-        kScanPeersTimeout           = 10 * kConnectionInterval,
+        kWaitBleConnectionTimeout   = 5000, // 10 * kConnectionInterval,
+        kWaitTobleConnectionTimeout = 5000, // (7 + 2) * 2 * kConnectionInterval,
+        kScanPeersTimeout           = 5000, // 10 * kConnectionInterval,
         kConnectionTimeout =
             Timer::kMaxDelay, //(kWaitBleConnectionTimeout + kWaitTobleConnectionTimeout), // Timer::kMaxDelay,
 

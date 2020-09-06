@@ -41,10 +41,31 @@ nrfjprog -f nrf52 -s ${device_sn} --reset
 ```
 
 #### Posix
+Install libraries
+```
+sudo apt-get update
+sudo apt-get -y install libglib2.0-dev libdbus-glib-1-dev libudev-dev libical-dev libreadline-dev
+```
 
+Compile
 ```
 ./bootstrap
 make -f ./src/posix/Makefile-posix TOBLE=1 BLE_HOST=bluez
+```
+
+Get the HCI index
+```
+$ hciconfig
+hci0:   Type: Primary  Bus: USB
+    BD Address: 00:19:86:00:0F:7B  ACL MTU: 1021:8  SCO MTU: 64:1
+    UP RUNNING
+    RX bytes:1542 acl:0 sco:0 events:79 errors:0
+    TX bytes:2081 acl:0 sco:0 commands:79 errors:0
+```
+
+Run Toble
+```
+sudo ./output/posix/x86_64-unknown-linux-gnu/bin/ot-cli hci0
 ```
 
 ## Example

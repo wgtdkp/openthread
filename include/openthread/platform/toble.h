@@ -158,8 +158,8 @@ void otPlatTobleInit(otInstance *aInstance);
  *
  * After this call, the `aConn` should be considered invalid and not used again.
  *
- * NOTE: When a connection is disconnected using an explicit call to this function, the platform should NOT invoke the
- * callback `otPlatTobleHandleDisconnected()`.
+ * NOTE: When a connection is disconnected using an explicit call to this function, the platform should NOT invoke
+ * the callback `otPlatTobleHandleDisconnected()`.
  *
  * @param[in] aInstance   A pointer to OpenThread instance.
  * @param[in] aConn       A pointer to a BLE connection.
@@ -528,12 +528,6 @@ extern void otPlatTobleDiagGapOnAdvReceived(otInstance *      aInstance,
 extern void otPlatTobleDiagGapOnScanRespReceived(otInstance *aInstance, otTobleAdvPacket *aAdvPacket);
 extern void otPlatTobleDiagHandleConnected(otInstance *aInstance, otTobleConnection *aConn);
 extern void otPlatTobleDiagHandleDisconnected(otInstance *aInstance, otTobleConnection *aConn);
-extern void otPlatTobleDiagHandleAdv(otInstance *          aInstance,
-                                     otTobleAdvType        aAdvType,
-                                     const otTobleAddress *aSource,
-                                     const uint8_t *       aData,
-                                     uint16_t              aLength,
-                                     int8_t                aRssi);
 extern void otPlatTobleDiagHandleConnectionIsReady(otInstance *              aInstance,
                                                    otTobleConnection *       aConn,
                                                    otTobleConnectionLinkType aLinkType);

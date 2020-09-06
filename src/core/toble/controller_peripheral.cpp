@@ -514,15 +514,6 @@ exit:
     return;
 }
 
-void Controller::HandleTransportConnected(Connection &aConn)
-{
-    OT_UNUSED_VARIABLE(aConn);
-    if (mState == kStateConnected)
-    {
-        TimerStart(kConnectionTimeout);
-    }
-}
-
 void Controller::ConnectionTimerRefresh(Connection &aConn)
 {
     OT_UNUSED_VARIABLE(aConn);

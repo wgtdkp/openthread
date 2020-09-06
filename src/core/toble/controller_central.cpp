@@ -496,7 +496,6 @@ void Controller::StartTransmit(void)
 
             if (mTxConn != NULL)
             {
-                otLogNoteTobleCent("%s: Step 3", __func__);
                 mTxConn->mShortAddr = mTxDest.GetShort();
                 otLogNoteTobleCent("Updated short addr, conn:[%s]", mTxConn->ToString().AsCString());
             }
@@ -916,6 +915,8 @@ void Controller::HandleConnected(Platform::Connection *aPlatConn)
         uint16_t length = mTxFrame->GetPsduLength() - Mac::Frame::GetFcsSize();
 
         SetTxState(kStateTxSending);
+        mTxTimer.Start(kConnectionTimeout);
+        otLogNoteTobleCent("%s: mTxTimer.Start(kConnectionTimeout=%d)", __func__, kConnectionTimeout);
         Get<Btp>().Send(*conn, mTxFrame->GetPsdu(), length);
     }
 
@@ -945,16 +946,6 @@ void Controller::HandleDisconnected(Platform::Connection *aPlatConn)
 
 exit:
     return;
-}
-
-void Controller::HandleTransportConnected(Connection &aConn)
-{
-    if (aConn.mState == Connection::kConnected)
-    {
-        aConn.mDisconnectTime = TimerMilli::GetNow() + kConnectionTimeout;
-        UpdateConnTimer();
-        mConnTimer.Start(kConnectionTimeout);
-    }
 }
 
 void Controller::ConnectionTimerRefresh(Connection &aConn)

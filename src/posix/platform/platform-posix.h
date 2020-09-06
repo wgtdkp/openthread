@@ -396,6 +396,38 @@ enum SocketBlockOption
  */
 int SocketWithCloseExec(int aDomain, int aType, int aProtocol, SocketBlockOption aBlockOption);
 
+/**
+ * This function initializes the Toble platform driver.
+ *
+ * @param[in]  aPlatformConfig  Platform configuration structure.
+ *
+ */
+void platformTobleInit(const otPlatformConfig *aPlatformConfig);
+
+/**
+ * This function shuts down the Toble platform driver.
+ *
+ */
+void platformTobleDeinit(void);
+
+/**
+ * This function updates the file descriptor sets with file descriptors used by the platform Toble driver.
+ *
+ * @param[inout]  aReadFdSet   A pointer to the read file descriptors.
+ * @param[inout]  aErrorFdSet  A pointer to the error file descriptors.
+ * @param[inout]  aMaxFd       A pointer to the max file descriptor.
+ */
+void platformTobleUpdateFdSet(fd_set *aReadFdSet, fd_set *aErrorFdSet, int *aMaxFd);
+
+/**
+ * This function performs platform Toble driver processing.
+ *
+ * @param[in]     aReadFdSet  A pointer to the read file descriptors.
+ * @param[inout]  aErrorFdSet  A pointer to the error file descriptors.
+ *
+ */
+void platformTobleProcess(const fd_set *aReadFdSet, const fd_set *aErrorFdSet);
+
 #ifdef __cplusplus
 }
 #endif

@@ -42,18 +42,26 @@
 namespace ot {
 namespace Cli {
 
-const struct ToblePlatform::Command ToblePlatform::sCommands[] = {
-    {"help", &ToblePlatform::ProcessHelp},       {"diag", &ToblePlatform::ProcessDiag},
-    {"adv", &ToblePlatform::ProcessAdv},         {"scan", &ToblePlatform::ProcessScan},
-    {"connect", &ToblePlatform::ProcessConnect}, {"disconnect", &ToblePlatform::ProcessDisconnect},
-    {"mtu", &ToblePlatform::ProcessMtu},         {"subscribe", &ToblePlatform::ProcessSubscribe},
-    {"send", &ToblePlatform::ProcessSend},       {"role", &ToblePlatform::ProcessRole},
-    {"link", &ToblePlatform::ProcessLink},       {"show", &ToblePlatform::ProcessShow}};
+const struct ToblePlatform::Command ToblePlatform::sCommands[] = {{"adv", &ToblePlatform::ProcessAdv},
+                                                                  {"connect", &ToblePlatform::ProcessConnect},
+                                                                  {"diag", &ToblePlatform::ProcessDiag},
+                                                                  {"disconnect", &ToblePlatform::ProcessDisconnect},
+                                                                  {"help", &ToblePlatform::ProcessHelp},
+                                                                  {"link", &ToblePlatform::ProcessLink},
+                                                                  {"mtu", &ToblePlatform::ProcessMtu},
+                                                                  {"role", &ToblePlatform::ProcessRole},
+                                                                  {"scan", &ToblePlatform::ProcessScan},
+                                                                  {"send", &ToblePlatform::ProcessSend},
+                                                                  {"show", &ToblePlatform::ProcessShow},
+                                                                  {"subscribe", &ToblePlatform::ProcessSubscribe},
+                                                                  {"whitelist", &ToblePlatform::ProcessWhitelist}};
 
 ToblePlatform::ToblePlatform(Interpreter &aInterpreter)
     : mInterpreter(aInterpreter)
     , mLinkType(kConnectionLinkTypeGatt)
     , mRole(OT_TOBLE_ROLE_PERIPHERAL)
+    , mWhitelistSize(0)
+    , mWhitelistEnabled(false)
 {
     memset(mConns, 0, sizeof(mConns));
     otPlatTobleInit(mInterpreter.mInstance);
@@ -200,9 +208,9 @@ otError ToblePlatform::ProcessAdv(uint8_t aArgsLength, char *aArgs[])
     {
         otTobleAdvConfig config;
 
-        const uint8_t advData[] = {0x02, 0x01, 0x07, 0x12, 0x16, 0xFF, 0xFB, 0x30, 0x00, 0x21, 0x00,
+        const uint8_t advData[] = {0x02, 0x01, 0x06, 0x12, 0x16, 0xFF, 0xFC, 0x30, 0x00, 0x21, 0x00,
                                    0x01, 0xAA, 0xBB, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
-        const uint8_t scanRsp[] = {0x16, 0x16, 0xFF, 0xFB, 0x31, 0x08, 0x10, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        const uint8_t scanRsp[] = {0x16, 0x16, 0xFF, 0xFD, 0x31, 0x08, 0x10, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
                                    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
         SuccessOrExit(error = Interpreter::ParseLong(aArgs[1], value));
@@ -276,7 +284,7 @@ otError ToblePlatform::ProcessRole(uint8_t aArgsLength, char *aArgs[])
     }
     else
     {
-        mInterpreter.mServer->OutputFormat("%s\r\n", mRole == OT_TOBLE_ROLE_CENTRAL ? "peripheral" : "central");
+        mInterpreter.mServer->OutputFormat("%s\r\n", mRole == OT_TOBLE_ROLE_CENTRAL ? "central" : "peripheral");
     }
 
 exit:
@@ -511,6 +519,109 @@ otError ToblePlatform::ProcessShow(uint8_t aArgsLength, char *aArgs[])
     return OT_ERROR_NONE;
 }
 
+int16_t ToblePlatform::WhitelistFind(otTobleAddress &aAddress)
+{
+    uint8_t i;
+
+    for (i = 0; i < mWhitelistSize; i++)
+    {
+        if ((aAddress.mType == mWhitelist[i].mType) &&
+            (memcmp(aAddress.mAddress, mWhitelist[i].mAddress, OT_TOBLE_ADDRESS_SIZE) == 0))
+        {
+            break;
+        }
+    }
+
+    return (i < mWhitelistSize) ? i : -1;
+}
+
+otError ToblePlatform::ProcessWhitelist(uint8_t aArgsLength, char *aArgs[])
+{
+    otTobleAddress address;
+    otError        error = OT_ERROR_NONE;
+    long           value;
+
+    if (aArgsLength == 3)
+    {
+        if (strcmp(aArgs[0], "add") == 0)
+        {
+            VerifyOrExit(mWhitelistSize <= OT_ARRAY_LENGTH(mWhitelist), error = OT_ERROR_NO_BUFS);
+            SuccessOrExit(error = Interpreter::ParseLong(aArgs[1], value));
+            mWhitelist[mWhitelistSize].mType = static_cast<otTobleAddressType>(value);
+
+            VerifyOrExit(mWhitelist[mWhitelistSize].mType <= OT_TOBLE_ADDRESS_TYPE_RANDOM_PRIVATE_NON_RESOLVABLE,
+                         error = OT_ERROR_INVALID_ARGS);
+
+            VerifyOrExit(Interpreter::Hex2Bin(aArgs[2], mWhitelist[mWhitelistSize].mAddress, OT_TOBLE_ADDRESS_SIZE) ==
+                             OT_TOBLE_ADDRESS_SIZE,
+                         error = OT_ERROR_INVALID_ARGS);
+            mWhitelistSize++;
+        }
+        else if (strcmp(aArgs[0], "remove") == 0)
+        {
+            int16_t index;
+
+            SuccessOrExit(error = Interpreter::ParseLong(aArgs[1], value));
+            address.mType = static_cast<otTobleAddressType>(value);
+
+            VerifyOrExit(address.mType <= OT_TOBLE_ADDRESS_TYPE_RANDOM_PRIVATE_NON_RESOLVABLE,
+                         error = OT_ERROR_INVALID_ARGS);
+
+            VerifyOrExit(Interpreter::Hex2Bin(aArgs[2], address.mAddress, OT_TOBLE_ADDRESS_SIZE) ==
+                             OT_TOBLE_ADDRESS_SIZE,
+                         error = OT_ERROR_INVALID_ARGS);
+
+            if ((index = WhitelistFind(address)) >= 0)
+            {
+                if ((index + 1) < mWhitelistSize)
+                {
+                    memmove(&mWhitelist[index], &mWhitelist[index + 1],
+                            (mWhitelistSize - (index + 1)) * sizeof(otTobleAddress));
+                }
+
+                mWhitelistSize--;
+            }
+            else
+            {
+                error = OT_ERROR_NOT_FOUND;
+            }
+        }
+        else
+        {
+            error = OT_ERROR_INVALID_ARGS;
+        }
+    }
+    else if (aArgsLength == 1)
+    {
+        if (strcmp(aArgs[0], "enable") == 0)
+        {
+            mWhitelistEnabled = true;
+        }
+        else if (strcmp(aArgs[0], "disable") == 0)
+        {
+            mWhitelistEnabled = false;
+        }
+        else
+        {
+            error = OT_ERROR_INVALID_ARGS;
+        }
+    }
+    else
+    {
+        mInterpreter.mServer->OutputFormat("\r\n| index | addrType |   address    |\r\n");
+        for (uint8_t i = 0; i < mWhitelistSize; i++)
+        {
+            mInterpreter.mServer->OutputFormat(
+                "| %-5d |    %d     | %02x%02x%02x%02x%02x%02x |\r\n", i, mWhitelist[i].mType,
+                mWhitelist[i].mAddress[0], mWhitelist[i].mAddress[1], mWhitelist[i].mAddress[2],
+                mWhitelist[i].mAddress[3], mWhitelist[i].mAddress[4], mWhitelist[i].mAddress[5]);
+        }
+    }
+
+exit:
+    return error;
+}
+
 otError ToblePlatform::Process(uint8_t aArgsLength, char *aArgs[])
 {
     otError error = OT_ERROR_INVALID_COMMAND;
@@ -577,17 +688,24 @@ void ToblePlatform::HandleAdvReceived(otTobleAdvType aAdvType, otTobleAdvPacket 
 {
     otTobleAddress *srcAddress = &aAdvPacket->mSrcAddress;
 
+    VerifyOrExit((!mWhitelistEnabled) || (mWhitelistEnabled && (WhitelistFind(*srcAddress) >= 0)), OT_NOOP);
+
     mInterpreter.mServer->OutputFormat("| %-15s |    %d     | %02x%02x%02x%02x%02x%02x | %3d  | ",
                                        AdvTypeToString(aAdvType), srcAddress->mType, srcAddress->mAddress[0],
                                        srcAddress->mAddress[1], srcAddress->mAddress[2], srcAddress->mAddress[3],
                                        srcAddress->mAddress[4], srcAddress->mAddress[5], aAdvPacket->mRssi);
     PrintBytes(aAdvPacket->mData, aAdvPacket->mLength);
     mInterpreter.mServer->OutputFormat("\r\n");
+
+exit:
+    return;
 }
 
 void ToblePlatform::HandleScanRespReceived(otTobleAdvPacket *aAdvPacket)
 {
     otTobleAddress *srcAddress = &aAdvPacket->mSrcAddress;
+
+    VerifyOrExit((!mWhitelistEnabled) || (mWhitelistEnabled && (WhitelistFind(*srcAddress) >= 0)), OT_NOOP);
 
     mInterpreter.mServer->OutputFormat("| SCAN_RSP        |    %d     | %02x%02x%02x%02x%02x%02x | %3d  | ",
                                        srcAddress->mType, srcAddress->mAddress[0], srcAddress->mAddress[1],
@@ -595,6 +713,9 @@ void ToblePlatform::HandleScanRespReceived(otTobleAdvPacket *aAdvPacket)
                                        srcAddress->mAddress[5], aAdvPacket->mRssi);
     PrintBytes(aAdvPacket->mData, aAdvPacket->mLength);
     mInterpreter.mServer->OutputFormat("\r\n");
+
+exit:
+    return;
 }
 
 void ToblePlatform::HandleConnected(otTobleConnection *aConn)
@@ -623,8 +744,6 @@ exit:
 void ToblePlatform::HandleDisconnected(otTobleConnection *aConn)
 {
     Connection *connSession = GetConnection(aConn);
-
-    mInterpreter.mServer->OutputFormat("HandleDisconnected: platConn=%p\r\n", aConn);
 
     VerifyOrExit(connSession != NULL, OT_NOOP);
 
