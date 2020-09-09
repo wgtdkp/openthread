@@ -159,6 +159,9 @@ void otSysProcessDrivers(otInstance *aInstance)
     nrf5RadioProcess(aInstance);
     nrf5TransportProcess();
     nrf5TempProcess();
+#if OPENTHREAD_CONFIG_TOBLE_ENABLE
+    nrf5TobleProcess();
+#endif
 #if SOFTDEVICE_OT_MANAGED
     otSysSoftdeviceProcess();
 #endif

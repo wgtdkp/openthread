@@ -38,13 +38,16 @@
 #include <string.h>
 
 #include "platform-nrf5.h"
+
 #include <openthread-core-config.h>
 #include <openthread/config.h>
 
+#include <openthread-system.h>
 #include <openthread/platform/ble.h>
 #include <openthread/platform/toble.h>
 #include <openthread/platform/toolchain.h>
 
+#include <common/code_utils.hpp>
 #include <common/logging.hpp>
 #include <utils/code_utils.h>
 #include <openthread/error.h>
@@ -87,6 +90,8 @@
 
 #define BLE_L2CAP_MTU 1000
 #define BLE_L2CAP_PSM 0x90
+
+#define BLE_TASK_COUNT 10
 
 /**
  * Macro to find the minimum of two values.
@@ -143,6 +148,40 @@ typedef struct
 
     otTobleConnectionLinkType mLinkType; ///< Toble Link type.
 } BlePeer;
+
+typedef enum
+{
+    kHandleConnected,
+    kHandleDisconnected,
+    kHandleScanResponse,
+    kHandleAdvertisement,
+    kHandleC1Write,
+    kHandleC1WriteDone,
+    kHandleC2Subscribed,
+    kHandleC2Notification,
+    kHandleC2NotificationDone,
+    kHandleConnectionIsReady,
+    kHandleL2CapFrameReceived,
+    kHandleL2CapScanSendDone,
+} BleTaskType;
+
+typedef struct
+{
+    BleTaskType        mType;
+    otTobleConnection *mConnection;
+    uint8_t            mBuffer[255];
+    uint16_t           mBufferLength;
+    otTobleAdvType     mAdvertisementType;
+    otTobleAdvPacket   mAdvertisement;
+    bool               mSubscribed;
+    uint8_t            mCount;
+    otTobleConnectionLinkType mLinkType;
+    bool               mPending;
+} BlePendingTask;
+
+static BlePendingTask sPendingTasks[BLE_TASK_COUNT];
+uint8_t sTaskQueueHead = 0;
+uint8_t sTaskQueueTail = 0;
 
 /**
  *  Control BLE structre.
@@ -357,12 +396,18 @@ static void initState()
         peerInit(&sBlePeers[index]);
     }
 
+    for (index = 0; index < sizeof(sPendingTasks) / sizeof(BlePendingTask); index++)
+    {
+        sPendingTasks[index].mPending = false;
+    }
+
     memset(&sBle.mAdvDataInfo, 0, sizeof(sBle.mAdvDataInfo));
 
     sPeripheralPeer = NULL;
     sDiagMode       = false;
 }
 
+// FIXME @gjc @zhanglongxia: should not init in cli
 void otPlatTobleInit(otInstance *aInstance)
 {
     uint8_t isEnabled;
@@ -1061,16 +1106,32 @@ static const char *bleEvtToString(int aEvtId)
 }
 #endif //#if (OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_DEBG) && (OPENTHREAD_CONFIG_LOG_PLATFORM == 1)
 
+static void SignalBleTaskPending(BlePendingTask *aTask)
+{
+    aTask->mPending = true;
+    sTaskQueueTail++;
+    sTaskQueueTail %= BLE_TASK_COUNT;
+    otLogCritPlat("SignalBleTaskPending %d %d", sTaskQueueHead, sTaskQueueTail);
+    otSysEventSignalPending();
+}
+
 static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 {
     uint32_t   retval       = NRF_SUCCESS;
     ble_evt_t *evt          = (ble_evt_t *)aEvent;
     uint16_t   connectionId = evt->evt.common_evt.conn_handle;
     BlePeer *  peer;
+    BlePendingTask *task = &sPendingTasks[sTaskQueueTail];
 
     OT_UNUSED_VARIABLE(aContext);
 
     otEXPECT(nrf5SoftDeviceBleIsEnabled());
+
+    if ((sTaskQueueTail + 1) % BLE_TASK_COUNT == sTaskQueueHead)
+    {
+        otLogCritPlat("No free BLE task slot, will skip event");
+        ExitNow();
+    }
 
     if ((evt->header.evt_id != BLE_GAP_EVT_ADV_REPORT) && (evt->header.evt_id != BLE_GAP_EVT_RSSI_CHANGED))
     {
@@ -1089,16 +1150,11 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
             sd_ble_gap_disconnect(connectionId, OT_BLE_HCI_REMOTE_USER_TERMINATED);
             break;
         }
-
         peer->mConnHandle = connectionId;
-        if (sDiagMode)
-        {
-            otPlatTobleDiagHandleConnected(sInstance, (otTobleConnection *)peer);
-        }
-        else
-        {
-            otPlatTobleHandleConnected(sInstance, (otTobleConnection *)peer);
-        }
+
+        task->mType = kHandleConnected;
+        task->mConnection = peer;
+        SignalBleTaskPending(task);
 
         if (sPeripheralPeer != NULL)
         {
@@ -1146,14 +1202,10 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         if ((peer = peerFind(connectionId)) != NULL)
         {
             sPeripheralPeer = NULL;
-            if (sDiagMode)
-            {
-                otPlatTobleDiagHandleDisconnected(sInstance, (otTobleConnection *)peer);
-            }
-            else
-            {
-                otPlatTobleHandleDisconnected(sInstance, (otTobleConnection *)peer);
-            }
+
+            task->mType = kHandleDisconnected;
+            task->mConnection = peer;
+            SignalBleTaskPending(task);
         }
 
         // Free the BLE Peer slot.
@@ -1195,48 +1247,10 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
     case BLE_GAP_EVT_ADV_REPORT:
     {
         ble_gap_evt_adv_report_t *advReport = &evt->evt.gap_evt.params.adv_report;
-
-        otTobleAdvPacket packet;
         ble_data_t       advData;
-
-        packet.mRssi   = advReport->rssi;
-        packet.mData   = advReport->data.p_data;
-        packet.mLength = advReport->data.len;
-
-        packet.mSrcAddress.mType = advReport->peer_addr.addr_type;
-        memcpy(packet.mSrcAddress.mAddress, advReport->peer_addr.addr, OT_TOBLE_ADDRESS_SIZE);
-
-        if (advReport->type.scan_response)
-        {
-            if (sDiagMode)
-            {
-                otPlatTobleDiagGapOnScanRespReceived(sInstance, &packet);
-            }
-            else
-            {
-                otPlatTobleGapOnScanRespReceived(sInstance, &packet);
-            }
-        }
-        else
-        {
-            otTobleAdvType advType;
-
-            if (advReportTypeConvert(advReport->type, &advType) == OT_ERROR_NONE)
-            {
-                if (sDiagMode)
-                {
-                    otPlatTobleDiagGapOnAdvReceived(sInstance, advType, &packet);
-                }
-                else
-                {
-                    otPlatTobleGapOnAdvReceived(sInstance, advType, &packet);
-                }
-            }
-        }
 
         advData.p_data = sBle.mScanBuff;
         advData.len    = sizeof(sBle.mScanBuff);
-
         // Continue scanning.
         retval = sd_ble_gap_scan_start(NULL, &advData);
         if (retval != NRF_SUCCESS)
@@ -1244,6 +1258,23 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
             otLogCritPlat("[BLE] sd_ble_gap_sec_params_reply error: 0x%x", retval);
         }
 
+        task->mAdvertisement.mRssi   = advReport->rssi;
+        memcpy(task->mBuffer, advReport->data.p_data, advReport->data.len);
+        task->mAdvertisement.mData   = task->mBuffer;
+        task->mAdvertisement.mLength = advReport->data.len;
+        task->mAdvertisement.mSrcAddress.mType = advReport->peer_addr.addr_type;
+        memcpy(task->mAdvertisement.mSrcAddress.mAddress, advReport->peer_addr.addr, OT_TOBLE_ADDRESS_SIZE);
+
+        if (advReport->type.scan_response)
+        {
+            task->mType = kHandleScanResponse;
+        }
+        else
+        {
+            task->mType = kHandleAdvertisement;
+            VerifyOrExit(advReportTypeConvert(advReport->type, &task->mAdvertisementType) == OT_ERROR_NONE, OT_NOOP);
+        }
+        SignalBleTaskPending(task);
         break;
     }
 
@@ -1332,31 +1363,23 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
             if (packet.mLength == 2 && isCccdHandle(evtWrite->handle))
             {
                 uint16_t cccd = packet.mValue[0] | (packet.mValue[1] << 8);
-#if OPENTHREAD_CONFIG_TOBLE_BTP_NO_GATT_ACK
-                bool subscribed = (cccd & BLE_GATT_HVX_NOTIFICATION) > 0;
-#else
-                bool subscribed = (cccd & BLE_GATT_HVX_INDICATION) > 0;
-#endif
 
-                if (sDiagMode)
-                {
-                    otPlatTobleDiagHandleC2Subscribed(sInstance, (otTobleConnection *)peer, subscribed);
-                }
-                else
-                {
-                    otPlatTobleHandleC2Subscribed(sInstance, (otTobleConnection *)peer, subscribed);
-                }
+#if OPENTHREAD_CONFIG_TOBLE_BTP_NO_GATT_ACK
+                task->mSubscribed = (cccd & BLE_GATT_HVX_NOTIFICATION) > 0;
+#else
+                task->mSubscribed = (cccd & BLE_GATT_HVX_INDICATION) > 0;
+#endif
+                task->mConnection = peer;
+                task->mType = kHandleC2Subscribed;
+                SignalBleTaskPending(task);
             }
             else
             {
-                if (sDiagMode)
-                {
-                    otPlatTobleDiagHandleC1Write(sInstance, (otTobleConnection *)peer, evtWrite->data, evtWrite->len);
-                }
-                else
-                {
-                    otPlatTobleHandleC1Write(sInstance, (otTobleConnection *)peer, evtWrite->data, evtWrite->len);
-                }
+                memcpy(task->mBuffer, evtWrite->data, evtWrite->len);
+                task->mBufferLength = evtWrite->len;
+                task->mConnection = peer;
+                task->mType = kHandleC1Write;
+                SignalBleTaskPending(task);
             }
         }
 
@@ -1366,21 +1389,14 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
     case BLE_GATTS_EVT_HVN_TX_COMPLETE:
     {
         ble_gatts_evt_hvn_tx_complete_t *evtHvn = &evt->evt.gatts_evt.params.hvn_tx_complete;
-        otLogDebgPlat("[BLE] BLE_GATTS_EVT_HVN_TX_COMPLETE: count=%d", connectionId, evtHvn->count);
-        OT_UNUSED_VARIABLE(evtHvn);
+        otLogDebgPlat("[BLE] BLE_GATTS_EVT_HVN_TX_COMPLETE: count=%d", evtHvn->count);
         if ((peer = peerFind(connectionId)) != NULL)
         {
-            for (uint8_t i = 0; i < evtHvn->count; i++)
-            {
-                if (sDiagMode)
-                {
-                    otPlatTobleDiagHandleC2NotificateDone(sInstance, (otTobleConnection *)peer);
-                }
-                else
-                {
-                    otPlatTobleHandleC2NotificateDone(sInstance, (otTobleConnection *)peer);
-                }
-            }
+            task->mCount = evtHvn->count;
+            task->mConnection = peer;
+            task->mType = kHandleC2NotificationDone;
+            otLogDebgPlat("task at %p count=%d", task, task->mCount);
+            SignalBleTaskPending(task);
         }
         break;
     }
@@ -1390,14 +1406,10 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
     {
         if ((peer = peerFind(connectionId)) != NULL)
         {
-            if (sDiagMode)
-            {
-                otPlatTobleDiagHandleC2NotificateDone(sInstance, (otTobleConnection *)peer);
-            }
-            else
-            {
-                otPlatTobleHandleC2NotificateDone(sInstance, (otTobleConnection *)peer);
-            }
+            task->mCount = 1;
+            task->mConnection = peer;
+            task->mType = kHandleC2NotificationDone;
+            SignalBleTaskPending(task);
         }
         break;
     }
@@ -1446,14 +1458,11 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 
         if ((peer = peerFind(connectionId)) != NULL)
         {
-            if (sDiagMode)
-            {
-                otPlatTobleDiagHandleC2Notification(sInstance, (otTobleConnection *)peer, evtHvx->data, evtHvx->len);
-            }
-            else
-            {
-                otPlatTobleHandleC2Notification(sInstance, (otTobleConnection *)peer, evtHvx->data, evtHvx->len);
-            }
+            task->mConnection = peer;
+            memcpy(task->mBuffer, evtHvx->data, evtHvx->len);
+            task->mBufferLength = evtHvx->len;
+            task->mType = kHandleC2Notification;
+            SignalBleTaskPending(task);
         }
         break;
     }
@@ -1462,23 +1471,15 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
     {
         ble_gattc_evt_write_cmd_tx_complete_t *evtWcmd = &evt->evt.gattc_evt.params.write_cmd_tx_complete;
         otLogDebgPlat("[BLE] BLE_GATTC_EVT_WRITE_CMD_TX_COMPLETE: count=%d", evtWcmd->count);
-        OT_UNUSED_VARIABLE(evtWcmd);
 
         if (sBle.mState != kStateGattSubscribing)
         {
             if ((peer = peerFind(connectionId)) != NULL)
             {
-                for (uint8_t i = 0; i < evtWcmd->count; i++)
-                {
-                    if (sDiagMode)
-                    {
-                        otPlatTobleDiagHandleC1WriteDone(sInstance, (otTobleConnection *)peer);
-                    }
-                    else
-                    {
-                        otPlatTobleHandleC1WriteDone(sInstance, (otTobleConnection *)peer);
-                    }
-                }
+                task->mCount = evtWcmd->count;
+                task->mConnection = peer;
+                task->mType = kHandleC1WriteDone;
+                SignalBleTaskPending(task);
             }
         }
 
@@ -1493,14 +1494,10 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         {
             if ((peer = peerFind(connectionId)) != NULL)
             {
-                if (sDiagMode)
-                {
-                    otPlatTobleDiagHandleC1WriteDone(sInstance, (otTobleConnection *)peer);
-                }
-                else
-                {
-                    otPlatTobleHandleC1WriteDone(sInstance, (otTobleConnection *)peer);
-                }
+                task->mCount = 1;
+                task->mConnection = peer;
+                task->mType = kHandleC1WriteDone;
+                SignalBleTaskPending(task);
             }
         }
 
@@ -1567,14 +1564,10 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
             if ((peer = peerFind(connectionId)) != NULL)
             {
                 sPeripheralPeer = NULL;
-                if (sDiagMode)
-                {
-                    otPlatTobleDiagHandleConnectionIsReady(sInstance, (otTobleConnection *)peer, peer->mLinkType);
-                }
-                else
-                {
-                    otPlatTobleHandleConnectionIsReady(sInstance, (otTobleConnection *)peer, peer->mLinkType);
-                }
+                task->mConnection = peer;
+                task->mLinkType = peer->mLinkType;
+                task->mType = kHandleConnectionIsReady;
+                SignalBleTaskPending(task);
             }
         }
 
@@ -1614,14 +1607,10 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
         if (((peer = peerFind(connectionId))) != NULL && (peer->mIsPeripheral))
         {
             sPeripheralPeer = NULL;
-            if (sDiagMode)
-            {
-                otPlatTobleDiagHandleConnectionIsReady(sInstance, (otTobleConnection *)peer, peer->mLinkType);
-            }
-            else
-            {
-                otPlatTobleHandleConnectionIsReady(sInstance, (otTobleConnection *)peer, peer->mLinkType);
-            }
+            task->mConnection = peer;
+            task->mLinkType = peer->mLinkType;
+            task->mType = kHandleConnectionIsReady;
+            SignalBleTaskPending(task);
         }
 
         // TODO: Currently only 1 RX buffer is available.
@@ -1665,6 +1654,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 
         if ((peer = peerFind(l2capEvt->conn_handle)) != NULL)
         {
+            // FIXME: @gjc @zhanglongxia Should post task
             if (sDiagMode)
             {
                 otPlatTobleDiagL2CapFrameReceived(sInstance, (otTobleConnection *)peer, chRx->sdu_buf.p_data,
@@ -1702,6 +1692,7 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
 
         if ((peer = peerFind(l2capEvt->conn_handle)) != NULL)
         {
+            // FIXME: @gjc @zhanglongxia Should post task
             if (sDiagMode)
             {
                 otPlatTobleDiagL2capSendDone(sInstance, (otTobleConnection *)peer);
@@ -1720,6 +1711,145 @@ static void ble_evt_handler(ble_evt_t const *aEvent, void *aContext)
     }
 
 exit:
+    return;
+}
+
+void nrf5TobleProcess(void)
+{
+    otLogCritPlat("nrf5TobleProcess %d %d", sTaskQueueHead, sTaskQueueTail);
+    for (uint8_t i = sTaskQueueHead; i != sTaskQueueTail; i++, i %= BLE_TASK_COUNT)
+    {
+        otLogInfoPlat("nrf5TobleProcess: type=%d", sPendingTasks[i].mType);
+        switch (sPendingTasks[i].mType)
+        {
+        case kHandleConnected:
+            if (sDiagMode)
+            {
+                otPlatTobleDiagHandleConnected(sInstance, sPendingTasks[i].mConnection);
+            }
+            else
+            {
+                otPlatTobleHandleConnected(sInstance, sPendingTasks[i].mConnection);
+            }
+            break;
+        case kHandleDisconnected:
+            if (sDiagMode)
+            {
+                otPlatTobleDiagHandleDisconnected(sInstance, sPendingTasks[i].mConnection);
+            }
+            else
+            {
+                otPlatTobleHandleDisconnected(sInstance, sPendingTasks[i].mConnection);
+            }
+            break;
+        case kHandleScanResponse:
+            if (sDiagMode)
+            {
+                otPlatTobleDiagGapOnScanRespReceived(sInstance, &sPendingTasks[i].mAdvertisement);
+            }
+            else
+            {
+                otPlatTobleGapOnScanRespReceived(sInstance, &sPendingTasks[i].mAdvertisement);
+            }
+            break;
+        case kHandleAdvertisement:
+            if (sDiagMode)
+            {
+                otPlatTobleDiagGapOnAdvReceived(sInstance, sPendingTasks[i].mAdvertisementType,
+                                                &sPendingTasks[i].mAdvertisement);
+            }
+            else
+            {
+                otPlatTobleGapOnAdvReceived(sInstance, sPendingTasks[i].mAdvertisementType,
+                                            &sPendingTasks[i].mAdvertisement);
+            }
+            break;
+        case kHandleC1Write:
+            if (sDiagMode)
+            {
+                otPlatTobleDiagHandleC1Write(sInstance, sPendingTasks[i].mConnection, sPendingTasks[i].mBuffer,
+                                             sPendingTasks[i].mBufferLength);
+            }
+            else
+            {
+                otPlatTobleHandleC1Write(sInstance, sPendingTasks[i].mConnection, sPendingTasks[i].mBuffer,
+                                         sPendingTasks[i].mBufferLength);
+            }
+            break;
+        case kHandleC1WriteDone:
+            for (uint8_t j = 0; j < sPendingTasks[i].mCount; j++)
+            {
+                if (sDiagMode)
+                {
+                    otPlatTobleDiagHandleC1WriteDone(sInstance, sPendingTasks[i].mConnection);
+                }
+                else
+                {
+                    otPlatTobleHandleC1WriteDone(sInstance, sPendingTasks[i].mConnection);
+                }
+            }
+            break;
+        case kHandleC2Subscribed:
+            if (sDiagMode)
+            {
+                otPlatTobleDiagHandleC2Subscribed(sInstance, sPendingTasks[i].mConnection,
+                                                  sPendingTasks[i].mSubscribed);
+            }
+            else
+            {
+                otPlatTobleHandleC2Subscribed(sInstance, sPendingTasks[i].mConnection, sPendingTasks[i].mSubscribed);
+            }
+            break;
+        case kHandleC2Notification:
+            if (sDiagMode)
+            {
+                otPlatTobleDiagHandleC2Notification(sInstance, sPendingTasks[i].mConnection, sPendingTasks[i].mBuffer,
+                                                    sPendingTasks[i].mBufferLength);
+            }
+            else
+            {
+                otPlatTobleHandleC2Notification(sInstance, sPendingTasks[i].mConnection, sPendingTasks[i].mBuffer,
+                                                sPendingTasks[i].mBufferLength);
+            }
+            break;
+        case kHandleC2NotificationDone:
+            otLogInfoPlat("nrf5TobleProcess: %p count=%d", &sPendingTasks[i], sPendingTasks[i].mCount);
+            otLogInfoPlat("WTF!!!\n");
+            for (uint8_t j = 0; j < sPendingTasks[i].mCount; j++)
+            {
+                otLogInfoPlat("Inside loop\n");
+                if (sDiagMode)
+                {
+                    otPlatTobleDiagHandleC2NotificateDone(sInstance, sPendingTasks[i].mConnection);
+                }
+                else
+                {
+                    otLogInfoPlat("Call otPlatTobleHandleC2NotificateDone\n");
+                    otPlatTobleHandleC2NotificateDone(sInstance, sPendingTasks[i].mConnection);
+                }
+            }
+            otLogInfoPlat("nrf5TobleProcess: %p count=%d", &sPendingTasks[i], sPendingTasks[i].mCount);
+            break;
+        case kHandleConnectionIsReady:
+            if (sDiagMode)
+            {
+                otPlatTobleDiagHandleConnectionIsReady(sInstance, sPendingTasks[i].mConnection,
+                                                       sPendingTasks[i].mLinkType);
+            }
+            else
+            {
+                otPlatTobleHandleConnectionIsReady(sInstance, sPendingTasks[i].mConnection, sPendingTasks[i].mLinkType);
+            }
+            break;
+        case kHandleL2CapFrameReceived:
+        case kHandleL2CapScanSendDone:
+        default:
+            break;
+        }
+        sPendingTasks[i].mPending = false;
+    }
+
+    sTaskQueueHead = sTaskQueueTail;
     return;
 }
 

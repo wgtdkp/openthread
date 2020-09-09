@@ -183,6 +183,8 @@ void nrf5TempProcess(void);
  */
 int32_t nrf5TempGet(void);
 
+void nrf5TobleProcess(void);
+
 #if SOFTDEVICE_PRESENT
 /**
  * Function for translating SoftDevice error into OpenThread's one.
