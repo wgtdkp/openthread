@@ -46,7 +46,6 @@
 
 #if SOFTDEVICE_OT_MANAGED
 #include "platform-softdevice.h"
-#include <drivers/power/nrf_drv_power.h>
 #endif
 
 #include <openthread/config.h>
@@ -92,12 +91,13 @@ void otSysInit(int argc, char *argv[])
 
     nrf_drv_clock_init();
 
-#if SOFTDEVICE_OT_MANAGED
-    nrf_drv_power_init(NULL);
-#endif
+//#if SOFTDEVICE_OT_MANAGED
+//    nrf_drv_power_init(NULL);
+//#endif
 
 #if (OPENTHREAD_CONFIG_LOG_OUTPUT == OPENTHREAD_CONFIG_LOG_OUTPUT_PLATFORM_DEFINED) || \
     (OPENTHREAD_CONFIG_LOG_OUTPUT == OPENTHREAD_CONFIG_LOG_OUTPUT_NCP_SPINEL)
+#error "fuck"
     nrf5LogInit();
 #endif
 

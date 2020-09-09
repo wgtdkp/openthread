@@ -204,10 +204,10 @@ static void soc_evt_handler(uint32_t aEvtId, void *aContext)
     otSysSoftdeviceSocEvtHandler(aEvtId);
 }
 
-void SD_EVT_IRQHandler(void)
-{
-    // Empty implementation.
-}
+//void SD_EVT_IRQHandler(void)
+//{
+//    // Empty implementation.
+//}
 
 // Register a handler for SOC events.
 NRF_SDH_SOC_OBSERVER(m_ot_soc_observer, 0, soc_evt_handler, NULL);

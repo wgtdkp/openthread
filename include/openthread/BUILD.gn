@@ -114,6 +114,7 @@ source_set("openthread") {
     "tasklet.h",
     "thread.h",
     "thread_ftd.h",
+    "toble.h",
     "udp.h",
   ]
 

@@ -200,7 +200,7 @@ Mle::Mle(Instance &aInstance)
     // `SetMeshLocalPrefix()` also adds the Mesh-Local EID and subscribes
     // to the Link- and Realm-Local All Thread Nodes multicast addresses.
 
-#if OPENTHREAD_FTD
+#if OPENTHREAD_FTD && OPENTHREAD_CONFIG_TOBLE_ENABLE
     Get<Radio>().SetTobleRole(Toble::AdvData::kRoleInactiveRouter);
 #endif
 }
