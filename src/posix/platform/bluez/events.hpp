@@ -59,6 +59,11 @@ struct BluezMgmtEventHeader
     BluezEventType mType;
     uint16_t       mLength;
 
+    BluezMgmtEventHeader(void)
+        : mLength(0)
+    {
+    }
+
     struct BluezMgmtEventHeader *Next(void)
     {
         return reinterpret_cast<BluezMgmtEventHeader *>(reinterpret_cast<uint8_t *>(this) + GetSize());

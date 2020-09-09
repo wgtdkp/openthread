@@ -2374,13 +2374,20 @@ void Interpreter::SendPing(void)
     uint32_t      timestamp = HostSwap32(TimerMilli::GetNow().GetValue());
     otMessage *   message   = NULL;
     otMessageInfo messageInfo;
+#if OPENTHREAD_CONFIG_IP6_UNSECURE_PING_ENABLE
+    otMessageSettings messageSettings = {false, OT_MESSAGE_PRIORITY_NORMAL};
+#endif
 
     memset(&messageInfo, 0, sizeof(messageInfo));
     messageInfo.mPeerAddr          = mPingDestAddress;
     messageInfo.mHopLimit          = mPingHopLimit;
     messageInfo.mAllowZeroHopLimit = mPingAllowZeroHopLimit;
 
+#if OPENTHREAD_CONFIG_IP6_UNSECURE_PING_ENABLE
+    message = otIp6NewMessage(mInstance, &messageSettings);
+#else
     message = otIp6NewMessage(mInstance, NULL);
+#endif
     VerifyOrExit(message != NULL, OT_NOOP);
 
     SuccessOrExit(otMessageAppend(message, &timestamp, sizeof(timestamp)));

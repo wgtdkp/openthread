@@ -102,6 +102,12 @@ bool Filter::Accept(Message &aMessage) const
 
         break;
 
+#if OPENTHREAD_CONFIG_IP6_UNSECURE_PING_ENABLE
+    case kProtoIcmp6:
+        ExitNow(rval = true);
+        break;
+#endif
+
     default:
         // Allow UDP or TCP traffic only
         ExitNow();

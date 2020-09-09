@@ -209,7 +209,11 @@ otError Icmp::HandleEchoRequest(Message &aRequestMessage, const MessageInfo &aMe
     icmp6Header.Init();
     icmp6Header.SetType(IcmpHeader::kTypeEchoReply);
 
+#if OPENTHREAD_CONFIG_IP6_UNSECURE_PING_ENABLE
+    if ((replyMessage = Get<Ip6>().NewMessage(0, Message::Settings(Message::kNoLinkSecurity, Message::kPriorityNormal))) == NULL)
+#else
     if ((replyMessage = Get<Ip6>().NewMessage(0)) == NULL)
+#endif
     {
         otLogDebgIcmp("Failed to allocate a new message");
         ExitNow();

@@ -248,7 +248,7 @@ static void ConnectionFree(TobleConnection *aConn)
     }
 }
 
-#if (OPENTHREAD_CONFIG_LOG_LEVEL <= OT_LOG_LEVEL_DEBG) && (OPENTHREAD_CONFIG_LOG_PLATFORM == 1)
+#if (OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_INFO) && (OPENTHREAD_CONFIG_LOG_PLATFORM == 1)
 static const char *AddressToString(const otTobleAddress *aAddr)
 {
     static char string[25];
