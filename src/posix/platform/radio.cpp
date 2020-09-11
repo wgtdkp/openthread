@@ -35,6 +35,7 @@
 
 #include "lib/spinel/radio_spinel.hpp"
 
+#if !(OPENTHREAD_CONFIG_TOBLE_ENABLE && !OPENTHREAD_CONFIG_TOBLE_MULTI_RADIO_ENABLE)
 #if OPENTHREAD_POSIX_CONFIG_RCP_BUS == OT_POSIX_RCP_BUS_UART
 #include "hdlc_interface.hpp"
 
@@ -485,3 +486,4 @@ void otPlatRadioSetMacKey(otInstance *    aInstance,
     SuccessOrDie(sRadioSpinel.SetMacKey(aKeyIdMode, aKeyId, *aPrevKey, *aCurrKey, *aNextKey));
     OT_UNUSED_VARIABLE(aInstance);
 }
+#endif // !(OPENTHREAD_CONFIG_TOBLE_ENABLE && !OPENTHREAD_CONFIG_TOBLE_MULTI_RADIO_ENABLE)

@@ -39,6 +39,7 @@
 #include "lib/hdlc/hdlc.hpp"
 #include "lib/spinel/spinel_interface.hpp"
 
+#if !(OPENTHREAD_CONFIG_TOBLE_ENABLE && !OPENTHREAD_CONFIG_TOBLE_MULTI_RADIO_ENABLE)
 #if OPENTHREAD_POSIX_CONFIG_RCP_BUS == OT_POSIX_RCP_BUS_UART
 
 namespace ot {
@@ -225,4 +226,5 @@ private:
 } // namespace ot
 
 #endif // OPENTHREAD_POSIX_CONFIG_RCP_BUS == OT_POSIX_RCP_BUS_UART
+#endif // !(OPENTHREAD_CONFIG_TOBLE_ENABLE && !OPENTHREAD_CONFIG_TOBLE_MULTI_RADIO_ENABLE)
 #endif // POSIX_APP_HDLC_INTERFACE_HPP_

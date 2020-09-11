@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2019, The OpenThread Authors.
+#  Copyright (c) 2020, The OpenThread Authors.
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -26,71 +26,45 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
-add_library(openthread-cli-ftd)
-add_library(openthread-cli-mtd)
+set(JAVA_PACKAGE_NAME io.openthread.toble)
+set(JAVA_OUTFILE_DIR ${CMAKE_CURRENT_BINARY_DIR}/io/openthread/toble)
 
-set_target_properties(
-    openthread-cli-ftd openthread-cli-mtd
-    PROPERTIES
-        C_STANDARD 99
-        CXX_STANDARD 11
+find_package(SWIG 4.0 REQUIRED)
+find_package(Java REQUIRED)
+
+include(UseSWIG)
+include(UseJava)
+
+set(CMAKE_SWIG_OUTDIR ${JAVA_OUTFILE_DIR})
+
+list(APPEND CMAKE_SWIG_FLAGS "-package;${JAVA_PACKAGE_NAME}")
+
+include_directories(
+    ${PROJECT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_compile_definitions(openthread-cli-ftd PRIVATE
-    OPENTHREAD_FTD=1
+set_property(SOURCE toble.i PROPERTY CPLUSPLUS ON)
+
+set(UseSWIG_TARGET_NAME_PREFERENCE LEGACY)
+
+swig_add_library(toble-java
+    TYPE SHARED
+    LANGUAGE java
+    SOURCES toble.i)
+
+swig_link_libraries(toble-java
+    openthread-mtd
+    openthread-android
 )
 
-target_compile_definitions(openthread-cli-mtd PRIVATE
-    OPENTHREAD_MTD=1
-)
-
-target_compile_options(openthread-cli-ftd PRIVATE
-    ${OT_CFLAGS}
-)
-
-target_compile_options(openthread-cli-mtd PRIVATE
-    ${OT_CFLAGS}
-)
-
-set(COMMON_INCLUDES
-    ${OT_PRIVATE_INCLUDES}
-    ${PROJECT_SOURCE_DIR}/src
-    ${PROJECT_SOURCE_DIR}/src/core
-)
-
-set(COMMON_SOURCES
-    cli.cpp
-    cli_coap.cpp
-    cli_coap_secure.cpp
-    cli_commissioner.cpp
-    cli_console.cpp
-    cli_dataset.cpp
-    cli_joiner.cpp
-    cli_server.cpp
-    cli_toble.cpp
-    cli_toble_platform.cpp
-    cli_uart.cpp
-    cli_udp.cpp
-)
-
-target_include_directories(openthread-cli-ftd PUBLIC ${OT_PUBLIC_INCLUDES} PRIVATE ${COMMON_INCLUDES})
-target_include_directories(openthread-cli-mtd PUBLIC ${OT_PUBLIC_INCLUDES} PRIVATE ${COMMON_INCLUDES})
-
-target_sources(openthread-cli-ftd PRIVATE ${COMMON_SOURCES})
-target_sources(openthread-cli-mtd PRIVATE ${COMMON_SOURCES})
-
-target_link_libraries(openthread-cli-ftd
-    PUBLIC
-        openthread-ftd
+## GCC is too strict on this in optimization mode, see http://www.swig.org/Doc3.0/Java.html#Java_compiling_dynamic
+## for explanations.
+target_compile_options(toble-java
     PRIVATE
-        ${OT_MBEDTLS}
-        ot-config
+        -fno-strict-aliasing
 )
 
-target_link_libraries(openthread-cli-mtd
-    PUBLIC
-        openthread-mtd
-    PRIVATE
-        ${OT_MBEDTLS}
-        ot-config
-)
+install(TARGETS toble-java
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib)

@@ -54,6 +54,7 @@
 #include <sys/types.h>
 #include <sys/ucontext.h>
 
+#if !(OPENTHREAD_CONFIG_TOBLE_ENABLE && !OPENTHREAD_CONFIG_TOBLE_MULTI_RADIO_ENABLE)
 #if OPENTHREAD_POSIX_CONFIG_RCP_BUS == OT_POSIX_RCP_BUS_SPI
 #include <linux/gpio.h>
 #include <linux/ioctl.h>
@@ -793,3 +794,4 @@ void SpiInterface::LogStats(void)
 } // namespace ot
 
 #endif // OPENTHREAD_POSIX_CONFIG_RCP_BUS == OT_POSIX_RCP_BUS_SPI
+#endif // !(OPENTHREAD_CONFIG_TOBLE_ENABLE && !OPENTHREAD_CONFIG_TOBLE_MULTI_RADIO_ENABLE)

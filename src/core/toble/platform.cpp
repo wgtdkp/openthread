@@ -102,6 +102,7 @@ otError Platform::StopScan(void)
 
 Platform::Connection *Platform::CreateConnection(const Address &aPeerAddress, ConnectionConfig &aConfig)
 {
+    otLogInfoToble("Platform::CreateConnection(aPeerAddress=%s, ...)", aPeerAddress.ToString().AsCString());
     return otPlatTobleCreateConnection(GetInstance(), &aPeerAddress, &aConfig);
 }
 

@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2019, The OpenThread Authors.
+#  Copyright (c) 2020, The OpenThread Authors.
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -26,71 +26,50 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
-add_library(openthread-cli-ftd)
-add_library(openthread-cli-mtd)
+set(OT_PLATFORM_LIB "openthread-android" PARENT_SCOPE)
 
-set_target_properties(
-    openthread-cli-ftd openthread-cli-mtd
-    PROPERTIES
-        C_STANDARD 99
-        CXX_STANDARD 11
+if(NOT OT_CONFIG)
+    set(OT_CONFIG "openthread-core-android-config.h")
+    set(OT_CONFIG ${OT_CONFIG} PARENT_SCOPE)
+endif()
+
+set(OT_PLATFORM_DEFINES "" PARENT_SCOPE)
+
+list(APPEND OT_PLATFORM_DEFINES "OPENTHREAD_PROJECT_CORE_CONFIG_FILE=\"${OT_CONFIG}\"")
+
+add_library(openthread-android
+    alarm.cpp
+    entropy.cpp
+    flash.cpp
+    logging.cpp
+    misc.cpp
+    toble.cpp
+    toble_platform.cpp
 )
 
-target_compile_definitions(openthread-cli-ftd PRIVATE
-    OPENTHREAD_FTD=1
+set_property(TARGET openthread-android PROPERTY C_STANDARD 99)
+
+target_link_libraries(openthread-android PRIVATE
+    openthread-ftd
+    openthread-platform
+    ot-config)
+
+target_compile_definitions(openthread-android
+    PUBLIC
+        ${OT_PLATFORM_DEFINES}
 )
 
-target_compile_definitions(openthread-cli-mtd PRIVATE
-    OPENTHREAD_MTD=1
-)
-
-target_compile_options(openthread-cli-ftd PRIVATE
+target_compile_options(openthread-android PRIVATE
     ${OT_CFLAGS}
 )
 
-target_compile_options(openthread-cli-mtd PRIVATE
-    ${OT_CFLAGS}
-)
-
-set(COMMON_INCLUDES
+target_include_directories(openthread-android PRIVATE
+    ${OT_PUBLIC_INCLUDES}
     ${OT_PRIVATE_INCLUDES}
+    ${PROJECT_SOURCE_DIR}/examples/platforms
     ${PROJECT_SOURCE_DIR}/src
     ${PROJECT_SOURCE_DIR}/src/core
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-set(COMMON_SOURCES
-    cli.cpp
-    cli_coap.cpp
-    cli_coap_secure.cpp
-    cli_commissioner.cpp
-    cli_console.cpp
-    cli_dataset.cpp
-    cli_joiner.cpp
-    cli_server.cpp
-    cli_toble.cpp
-    cli_toble_platform.cpp
-    cli_uart.cpp
-    cli_udp.cpp
-)
-
-target_include_directories(openthread-cli-ftd PUBLIC ${OT_PUBLIC_INCLUDES} PRIVATE ${COMMON_INCLUDES})
-target_include_directories(openthread-cli-mtd PUBLIC ${OT_PUBLIC_INCLUDES} PRIVATE ${COMMON_INCLUDES})
-
-target_sources(openthread-cli-ftd PRIVATE ${COMMON_SOURCES})
-target_sources(openthread-cli-mtd PRIVATE ${COMMON_SOURCES})
-
-target_link_libraries(openthread-cli-ftd
-    PUBLIC
-        openthread-ftd
-    PRIVATE
-        ${OT_MBEDTLS}
-        ot-config
-)
-
-target_link_libraries(openthread-cli-mtd
-    PUBLIC
-        openthread-mtd
-    PRIVATE
-        ${OT_MBEDTLS}
-        ot-config
-)
+add_subdirectory(jni)

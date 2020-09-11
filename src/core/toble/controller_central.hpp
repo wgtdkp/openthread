@@ -101,8 +101,8 @@ private:
          kTxScanInterval = 40, // Scan interval while in tx mode (msec, same as kConnectionInterval).
          kTxScanWindow = 30,   // Scan window while in tx mode (msec, larger than peripheral's kRxModeAdvInterval).
 
-         kRxWaitToConnectTimeout = 1600, // Wait time to establish a connection for rx.
-         kTxWaitToConnectTimeout = 1600, // Wait time to establish a connection for tx.
+         kRxWaitToConnectTimeout = 20000, // Wait time to establish a connection for rx.
+         kTxWaitToConnectTimeout = 20000, // Wait time to establish a connection for tx.
 
          kTxTimeout = 10000, // 5000, // Tx timeout interval (max time waiting for entire tx operation to finish.
 
@@ -117,10 +117,10 @@ private:
         kConnectionScanWindow = 20,                    // Scan window when trying to establish a connection (msec,
                                                        // larger than peripheral's kAdvInterval).
 
-        kScanInterval               = kConnectionInterval,
-        kScanWindow                 = kConnectionScanWindow,
-        kWaitBleConnectionTimeout   = 5000, // 10 * kConnectionInterval,
-        kWaitTobleConnectionTimeout = 5000, // (7 + 2) * 2 * kConnectionInterval,
+        kScanInterval               = 1000,
+        kScanWindow                 = 800,
+        kWaitBleConnectionTimeout   = 60000, // 10 * kConnectionInterval,
+        kWaitTobleConnectionTimeout = 60000, // (7 + 2) * 2 * kConnectionInterval,
         kScanPeersTimeout           = 5000, // 10 * kConnectionInterval,
         kConnectionTimeout =
             Timer::kMaxDelay, //(kWaitBleConnectionTimeout + kWaitTobleConnectionTimeout), // Timer::kMaxDelay,

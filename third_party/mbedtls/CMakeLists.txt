@@ -26,6 +26,12 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
+## Mbedtls builds static libraries by default.
+if (BUILD_SHARED_LIBS)
+    set(USE_STATIC_MBEDTLS_LIBRARY OFF CACHE BOOL "Disable static mbedtls library")
+    set(USE_SHARED_MBEDTLS_LIBRARY ON  CACHE BOOL "Enable shared mbedtls library")
+endif()
+
 set(OT_MBEDTLS_DEFAULT_CONFIG_FILE \"${CMAKE_CURRENT_SOURCE_DIR}/mbedtls-config.h\")
 
 set(OT_MBEDTLS_CONFIG_FILE "" CACHE STRING "The mbedTLS config file")

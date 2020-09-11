@@ -103,9 +103,11 @@ void Btp::SendData(Connection &aConn)
 
     if (session.mRxSeqnoCurrent != session.mRxSeqnoAcked)
     {
+        otLogNoteBtp("AppendAck(session=%p, mRxSeqnoCurrent=%u, mRxSeqnoAcked=%u)", &session, session.mRxSeqnoCurrent, session.mRxSeqnoAcked);
         frame.AppendAck(iterator, session.mRxSeqnoCurrent);
     }
 
+    otLogNoteBtp("AppendSeqNum(session=%p, iterator=%u, mTxSeqnoCurrent + 1=%u)", &session, iterator, session.mTxSeqnoCurrent + 1);
     frame.AppendSeqNum(iterator, session.mTxSeqnoCurrent + 1);
 
     if (session.HasFragmentToSend())
@@ -198,10 +200,17 @@ void Btp::HandleDataFrame(Connection &aConn, const uint8_t *aFrame, uint16_t aLe
     const Frame &  frame(*reinterpret_cast<const Frame *>(aFrame));
     const uint8_t *cur = &aFrame[1];
 
-    VerifyOrExit(session.mState == kStateConnected, OT_NOOP);
-    VerifyOrExit(frame.IsValid(), OT_NOOP);
-
     otLogNoteBtp("Received BTP msg, %s", frame.ToString().AsCString());
+
+    VerifyOrExit(session.mState == kStateConnected, OT_NOOP);
+    if (frame.IsValid())
+    {
+        otLogNoteBtp("Received BTP msg, valid frame");
+    }
+    else
+    {
+        otLogNoteBtp("Received BTP msg, drop invalid frame");
+    }
 
     ConnectionTimerRefresh(aConn);
 
@@ -349,7 +358,7 @@ otError Btp::GattSend(Connection &aConn, const uint8_t *aBuffer, uint16_t aLengt
     if (Get<Toble>().IsCentral())
     {
 #if OPENTHREAD_CONFIG_TOBLE_CENTRAL_ENABLE
-        otLogNoteBtp("Btp::SendData: WriteC1");
+        otLogNoteBtp("Btp::SendData: WriteC1, (length=%u)", aLength);
         error = Get<Platform>().WriteC1(aConn.mPlatConn, aBuffer, aLength);
 #endif
     }

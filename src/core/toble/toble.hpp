@@ -103,7 +103,7 @@ private:
     otRadioCaps  GetCaps(void) { return (otRadioCaps)(OT_RADIO_CAPS_ACK_TIMEOUT | OT_RADIO_CAPS_CSMA_BACKOFF); }
     const char * GetVersionString(void) { return otPlatRadioGetVersionString(GetInstancePtr()); }
     int8_t       GetReceiveSensitivity(void) { return kDefaulteceiveSensitivity; }
-    void         GetIeeeEui64(Mac::ExtAddress &aIeeeEui64) { otPlatRadioGetIeeeEui64(GetInstancePtr(), aIeeeEui64.m8); }
+    void         GetIeeeEui64(Mac::ExtAddress &aIeeeEui64) { Get<Radio>().GetIeeeEui64(aIeeeEui64); }
     void         SetPanId(Mac::PanId) {}
     void         SetExtendedAddress(const Mac::ExtAddress &) {}
     void         SetShortAddress(Mac::ShortAddress) {}

@@ -52,7 +52,7 @@ void Btp::HandleConnectionReady(Platform::Connection *aPlatConn)
     otLogDebgBtp("HandleConnectionReady");
     VerifyOrExit((conn != NULL) && Get<Toble>().IsCentral(), OT_NOOP);
 
-    otLogInfoBtp("Send Handshake Request: Mtu=%d, Window=%d", Get<Platform>().GetConnMtu(aPlatConn), kWindowSize);
+    otLogInfoBtp("Send Handshake Request: length=%u, Mtu=%d, Window=%d", sizeof(handshakeRequest), Get<Platform>().GetConnMtu(aPlatConn), kWindowSize);
     GattSend(*conn, reinterpret_cast<uint8_t *>(&handshakeRequest), sizeof(handshakeRequest));
     conn->mSession.mState = kStateHandshake;
 

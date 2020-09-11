@@ -120,6 +120,7 @@
 
 #endif // __APPLE__
 
+#if !(OPENTHREAD_CONFIG_TOBLE_ENABLE && !OPENTHREAD_CONFIG_TOBLE_MULTI_RADIO_ENABLE)
 #if OPENTHREAD_POSIX_CONFIG_RCP_BUS == OT_POSIX_RCP_BUS_UART
 
 using ot::Spinel::SpinelInterface;
@@ -647,3 +648,4 @@ void HdlcInterface::HandleHdlcFrame(otError aError)
 } // namespace Posix
 } // namespace ot
 #endif // OPENTHREAD_POSIX_CONFIG_RCP_BUS == OT_POSIX_RCP_BUS_UART
+#endif // !(OPENTHREAD_CONFIG_TOBLE_ENABLE && !OPENTHREAD_CONFIG_TOBLE_MULTI_RADIO_ENABLE)

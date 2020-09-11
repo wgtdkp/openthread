@@ -729,6 +729,8 @@ void Controller::HandleAdv(Platform::AdvType aAdvType, Platform::AdvPacket &aAdv
         ProcessAdvertisement(aAdvPacket, mAdvInfo);
     }
 
+    otLogNoteTobleCent("HandleAdv: adv-source-addr: %s, expected-tx-dest: %s", mAdvInfo.mSrcExtended.ToString().AsCString(), mTxDest.ToString().AsCString());
+
     if (mWaitForCreatingTxConnection && IsAdvFromDest(mAdvInfo, mTxDest))
     {
         createTxConnection = true;

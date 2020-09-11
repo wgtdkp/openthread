@@ -102,6 +102,7 @@ set(COMMON_SOURCES
     api/tasklet_api.cpp
     api/thread_api.cpp
     api/thread_ftd_api.cpp
+    api/toble_api.cpp
     api/udp_api.cpp
     backbone_router/leader.cpp
     backbone_router/local.cpp
@@ -169,6 +170,7 @@ set(COMMON_SOURCES
     radio/radio.cpp
     radio/radio_callbacks.cpp
     radio/radio_platform.cpp
+    radio/radio_toble.cpp
     thread/address_resolver.cpp
     thread/announce_begin_server.cpp
     thread/announce_sender.cpp
@@ -197,6 +199,17 @@ set(COMMON_SOURCES
     thread/thread_netif.cpp
     thread/time_sync_service.cpp
     thread/topology.cpp
+    toble/ads.cpp
+    toble/adv_data.cpp
+    toble/btp.cpp
+    toble/btp_client.cpp
+    toble/btp_frame.cpp
+    toble/btp_server.cpp
+    toble/conn_table.cpp
+    toble/controller_central.cpp
+    toble/controller_peripheral.cpp
+    toble/platform.cpp
+    toble/toble.cpp
     utils/channel_manager.cpp
     utils/channel_monitor.cpp
     utils/child_supervision.cpp

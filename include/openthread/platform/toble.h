@@ -36,6 +36,8 @@
 #ifndef OPENTHREAD_PLATFORM_TOBLE_H_
 #define OPENTHREAD_PLATFORM_TOBLE_H_
 
+#include <stdint.h>
+
 #include <openthread/instance.h>
 
 #ifdef __cplusplus
