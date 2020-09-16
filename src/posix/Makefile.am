@@ -46,6 +46,8 @@ CPPFLAGS_COMMON                                                        = \
     -I$(top_srcdir)/src/core                                             \
     -I$(top_srcdir)/src/posix/platform                                   \
     -I$(top_srcdir)/src/posix/platform/include                           \
+    -I$(top_srcdir)/third_party/mdnsresponder/ServiceRegistration 	 \
+    -DOPENTHREAD_INCLUDE_CTI=1                                           \
     -D_GNU_SOURCE                                                        \
     -DOPENTHREAD_FTD=1                                                   \
     -DOPENTHREAD_MTD=0                                                   \

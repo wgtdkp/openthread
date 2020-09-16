@@ -72,6 +72,9 @@ add_library(openthread-posix
     settings.cpp
     spi_interface.cpp
     system.cpp
+    ../../../third_party/mdnsresponder/ServiceRegistration/cti-openthread.c
+    ../../../third_party/mdnsresponder/ServiceRegistration/cti-server.c
+    ../../../third_party/mdnsresponder/ServiceRegistration/cti-proto.c
     uart.cpp
     udp.cpp
     virtual_time.cpp
@@ -110,6 +113,7 @@ target_include_directories(openthread-posix PRIVATE
     ${PROJECT_SOURCE_DIR}/src
     ${PROJECT_SOURCE_DIR}/src/core
     ${PROJECT_SOURCE_DIR}/third_party/mbedtls/repo/include
+    ${PROJECT_SOURCE_DIR}/third_party/mdnsresponder/ServiceRegistration
     PUBLIC
         ${PROJECT_SOURCE_DIR}/src/posix/platform/include
 )

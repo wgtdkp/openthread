@@ -37,6 +37,7 @@ libopenthread_posix_a_CPPFLAGS                                = \
     -I$(top_srcdir)/src/core                                    \
     -I$(top_srcdir)/src/posix/platform                          \
     -I$(top_srcdir)/src/posix/platform/include                  \
+    -I$(top_srcdir)/third_party/mdnsresponder/ServiceRegistration \
     -D_GNU_SOURCE                                               \
     -DOPENTHREAD_FTD=1                                          \
     -DOPENTHREAD_MTD=0                                          \
@@ -56,6 +57,9 @@ libopenthread_posix_a_SOURCES             = \
     settings.cpp                            \
     spi_interface.cpp                       \
     system.cpp                              \
+    ../../../third_party/mdnsresponder/ServiceRegistration/cti-openthread.c \
+    ../../../third_party/mdnsresponder/ServiceRegistration/cti-server.c     \
+    ../../../third_party/mdnsresponder/ServiceRegistration/cti-proto.c      \
     uart.cpp                                \
     udp.cpp                                 \
     virtual_time.cpp                        \

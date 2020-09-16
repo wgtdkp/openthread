@@ -32,6 +32,7 @@ set(COMMON_INCLUDES
     ${PROJECT_SOURCE_DIR}/src/core
     ${PROJECT_SOURCE_DIR}/src/posix/platform
     ${PROJECT_SOURCE_DIR}/src/posix/platform/include
+    ${PROJECT_SOURCE_DIR}/third_party/mdnsresponder/ServiceRegistration 
 )
 
 set(OT_READLINE "readline" CACHE STRING "set readline library name")

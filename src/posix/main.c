@@ -80,6 +80,8 @@
 #include <lib/platform/exit_code.h>
 #include <openthread/openthread-system.h>
 
+#include "cti-openthread.h"
+
 #ifndef OPENTHREAD_ENABLE_COVERAGE
 #define OPENTHREAD_ENABLE_COVERAGE 0
 #endif
@@ -330,6 +332,10 @@ int main(int argc, char *argv[])
 #endif
 #endif
 
+#ifdef OPENTHREAD_INCLUDE_CTI
+	otCtiServerInit(instance);
+#endif
+
     while (true)
     {
         otSysMainloopContext mainloop;
@@ -350,11 +356,18 @@ int main(int argc, char *argv[])
 
         otSysMainloopUpdate(instance, &mainloop);
 
+#ifdef OPENTHREAD_INCLUDE_CTI
+        otCtiServerUpdate(instance, &mainloop);
+#endif
+
         if (otSysMainloopPoll(&mainloop) >= 0)
         {
             otSysMainloopProcess(instance, &mainloop);
 #ifdef OPENTHREAD_USE_CONSOLE
             otxConsoleProcess(&mainloop);
+#endif
+#ifdef OPENTHREAD_INCLUDE_CTI
+            otCtiServerProcess(instance, &mainloop);
 #endif
         }
         else if (errno != EINTR)

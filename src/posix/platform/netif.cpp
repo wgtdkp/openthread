@@ -970,7 +970,7 @@ static void processNetifEvent(otInstance *aInstance)
     VerifyOrExit(length > 0, OT_NOOP);
 
 #if defined(__linux__)
-    for (struct nlmsghdr *msg = reinterpret_cast<struct nlmsghdr *>(buffer); NLMSG_OK(msg, static_cast<size_t>(length));
+    for (struct nlmsghdr *msg = reinterpret_cast<struct nlmsghdr *>((void *)buffer); NLMSG_OK(msg, static_cast<size_t>(length));
          msg                  = NLMSG_NEXT(msg, length))
     {
 #else
@@ -1103,7 +1103,7 @@ static void processMLDEvent(otInstance *aInstance)
         if (ifAddr->ifa_addr != nullptr && ifAddr->ifa_addr->sa_family == AF_INET6 &&
             strncmp(gNetifName, ifAddr->ifa_name, IFNAMSIZ) == 0)
         {
-            struct sockaddr_in6 *addr6 = reinterpret_cast<struct sockaddr_in6 *>(ifAddr->ifa_addr);
+            struct sockaddr_in6 *addr6 = reinterpret_cast<struct sockaddr_in6 *>((void *)ifAddr->ifa_addr);
 
             if (memcmp(&addr6->sin6_addr, &srcAddr.sin6_addr, sizeof(in6_addr)) == 0)
             {
