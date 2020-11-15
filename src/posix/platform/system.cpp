@@ -73,6 +73,8 @@ otInstance *otSysInit(otPlatformConfig *aPlatformConfig)
     platformUdpInit(aPlatformConfig->mInterfaceName);
 #endif
 
+    platformBorderRouterInit(instance);
+
     return instance;
 }
 
@@ -86,6 +88,8 @@ void otSysDeinit(void)
     platformNetifDeinit();
 #endif
     IgnoreError(otPlatUartDisable());
+
+    platformBorderRouterDeinit();
 }
 
 #if OPENTHREAD_POSIX_VIRTUAL_TIME
@@ -139,6 +143,8 @@ void otSysMainloopUpdate(otInstance *aInstance, otSysMainloopContext *aMainloop)
 #else
     platformRadioUpdateFdSet(&aMainloop->mReadFdSet, &aMainloop->mWriteFdSet, &aMainloop->mMaxFd, &aMainloop->mTimeout);
 #endif
+
+    platformBorderRouterUpdate(aMainloop);
 
     if (otTaskletsArePending(aInstance))
     {
@@ -205,6 +211,8 @@ void otSysMainloopProcess(otInstance *aInstance, const otSysMainloopContext *aMa
 #if OPENTHREAD_CONFIG_PLATFORM_UDP_ENABLE
     platformUdpProcess(aInstance, &aMainloop->mReadFdSet);
 #endif
+
+    platformBorderRouterProcess(aMainloop);
 }
 
 #if OPENTHREAD_CONFIG_OTNS_ENABLE

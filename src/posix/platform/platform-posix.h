@@ -430,6 +430,12 @@ extern char gBackboneNetifName[IFNAMSIZ];
 extern unsigned int gBackboneNetifIndex;
 #endif
 
+// TODO(wgtdkp): documents.
+void platformBorderRouterInit(otInstance *aInstance);
+void platformBorderRouterDeinit();
+void platformBorderRouterUpdate(otSysMainloopContext *aMainLoop);
+void platformBorderRouterProcess(const otSysMainloopContext *aMainLoop);
+
 #ifdef __cplusplus
 }
 #endif
