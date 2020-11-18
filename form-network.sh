@@ -6,7 +6,7 @@ readonly PANID=0xface
 readonly XPANID=dead00beef00cafe
 readonly MASTERKEY=00112233445566778899aabbccddeeff
 readonly PASSWORD=123456
-readonly OT_CTL=ot-ctl
+readonly OT_CTL=./cmake-build/src/posix/ot-ctl
 
 sudo "${OT_CTL}" factoryreset
 sleep 1
