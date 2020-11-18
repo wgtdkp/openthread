@@ -88,6 +88,7 @@ target_link_libraries(openthread-posix
     PUBLIC
         openthread-platform
     PRIVATE
+        openthread-border-router
         openthread-url
         ot-config
         util

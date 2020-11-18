@@ -56,6 +56,7 @@ target_link_libraries(ot-daemon PRIVATE
     ${OT_PLATFORM_LIB}
     openthread-ncp-ftd
     ${OT_MBEDTLS}
+    ot-config
 )
 
 add_executable(ot-ctl

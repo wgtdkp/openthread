@@ -27,11 +27,10 @@
 #
 
 add_library(openthread-border-router
-    border_router.cpp
-    border_router_api.cpp
     icmp6.cpp
-    netif.cpp
-    router_advertiser.cpp
+    infra_netif.cpp
+    router_manager.cpp
+    router_manager_platform.cpp
 )
 
 set_target_properties(openthread-border-router

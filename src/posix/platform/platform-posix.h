@@ -431,10 +431,10 @@ extern unsigned int gBackboneNetifIndex;
 #endif
 
 // TODO(wgtdkp): documents.
-void platformBorderRouterInit(otInstance *aInstance);
-void platformBorderRouterDeinit();
-void platformBorderRouterUpdate(otSysMainloopContext *aMainLoop);
-void platformBorderRouterProcess(const otSysMainloopContext *aMainLoop);
+void platformRouterManagerInit(otInstance *aInstance, const char *aInfraNetifName);
+void platformRouterManagerDeinit();
+void platformRouterManagerUpdate(otSysMainloopContext *aMainloop);
+void platformRouterManagerProcess(const otSysMainloopContext *aMainloop);
 
 #ifdef __cplusplus
 }

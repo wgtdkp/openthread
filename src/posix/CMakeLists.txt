@@ -56,7 +56,7 @@ if(OT_READLINE)
     list(APPEND READLINE_LINK_LIBRARIES "${READLINE}" "${NCURSES}")
 endif()
 
-add_subdirectory(border_router)
+add_subdirectory(router_manager)
 
 if(OT_DAEMON)
     include(daemon.cmake)

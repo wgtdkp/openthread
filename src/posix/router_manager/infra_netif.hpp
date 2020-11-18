@@ -26,13 +26,16 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef POSIX_TUN_INTERFACE_HPP_
-#define POSIX_TUN_INTERFACE_HPP_
+#ifndef POSIX_INFRA_NETIF_HPP_
+#define POSIX_INFRA_NETIF_HPP_
+
+#include <stdint.h>
+
+#include <net/if.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 
 #include <openthread/error.h>
-#include <openthread/instance.h>
-
-#include <openthread/openthread-system.h>
 
 namespace ot
 {
@@ -40,30 +43,38 @@ namespace ot
 namespace Posix
 {
 
-class TunInterface
+/**
+ * This class represents a infrastructure network interface (e.g. wlan0).
+ *
+ */
+class InfraNetif
 {
 public:
-    TunInterface()
-        : mInstance(nullptr)
-        , mTunFd(-1)
-    {
-    }
+    InfraNetif();
 
-    otError Init(otInstance *aInstance, const char *aInterfaceName);
+    otError Init(const char *aName);
     void Deinit();
 
-    void Update(otSysMainloopContext *aMainLoop);
-    void Process(const otSysMainloopContext *aMainLoop);
-
-    void HandleStateChanged();
+    const char *GetName() const { return mName; }
+    unsigned int GetIndex() const { return mIndex; }
+    bool HasUlaOrGuaAddress() const;
 
 private:
-    otInstance *mInstance;
-    int mTunFd;
+    static constexpr uint8_t kMaxAddrNum = 32;
+
+    otError AddAddress(const struct sockaddr_in6 &aAddr);
+    static bool IsUlaAddress(const struct sockaddr_in6 &aAddr);
+    static bool IsGuaAddress(const struct sockaddr_in6 &aAddr);
+
+    char mName[IFNAMSIZ];
+    unsigned int mIndex;
+
+    struct sockaddr_in6 mAddresses[kMaxAddrNum];
+    uint8_t mAddressNum;
 };
 
 } // namespace Posix
 
 } // namespace ot
 
-#endif // POSIX_TUN_INTERFACE_HPP_
+#endif // POSIX_INFRA_NETIF_HPP_

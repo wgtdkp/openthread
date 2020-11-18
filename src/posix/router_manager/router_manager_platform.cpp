@@ -26,39 +26,46 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef POSIX_NETIF_HPP_
-#define POSIX_NETIF_HPP_
+#include "platform-posix.h"
 
-#include <net/if.h>
+#include "router_manager.hpp"
+#include "common/code_utils.hpp"
 
-#include <openthread/error.h>
+using namespace ot::Posix;
 
-namespace ot
+static RouterManager *sRouterManager = nullptr;
+
+void platformRouterManagerInit(otInstance *aInstance, const char *aInfraNetifName)
 {
+    if (sRouterManager == nullptr)
+    {
+        sRouterManager = new RouterManager(*static_cast<ot::Instance *>(aInstance));
+        sRouterManager->Init(aInfraNetifName);
+    }
+}
 
-namespace Posix
+void platformRouterManagerDeinit()
 {
+    if (sRouterManager != nullptr)
+    {
+        sRouterManager->Deinit();
+        delete sRouterManager;
+        sRouterManager = nullptr;
+    }
+}
 
-/**
- * This class represents a network interface.
- *
- */
-class NetIf
+void platformRouterManagerUpdate(otSysMainloopContext *aMainloop)
 {
-public:
-    otError Init(const char *aName, int aIndex);
-    void Deinit();
+    if (sRouterManager != nullptr)
+    {
+        sRouterManager->Update(aMainloop);
+    }
+}
 
-    const char *GetName() const { return mName; }
-    int GetIndex() const { return mIndex; }
-
-private:
-    const char mName[IFNAMSIZ];
-    int mIndex;
-};
-
-} // namespace Posix
-
-} // namespace ot
-
-#endif // POSIX_NETIF_HPP_
+void platformRouterManagerProcess(const otSysMainloopContext *aMainloop)
+{
+    if (sRouterManager != nullptr)
+    {
+        sRouterManager->Process(aMainloop);
+    }
+}
