@@ -33,8 +33,8 @@
 #include <stdint.h>
 
 #include <sys/socket.h>
-#include <netinet/icmp6.h>
 #include <netinet/in.h>
+#include <netinet/icmp6.h>
 
 #include <openthread/icmp6.h>
 #include <openthread/openthread-system.h>

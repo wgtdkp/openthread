@@ -26,6 +26,8 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
+#define __APPLE_USE_RFC_3542
+
 #include "icmp6.hpp"
 
 #include <errno.h>

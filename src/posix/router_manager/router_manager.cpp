@@ -169,7 +169,11 @@ void RouterManager::HandleStateChanged(otChangedFlags aFlags)
 
     if (aFlags & OT_CHANGED_THREAD_NETDATA)
     {
-        EvaluateRoutingPolicy();
+        otDeviceRole role = otThreadGetDeviceRole(&GetInstance());
+        if (role == OT_DEVICE_ROLE_ROUTER || role == OT_DEVICE_ROLE_LEADER)
+        {
+            EvaluateRoutingPolicy();
+        }
     }
 }
 
@@ -340,6 +344,8 @@ void RouterManager::EvaluateOnLinkPrefix()
 
 void RouterManager::EvaluateRoutingPolicy()
 {
+    otLogInfoPlat("evaluating routing policy");
+
     EvaluateOmrPrefix();
     EvaluateOnLinkPrefix();
 
