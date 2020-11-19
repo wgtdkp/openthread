@@ -3645,8 +3645,8 @@ void Interpreter::HandleSntpResponse(uint64_t aTime, otError aResult)
 
 void Interpreter::ProcessSrpClient(uint8_t aArgsLength, char *aArgs[])
 {
-    assert(mInstance != nullptr);
-    assert(&mSrpClient.mInterpreter == this);
+    OT_ASSERT(mInstance != nullptr);
+    OT_ASSERT(&mSrpClient.mInterpreter == this);
     OutputResult(mSrpClient.Process(aArgsLength, aArgs));
 }
 
