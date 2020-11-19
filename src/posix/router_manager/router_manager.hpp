@@ -87,8 +87,8 @@ public:
 private:
     static constexpr uint16_t kKeyOmrPrefix = 0xFF01;
 
-    static constexpr uint32_t kMinRtrAdvInterval = 3; //30;   // In Seconds.
-    static constexpr uint32_t kMaxRtrAdvInterval = 10; // 1800; // In Seconds.
+    static constexpr uint32_t kMinRtrAdvInterval = 30;     // In Seconds.
+    static constexpr uint32_t kMaxRtrAdvInterval = 1800;   // In Seconds.
     static constexpr uint32_t kMaxInitRtrAdvInterval = 16; // InSeconds.
     static constexpr uint32_t kMaxInitRtrAdvertisements = 3;
 
@@ -172,9 +172,6 @@ private:
      */
     void SendRouterAdvertisement(const otIp6Prefix &aOmrPrefix, const otIp6Prefix &aOnLinkPrefix);
 
-    void HandleRouterSolicit();
-    void HandleRouterAdvertisement();
-
     /**
      * Decides if given prefix is a valid OMR prefix.
      *
@@ -192,6 +189,9 @@ private:
 
     static void HandleRouterSolicitTimer(Timer &aTimer, void *aRouterManager);
     void HandleRouterSolicitTimer(Timer &aTimer);
+
+    static void HandleRouterSolicit(void *aRouterManager);
+    void HandleRouterSolicit();
 
     /**
      * The OMR prefix loaded from local persistent storage.
@@ -217,8 +217,8 @@ private:
      */
     otIp6Prefix mAdvertisedOnLinkPrefix;
 
-    Icmp6       mIcmp6;
     InfraNetif  mInfraNetif;
+    Icmp6       mIcmp6;
 
     Timer mRouterAdvertisementTimer;
     uint32_t mRouterAdvertisementCount;

@@ -240,7 +240,9 @@ private:
 class Icmp6
 {
 public:
-    Icmp6();
+    typedef void (*RouterSolicitHandler)(void *aContext);
+
+    Icmp6(InfraNetif &aInfraNetif);
 
     otError Init();
 
@@ -254,15 +256,32 @@ public:
                                     const InfraNetif &aInfraNetif,
                                     const struct in6_addr &aDest);
 
+    otError SendRouterSolicit(const InfraNetif &aInfraNetif,
+                              const struct in6_addr &aDest);
+
+    void SetRouterSolicitHandler(RouterSolicitHandler aRouterSolicitHandler, void *aContext)
+    {
+        mRouterSolicitHandler = aRouterSolicitHandler;
+        mRouterSolicitHandlerContext = aContext;
+    }
+
 private:
     static constexpr uint16_t kMaxIcmp6MessageLength = 1280;
+
+    void HandleRouterSolicit(const uint8_t *aMessage, uint16_t aMessageLength);
+    void HandleRouterAdvertisement(const uint8_t *aMessage, uint16_t aMessageLength);
 
     otError Send(uint8_t *aMessage,
                  uint16_t aMessageLength,
                  const InfraNetif &aInfraNetif,
                  const struct in6_addr &aDest);
 
+    void Recv(const InfraNetif &aInfraNetif);
+
+    InfraNetif &mInfraNetif;
     int mSocketFd;
+    RouterSolicitHandler mRouterSolicitHandler;
+    void * mRouterSolicitHandlerContext;
 };
 
 } // namespace Posix

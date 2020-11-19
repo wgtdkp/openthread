@@ -70,6 +70,7 @@ static void LogIfError(otError aError, const char *aFuncName, const char *aMessa
 
 RouterManager::RouterManager(Instance &aInstance)
     : InstanceLocator(aInstance)
+    , mIcmp6(mInfraNetif)
     , mRouterAdvertisementTimer(HandleRouterAdvertisementTimer, this)
     , mRouterSolicitTimer(HandleRouterSolicitTimer, this)
 {
@@ -446,6 +447,16 @@ void RouterManager::HandleRouterSolicitTimer(Timer &aTimer, void *aRouterManager
 void RouterManager::HandleRouterSolicitTimer(Timer &aTimer)
 {
     OT_UNUSED_VARIABLE(aTimer);
+    // TODO(wgtdkp):
+}
+
+void RouterManager::HandleRouterSolicit(void *aRouterManager)
+{
+    static_cast<RouterManager *>(aRouterManager)->HandleRouterSolicit();
+}
+
+void RouterManager::HandleRouterSolicit()
+{
     // TODO(wgtdkp):
 }
 

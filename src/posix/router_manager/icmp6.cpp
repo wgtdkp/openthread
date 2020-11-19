@@ -44,8 +44,10 @@ namespace ot
 namespace Posix
 {
 
-Icmp6::Icmp6()
-    : mSocketFd(-1)
+Icmp6::Icmp6(InfraNetif &aInfraNetif)
+    : mInfraNetif(aInfraNetif)
+    , mSocketFd(-1)
+    , mRouterSolicitHandler(nullptr)
 {
 }
 
@@ -131,12 +133,14 @@ void Icmp6::Update(otSysMainloopContext *aMainloop)
 
 void Icmp6::Process(const otSysMainloopContext *aMainloop)
 {
-    // TODO(wgtdkp):
     if (FD_ISSET(mSocketFd, &aMainloop->mReadFdSet))
     {
+        Recv(mInfraNetif);
     }
-    else if (FD_ISSET(mSocketFd, &aMainloop->mErrorFdSet))
+
+    if (FD_ISSET(mSocketFd, &aMainloop->mErrorFdSet))
     {
+        otLogWarnPlat("ICMP socket errored");
     }
 }
 
@@ -182,6 +186,21 @@ otError Icmp6::SendRouterAdvertisement(const otIp6Prefix *aOmrPrefix,
         memcpy(message + messageLength, &rio, rio.GetLengthInBytes());
         messageLength += rio.GetLengthInBytes();
     }
+
+    return Send(message, messageLength, aInfraNetif, aDest);
+}
+
+otError Icmp6::SendRouterSolicit(const InfraNetif &aInfraNetif,
+                                 const struct in6_addr &aDest)
+{
+    uint8_t message[kMaxIcmp6MessageLength];
+    uint16_t messageLength = 0;
+    otIcmp6Header header;
+
+    memset(&header, 0, sizeof(header));
+    header.mType = ND_ROUTER_SOLICIT;
+
+    memcpy(message, &header, sizeof(header));
 
     return Send(message, messageLength, aInfraNetif, aDest);
 }
@@ -254,6 +273,108 @@ otError Icmp6::Send(uint8_t *aMessage,
 
 exit:
     return error;
+}
+
+void Icmp6::Recv(const InfraNetif &aInfraNetif)
+{
+    uint8_t buffer[1500];
+    uint16_t readLength = 0;
+
+    ssize_t rval;
+    struct msghdr msg;
+    struct iovec bufp;
+    char cmsgbuf[128];
+    struct cmsghdr *cmh;
+    unsigned int ifIndex = 0;
+    int hopLimit = -1;
+
+    struct sockaddr_in6 srcAddr;
+    struct sockaddr_in6 dstAddr;
+
+    bufp.iov_base = buffer;
+    bufp.iov_len = sizeof(buffer);
+    msg.msg_iov = &bufp;
+    msg.msg_iovlen = 1;
+    msg.msg_name = &srcAddr;
+    msg.msg_namelen = sizeof(srcAddr);
+    msg.msg_control = cmsgbuf;
+    msg.msg_controllen = sizeof(cmsgbuf);
+
+    VerifyOrExit(mSocketFd >= 0);
+
+    rval = recvmsg(mSocketFd, &msg, 0);
+    if (rval < 0)
+    {
+        otLogWarnPlat("failed to recv ICMP message: %s", strerror(errno));
+        ExitNow();
+    }
+
+    readLength = static_cast<uint16_t>(rval);
+
+    for (cmh = CMSG_FIRSTHDR(&msg); cmh; cmh = CMSG_NXTHDR(&msg, cmh))
+    {
+        if (cmh->cmsg_level == IPPROTO_IPV6 &&
+            cmh->cmsg_type == IPV6_PKTINFO &&
+            cmh->cmsg_len == CMSG_LEN(sizeof(struct in6_pktinfo)))
+        {
+            struct in6_pktinfo pktinfo;
+
+            memcpy(&pktinfo, CMSG_DATA(cmh), sizeof pktinfo);
+            ifIndex = pktinfo.ipi6_ifindex;
+
+            /* Get the destination address, for use when replying. */
+            dstAddr.sin6_family = AF_INET6;
+            dstAddr.sin6_port = 0;
+            dstAddr.sin6_addr = pktinfo.ipi6_addr;
+        }
+        else if (cmh->cmsg_level == IPPROTO_IPV6 &&
+                 cmh->cmsg_type == IPV6_HOPLIMIT &&
+                 cmh->cmsg_len == CMSG_LEN(sizeof(int)))
+        {
+            hopLimit = *(int *)CMSG_DATA(cmh);
+        }
+    }
+
+    // Ignore ICMP messages that we are not interested.
+    if (ifIndex != aInfraNetif.GetIndex())
+    {
+        otLogDebgPlat("Ignore ICMP message at inteface index %u", ifIndex);
+        ExitNow();
+    }
+
+    // TODO(wgtdkp): drop messages from cur interface.
+
+    VerifyOrExit(readLength >= 1);
+
+    switch(buffer[0]) // type
+    {
+    case ND_ROUTER_SOLICIT:
+        HandleRouterSolicit(buffer, readLength);
+        break;
+    case ND_ROUTER_ADVERT:
+        // TODO(wgtdkp):
+        // Rely on the kernel to handle this. The kernel will
+        // add address to this interface when received
+        // ROUTER_ADVERT with auto address config enabled. And
+        // we can get this event with netlink. We should probable
+        // restart routing policy evaluation when we received
+        // this message.
+        break;
+    }
+
+exit:
+    return;
+}
+
+void Icmp6::HandleRouterSolicit(const uint8_t *aMessage, uint16_t aMessageLength)
+{
+    OT_UNUSED_VARIABLE(aMessage);
+    OT_UNUSED_VARIABLE(aMessageLength);
+
+    if (mRouterSolicitHandler)
+    {
+        mRouterSolicitHandler(mRouterSolicitHandlerContext);
+    }
 }
 
 } // namespace Posix
