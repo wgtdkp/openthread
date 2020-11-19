@@ -29,7 +29,9 @@
 #include "platform-posix.h"
 
 #include "router_manager.hpp"
+
 #include "common/code_utils.hpp"
+#include "timer.hpp"
 
 using namespace ot::Posix;
 
@@ -56,10 +58,23 @@ void platformRouterManagerDeinit()
 
 void platformRouterManagerUpdate(otSysMainloopContext *aMainloop)
 {
+    MilliSeconds timeout;
+    MilliSeconds nextFire;
+
     if (sRouterManager != nullptr)
     {
         sRouterManager->Update(aMainloop);
     }
+
+    timeout = aMainloop->mTimeout.tv_sec * 1000 + aMainloop->mTimeout.tv_usec / 1000;
+    nextFire = TimerScheduler::Get().GetEarliestFireTime() - otPlatAlarmMilliGetNow();
+    if (nextFire < timeout)
+    {
+        timeout = nextFire;
+    }
+
+    aMainloop->mTimeout.tv_sec = timeout / 1000;
+    aMainloop->mTimeout.tv_usec = (timeout % 1000) * 1000;
 }
 
 void platformRouterManagerProcess(const otSysMainloopContext *aMainloop)
@@ -68,4 +83,6 @@ void platformRouterManagerProcess(const otSysMainloopContext *aMainloop)
     {
         sRouterManager->Process(aMainloop);
     }
+
+    TimerScheduler::Get().Process(otPlatAlarmMilliGetNow());
 }

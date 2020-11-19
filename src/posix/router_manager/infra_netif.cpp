@@ -120,6 +120,22 @@ bool InfraNetif::HasUlaOrGuaAddress() const
     return ret;
 }
 
+const struct sockaddr_in6 *InfraNetif::GetLinkLocalAddress() const
+{
+    const struct sockaddr_in6 *linkLocalAddress = nullptr;
+
+    for (uint8_t i = 0; i < mAddressNum; ++i)
+    {
+        if (IsLinkLocalAddress(mAddresses[i]))
+        {
+            linkLocalAddress = &mAddresses[i];
+            break;
+        }
+    }
+
+    return linkLocalAddress;
+}
+
 bool InfraNetif::IsUlaAddress(const struct sockaddr_in6 &aAddr)
 {
     return (aAddr.sin6_addr.s6_addr[0] & 0xfe) == 0xfc;
@@ -128,6 +144,12 @@ bool InfraNetif::IsUlaAddress(const struct sockaddr_in6 &aAddr)
 bool InfraNetif::IsGuaAddress(const struct sockaddr_in6 &aAddr)
 {
     return (aAddr.sin6_addr.s6_addr[0] & 0xe0) == 0x20;
+}
+
+bool InfraNetif::IsLinkLocalAddress(const struct sockaddr_in6 &aAddr)
+{
+    return (aAddr.sin6_addr.s6_addr[0] & 0xff) == 0xfe &&
+           (aAddr.sin6_addr.s6_addr[1] & 0xc0) == 0x80;
 }
 
 } // namespace Posix

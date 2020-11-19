@@ -31,6 +31,7 @@ add_library(openthread-border-router
     infra_netif.cpp
     router_manager.cpp
     router_manager_platform.cpp
+    timer.cpp
 )
 
 set_target_properties(openthread-border-router

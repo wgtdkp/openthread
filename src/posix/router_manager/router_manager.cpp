@@ -70,6 +70,8 @@ static void LogIfError(otError aError, const char *aFuncName, const char *aMessa
 
 RouterManager::RouterManager(Instance &aInstance)
     : InstanceLocator(aInstance)
+    , mRouterAdvertisementTimer(HandleRouterAdvertisementTimer, this)
+    , mRouterSolicitTimer(HandleRouterSolicitTimer, this)
 {
     memset(&mLocalOmrPrefix, 0, sizeof(mLocalOmrPrefix));
     memset(&mAdvertisedOmrPrefix, 0, sizeof(mAdvertisedOmrPrefix));
@@ -119,14 +121,12 @@ void RouterManager::Deinit()
 
 void RouterManager::Update(otSysMainloopContext *aMainloop)
 {
-    OT_UNUSED_VARIABLE(aMainloop);
-    // TODO(wgtdkp):
+    mIcmp6.Update(aMainloop);
 }
 
 void RouterManager::Process(const otSysMainloopContext *aMainloop)
 {
-    OT_UNUSED_VARIABLE(aMainloop);
-    // TODO(wgtdkp):
+    mIcmp6.Process(aMainloop);
 }
 
 otError RouterManager::Start()
@@ -144,7 +144,9 @@ exit:
 
 void RouterManager::Stop()
 {
-    // TODO(wgtdkp):
+    UnpublishOmrPrefix();
+    mRouterAdvertisementTimer.Stop();
+    mRouterSolicitTimer.Stop();
 }
 
 void RouterManager::HandleStateChanged(otChangedFlags aFlags, void *aRouterManager)
@@ -326,6 +328,15 @@ exit:
     }
 }
 
+void RouterManager::UnpublishOmrPrefix()
+{
+    if (mAdvertisedOmrPrefix == mLocalOmrPrefix)
+    {
+        otBorderRouterRemoveOnMeshPrefix(&GetInstance(), &mLocalOmrPrefix);
+        otBorderRouterRegister(&GetInstance());
+    }
+}
+
 void RouterManager::EvaluateOnLinkPrefix()
 {
     if (mInfraNetif.HasUlaOrGuaAddress())
@@ -366,6 +377,7 @@ otError RouterManager::SendRouterSolicit()
 
 void RouterManager::SendRouterAdvertisement(const otIp6Prefix &aOmrPrefix, const otIp6Prefix &aOnLinkPrefix)
 {
+    uint32_t nextSendTime;
     const otIp6Prefix *omrPrefix = IsValidOmrPrefix(aOmrPrefix) ? &aOmrPrefix : nullptr;
     const otIp6Prefix *onLinkPrefix = IsValidOnLinkPrefix(aOnLinkPrefix) ? &aOnLinkPrefix : nullptr;
 
@@ -375,6 +387,20 @@ void RouterManager::SendRouterAdvertisement(const otIp6Prefix &aOmrPrefix, const
     {
         otLogWarnPlat("failed to send Router Advertisement message");
     }
+
+    ++mRouterAdvertisementCount;
+
+    srand(time(nullptr));
+    nextSendTime = kMinRtrAdvInterval + rand() % (kMaxRtrAdvInterval - kMinRtrAdvInterval + 1);
+
+    if (mRouterAdvertisementCount <= kMaxInitRtrAdvertisements &&
+        nextSendTime > kMaxInitRtrAdvInterval)
+    {
+        nextSendTime = kMaxInitRtrAdvInterval;
+    }
+
+    otLogInfoPlat("Router Advertisement scheduled in %u Seconds", nextSendTime);
+    mRouterAdvertisementTimer.Start(nextSendTime * 1000);
 
 exit:
     return;
@@ -396,6 +422,31 @@ exit:
 bool RouterManager::IsValidOnLinkPrefix(const otIp6Prefix &aPrefix)
 {
     return IsValidOmrPrefix(aPrefix);
+}
+
+void RouterManager::HandleRouterAdvertisementTimer(Timer &aTimer, void *aRouterManager)
+{
+    static_cast<RouterManager *>(aRouterManager)->HandleRouterAdvertisementTimer(aTimer);
+}
+
+void RouterManager::HandleRouterAdvertisementTimer(Timer &aTimer)
+{
+    OT_UNUSED_VARIABLE(aTimer);
+
+    otLogInfoPlat("Router Advertisement timer triggered");
+
+    SendRouterAdvertisement(mAdvertisedOmrPrefix, mAdvertisedOnLinkPrefix);
+}
+
+void RouterManager::HandleRouterSolicitTimer(Timer &aTimer, void *aRouterManager)
+{
+    static_cast<RouterManager *>(aRouterManager)->HandleRouterSolicitTimer(aTimer);
+}
+
+void RouterManager::HandleRouterSolicitTimer(Timer &aTimer)
+{
+    OT_UNUSED_VARIABLE(aTimer);
+    // TODO(wgtdkp):
 }
 
 } // namespace Posix

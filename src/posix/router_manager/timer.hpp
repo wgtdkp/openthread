@@ -31,7 +31,7 @@
 
 #include "openthread-posix-config.h"
 
-#include <openthread/platform/alarm-milli.h>
+#include <stdint.h>
 
 namespace ot
 {
@@ -39,31 +39,26 @@ namespace ot
 namespace Posix
 {
 
+typedef uint32_t MilliSeconds;
+
 class Timer
 {
 public:
     friend class TimerScheduler;
 
-    typedef uint32_t MilliSeconds;
-
     /**
      * This type represents the function bound to a Timer object.
      *
      */
-    typedef void (*Callback)(Timer &aTimer);
+    typedef void (*Handler)(Timer &aTimer, void *aContext);
 
     /**
-     * This constructor binds the callback.
+     * This constructor binds the Handler.
      *
-     * @param  aCallback  A function to be called when the timer fires.
+     * @param  aHandler  A function to be called when the timer fires.
      *
      */
-    explicit Timer(Callback aCallback)
-        : mCallback(aCallback)
-        , mFireTime(0)
-        , mIsRunning(false)
-    {
-    }
+    Timer(Handler aHandler, void *aContext);
 
     /**
      * This method starts the timer with given delay.
@@ -71,7 +66,7 @@ public:
      * @param  aDelay  The delay which the timer will fire after.
      *
      */
-    void Start(MilliSeconds aDelay) { StartAt(otPlatAlarmMilliGetNow() + aDelay); }
+    void Start(MilliSeconds aDelay);
 
     /**
      * This method starts the timer with given fire time.
@@ -79,23 +74,13 @@ public:
      * @param  aFireTime  The time point the timer will fire at.
      *
      */
-    void StartAt(MilliSeconds aFireTime)
-    {
-        Stop();
-        mFireTime  = aFireTime;
-        mIsRunning = true;
-        TimerScheduler::Get().Add(this);
-    }
+    void StartAt(MilliSeconds aFireTime);
 
     /**
      * This method stops a timer.
      *
      */
-    void Stop()
-    {
-        TimerScheduler::Get().Remove(this);
-        mIsRunning = false;
-    }
+    void Stop();
 
     /**
      * This method devices if the timer is running.
@@ -114,16 +99,10 @@ public:
     MilliSeconds GetFireTime() const { return mFireTime; }
 
 private:
-    void Fire()
-    {
-        if (mIsRunning && mCallback != nullptr)
-        {
-            mCallback(*this);
-        }
-        Stop();
-    }
+    void Fire();
 
-    Callback     mCallback;
+    Handler      mHandler;
+    void *       mContext;
     MilliSeconds mFireTime;
     bool         mIsRunning;
     Timer *      mNext;
@@ -153,7 +132,13 @@ public:
      * @returns Delay of next earliest timer event in MilliSeconds.
      *
      */
-    MilliSeconds Process(MilliSeconds aNow);
+    void Process(MilliSeconds aNow);
+
+    /**
+     * This method returns the earliest fire time in all sorted timers.
+     *
+     */
+    MilliSeconds GetEarliestFireTime() const;
 
     /**
      * This method adds a new timer into the scheduler.
@@ -169,11 +154,20 @@ public:
      */
     void Remove(Timer *aTimer);
 
+    /**
+     * This method clears all timers scheduled.
+     *
+     */
+    void Clear();
+
 private:
-    TimerScheduler() = default;
+    TimerScheduler()
+        : mSortedTimerList(nullptr)
+    {
+    }
 
     // The timer list sorted by their Fire Time. Earlier timer comes first.
-    Timer *mTimerList;
+    Timer *mSortedTimerList;
 };
 
 

@@ -59,12 +59,15 @@ public:
     unsigned int GetIndex() const { return mIndex; }
     bool HasUlaOrGuaAddress() const;
 
+    const struct sockaddr_in6 *GetLinkLocalAddress() const;
+
 private:
     static constexpr uint8_t kMaxAddrNum = 32;
 
     otError AddAddress(const struct sockaddr_in6 &aAddr);
     static bool IsUlaAddress(const struct sockaddr_in6 &aAddr);
     static bool IsGuaAddress(const struct sockaddr_in6 &aAddr);
+    static bool IsLinkLocalAddress(const struct sockaddr_in6 &aAddr);
 
     char mName[IFNAMSIZ];
     unsigned int mIndex;

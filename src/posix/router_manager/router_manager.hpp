@@ -43,6 +43,7 @@
 #include "common/locator-getters.hpp"
 
 #include "icmp6.hpp"
+#include "timer.hpp"
 
 namespace ot
 {
@@ -86,6 +87,11 @@ public:
 private:
     static constexpr uint16_t kKeyOmrPrefix = 0xFF01;
 
+    static constexpr uint32_t kMinRtrAdvInterval = 3; //30;   // In Seconds.
+    static constexpr uint32_t kMaxRtrAdvInterval = 10; // 1800; // In Seconds.
+    static constexpr uint32_t kMaxInitRtrAdvInterval = 16; // InSeconds.
+    static constexpr uint32_t kMaxInitRtrAdvertisements = 3;
+
     /**
      * Start the Border Router functionality.
      *
@@ -112,15 +118,6 @@ private:
      *
      */
     static otIp6Prefix GenerateRandomOmrPrefix();
-
-    /**
-     * Publish an random-generated OMR prefix in Thread Network
-     * if non existing such prefix is already in the Thread Network Data.
-     *
-     * @see PublishOnMeshPrefix
-     *
-     */
-    void PublishOnMeshPrefixIfNoneExisting();
 
     /**
      * Evaluate the routing policy depends on prefix and route informations
@@ -154,6 +151,12 @@ private:
     void PublishOmrPrefix();
 
     /**
+     * Unpublish OMR prefix if we have done that.
+     *
+     */
+    void UnpublishOmrPrefix();
+
+    /**
      * Send Router Solicit messages to discovery on-link prefix
      * on infra links.
      *
@@ -184,6 +187,12 @@ private:
      */
     static bool IsValidOnLinkPrefix(const otIp6Prefix &aPrefix);
 
+    static void HandleRouterAdvertisementTimer(Timer &aTimer, void *aRouterManager);
+    void HandleRouterAdvertisementTimer(Timer &aTimer);
+
+    static void HandleRouterSolicitTimer(Timer &aTimer, void *aRouterManager);
+    void HandleRouterSolicitTimer(Timer &aTimer);
+
     /**
      * The OMR prefix loaded from local persistent storage.
      *
@@ -210,6 +219,11 @@ private:
 
     Icmp6       mIcmp6;
     InfraNetif  mInfraNetif;
+
+    Timer mRouterAdvertisementTimer;
+    uint32_t mRouterAdvertisementCount;
+
+    Timer mRouterSolicitTimer;
 };
 
 } // namespace Posix

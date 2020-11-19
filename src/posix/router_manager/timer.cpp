@@ -28,9 +28,48 @@
 
 #include "timer.hpp"
 
+#include <openthread/platform/alarm-milli.h>
+
+#include "common/numeric_limits.hpp"
+
 namespace ot {
 
 namespace Posix {
+
+Timer::Timer(Handler aHandler, void *aContext)
+    : mHandler(aHandler)
+    , mContext(aContext)
+    , mFireTime(0)
+    , mIsRunning(false)
+{
+}
+
+void Timer::Start(MilliSeconds aDelay)
+{
+    StartAt(otPlatAlarmMilliGetNow() + aDelay);
+}
+
+void Timer::StartAt(MilliSeconds aFireTime)
+{
+    Stop();
+    mFireTime  = aFireTime;
+    mIsRunning = true;
+    TimerScheduler::Get().Add(this);
+}
+
+void Timer::Stop()
+{
+    TimerScheduler::Get().Remove(this);
+    mIsRunning = false;
+}
+
+void Timer::Fire()
+{
+    if (mIsRunning && mHandler != nullptr)
+    {
+        mHandler(*this, mContext);
+    }
+}
 
 TimerScheduler &TimerScheduler::Get()
 {
@@ -40,54 +79,77 @@ TimerScheduler &TimerScheduler::Get()
 
 void TimerScheduler::Add(Timer *aTimer)
 {
-    mSortedTimerList.remove(aTimer);
+    Timer *pre = nullptr;
+    Timer *cur = nullptr;
 
-    for (auto it = mSortedTimerList.begin();; ++it)
+    Remove(aTimer);
+
+    if (mSortedTimerList == nullptr)
     {
-        if (it == mSortedTimerList.end() || (*it)->GetFireTime() > aTimer->GetFireTime())
+        mSortedTimerList = aTimer;
+    }
+    else
+    {
+        cur = mSortedTimerList;
+        while (cur != nullptr && cur->mFireTime <= aTimer->mFireTime)
         {
-            mSortedTimerList.insert(it, aTimer);
-            break;
+            pre = cur;
+            cur = cur->mNext;
+        }
+
+        aTimer->mNext = cur;
+
+        if (pre == nullptr)
+        {
+            mSortedTimerList = aTimer;
+        }
+        else
+        {
+            pre->mNext = aTimer;
         }
     }
 }
 
-MicroSeconds TimerScheduler::Process(TimePoint aNow)
+void TimerScheduler::Remove(Timer *aTimer)
 {
-    TimePoint earliestNextFireTime = TimePoint::max();
+    Timer *pre = nullptr;
+    Timer *cur = mSortedTimerList;
 
-    for (Timer *timer : mSortedTimerList)
+    while (cur != nullptr && cur != aTimer)
     {
-        if (!timer->IsRunning())
-        {
-            continue;
-        }
+        pre = cur;
+        cur = cur->mNext;
+    }
 
-        if (timer->GetFireTime() <= aNow)
+    if (cur != nullptr)
+    {
+        if (pre == nullptr)
         {
-            timer->Fire();
+            mSortedTimerList = cur->mNext;
         }
         else
         {
-            earliestNextFireTime = timer->GetFireTime();
-            break;
+            pre->mNext = cur->mNext;
         }
     }
+}
 
-    // Cleanup dead timers.
-    for (auto it = mSortedTimerList.begin(); it != mSortedTimerList.end();)
+void TimerScheduler::Process(MilliSeconds aNow)
+{
+    while (mSortedTimerList != nullptr && mSortedTimerList->mFireTime <= aNow)
     {
-        if (!(*it)->IsRunning())
-        {
-            it = mSortedTimerList.erase(it);
-        }
-        else
-        {
-            ++it;
-        }
-    }
+        Timer * timer = mSortedTimerList;
 
-    return std::chrono::duration_cast<MicroSeconds>(earliestNextFireTime - aNow);
+        // We must remove the timer before firing it, because the user
+        // may add the timer again in the timer handler.
+        Remove(mSortedTimerList);
+        timer->Fire();
+    }
+}
+
+MilliSeconds TimerScheduler::GetEarliestFireTime() const
+{
+    return mSortedTimerList ? mSortedTimerList->mFireTime : NumericLimits<MilliSeconds>::Max();
 }
 
 } // namespace Posix
