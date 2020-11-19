@@ -460,7 +460,9 @@ private:
 #if OPENTHREAD_CONFIG_SNTP_CLIENT_ENABLE
     void ProcessSntp(uint8_t aArgsLength, char *aArgs[]);
 #endif
+#if OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
     void ProcessSrpClient(uint8_t aArgsLength, char *aArgs[]);
+#endif
     void ProcessState(uint8_t aArgsLength, char *aArgs[]);
     void ProcessThread(uint8_t aArgsLength, char *aArgs[]);
     void ProcessDataset(uint8_t aArgsLength, char *aArgs[]);
@@ -688,7 +690,9 @@ private:
 #if OPENTHREAD_CONFIG_SNTP_CLIENT_ENABLE
         {"sntp", &Interpreter::ProcessSntp},
 #endif
+#if OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
         {"srpclient", &Interpreter::ProcessSrpClient},
+#endif
         {"state", &Interpreter::ProcessState},
         {"thread", &Interpreter::ProcessThread},
         {"txpower", &Interpreter::ProcessTxPower},
@@ -736,7 +740,9 @@ private:
     Joiner mJoiner;
 #endif
 
+#if OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
     SrpClient mSrpClient;
+#endif
 
     Instance *mInstance;
 };

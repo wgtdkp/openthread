@@ -136,7 +136,9 @@ Interpreter::Interpreter(Instance *aInstance)
 #if OPENTHREAD_CONFIG_JOINER_ENABLE
     , mJoiner(*this)
 #endif
+#if OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
     , mSrpClient(*this)
+#endif
     , mInstance(aInstance)
 {
 #if OPENTHREAD_FTD || OPENTHREAD_CONFIG_TMF_NETWORK_DIAG_MTD_ENABLE
@@ -3643,12 +3645,14 @@ void Interpreter::HandleSntpResponse(uint64_t aTime, otError aResult)
 }
 #endif
 
+#if OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
 void Interpreter::ProcessSrpClient(uint8_t aArgsLength, char *aArgs[])
 {
     OT_ASSERT(mInstance != nullptr);
     OT_ASSERT(&mSrpClient.mInterpreter == this);
     OutputResult(mSrpClient.Process(aArgsLength, aArgs));
 }
+#endif
 
 void Interpreter::ProcessState(uint8_t aArgsLength, char *aArgs[])
 {

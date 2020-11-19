@@ -36,6 +36,8 @@
 
 #include "openthread-core-config.h"
 
+#ifdef OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
+
 #include <stdlib.h>
 
 #include <openthread/error.h>
@@ -92,5 +94,7 @@ private:
 
 } // namespace Cli
 } // namespace ot
+
+#endif // OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
 
 #endif // CLI_SRP_CLIENT_HPP_

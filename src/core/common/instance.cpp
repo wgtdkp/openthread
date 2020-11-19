@@ -72,7 +72,9 @@ Instance::Instance(void)
 #endif // #if OPENTHREAD_MTD || OPENTHREAD_FTD
     , mRandomManager()
     , mRadio(*this)
+#if OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
     , mSrpClient(*this)
+#endif
 #if OPENTHREAD_MTD || OPENTHREAD_FTD
     , mNotifier(*this)
     , mTimeTicker(*this)

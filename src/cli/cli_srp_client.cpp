@@ -33,6 +33,8 @@
 
 #include "cli_srp_client.hpp"
 
+#ifdef OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
+
 #include <openthread/srp.h>
 
 #include "cli/cli.hpp"
@@ -131,3 +133,5 @@ otError SrpClient::ProcessDeregister(uint8_t aArgsLength, char *aArgs[])
 
 } // namespace Cli
 } // namespace ot
+
+#endif // OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE

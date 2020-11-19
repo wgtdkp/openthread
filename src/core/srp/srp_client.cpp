@@ -33,6 +33,8 @@
 
 #include "srp_client.hpp"
 
+#if OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
+
 #include <openthread/ip6.h>
 #include <openthread/netdata.h>
 
@@ -147,3 +149,5 @@ void SrpClient::HandleTimer(Timer &aTimer)
 }
 
 } // namespace ot
+
+#endif // OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE

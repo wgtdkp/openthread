@@ -36,6 +36,8 @@
 
 #include "openthread-core-config.h"
 
+#if OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
+
 #include <openthread/error.h>
 
 #include "common/locator.hpp"
@@ -85,5 +87,7 @@ private:
 };
 
 } // namespace ot
+
+#endif // OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
 
 #endif // SRP_CLIENT_HPP_

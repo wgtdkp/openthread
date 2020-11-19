@@ -232,6 +232,11 @@ if(OT_SLAAC)
     target_compile_definitions(ot-config INTERFACE "OPENTHREAD_CONFIG_IP6_SLAAC_ENABLE=1")
 endif()
 
+option(OT_SRP_CLIENT "enable SRP client")
+if (OT_SRP_CLIENT)
+    target_compile_definitions(ot-config INTERFACE "OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE=1")
+endif()
+
 option(OT_SNTP_CLIENT "enable SNTP Client support")
 if(OT_SNTP_CLIENT)
     target_compile_definitions(ot-config INTERFACE "OPENTHREAD_CONFIG_SNTP_CLIENT_ENABLE=1")

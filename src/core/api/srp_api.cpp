@@ -33,6 +33,8 @@
 
 #include "openthread-core-config.h"
 
+#if OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
+
 #include <openthread/srp.h>
 
 #include "common/instance.hpp"
@@ -65,3 +67,5 @@ otError otSrpClientDeregister(otInstance *aInstance)
     Instance &instance = *static_cast<Instance *>(aInstance);
     return instance.Get<SrpClient>().Deregister();
 }
+
+#endif // OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE

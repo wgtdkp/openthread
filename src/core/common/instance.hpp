@@ -345,7 +345,9 @@ private:
     // from their constructor.
     Radio mRadio;
 
+#if OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
     SrpClient mSrpClient;
+#endif
 
 #if OPENTHREAD_MTD || OPENTHREAD_FTD
     // Notifier, TimeTicker, Settings, and MessagePool are initialized
@@ -403,10 +405,12 @@ private:
 
 // Specializations of the `Get<Type>()` method.
 
+#if OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
 template <> inline SrpClient &Instance::Get(void)
 {
     return mSrpClient;
 }
+#endif
 
 template <> inline Radio &Instance::Get(void)
 {
