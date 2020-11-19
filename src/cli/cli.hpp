@@ -57,6 +57,8 @@
 #include "cli/cli_coap_secure.hpp"
 #endif
 
+#include "cli/cli_srp_client.hpp"
+
 #include "common/code_utils.hpp"
 #include "common/instance.hpp"
 
@@ -88,6 +90,7 @@ class Interpreter
     friend class Dataset;
     friend class Joiner;
     friend class UdpExample;
+    friend class SrpClient;
 
 public:
     /**
@@ -457,6 +460,7 @@ private:
 #if OPENTHREAD_CONFIG_SNTP_CLIENT_ENABLE
     void ProcessSntp(uint8_t aArgsLength, char *aArgs[]);
 #endif
+    void ProcessSrpClient(uint8_t aArgsLength, char *aArgs[]);
     void ProcessState(uint8_t aArgsLength, char *aArgs[]);
     void ProcessThread(uint8_t aArgsLength, char *aArgs[]);
     void ProcessDataset(uint8_t aArgsLength, char *aArgs[]);
@@ -684,6 +688,7 @@ private:
 #if OPENTHREAD_CONFIG_SNTP_CLIENT_ENABLE
         {"sntp", &Interpreter::ProcessSntp},
 #endif
+        {"srpclient", &Interpreter::ProcessSrpClient},
         {"state", &Interpreter::ProcessState},
         {"thread", &Interpreter::ProcessThread},
         {"txpower", &Interpreter::ProcessTxPower},
@@ -730,6 +735,8 @@ private:
 #if OPENTHREAD_CONFIG_JOINER_ENABLE
     Joiner mJoiner;
 #endif
+
+    SrpClient mSrpClient;
 
     Instance *mInstance;
 };

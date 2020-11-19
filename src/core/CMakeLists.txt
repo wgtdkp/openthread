@@ -98,6 +98,7 @@ set(COMMON_SOURCES
     api/random_noncrypto_api.cpp
     api/server_api.cpp
     api/sntp_api.cpp
+    api/srp_api.cpp
     api/tasklet_api.cpp
     api/thread_api.cpp
     api/thread_ftd_api.cpp
@@ -174,6 +175,8 @@ set(COMMON_SOURCES
     radio/radio.cpp
     radio/radio_callbacks.cpp
     radio/radio_platform.cpp
+    srp/srp_client.cpp
+    srp/srp-thread.c
     thread/address_resolver.cpp
     thread/announce_begin_server.cpp
     thread/announce_sender.cpp
@@ -263,16 +266,20 @@ if(OT_VENDOR_EXTENSION)
   target_sources(openthread-radio PRIVATE ${OT_VENDOR_EXTENSION})
 endif()
 
+#add_subdirectory(srp)
+
 target_link_libraries(openthread-ftd
     PRIVATE
         ${OT_MBEDTLS}
         ot-config
+        srp-client
 )
 
 target_link_libraries(openthread-mtd
     PRIVATE
         ${OT_MBEDTLS}
         ot-config
+        srp-client
 )
 
 target_link_libraries(openthread-radio

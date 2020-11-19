@@ -39,3 +39,5 @@ elseif(OT_PLATFORM STREQUAL "qpg6095")
 elseif(OT_PLATFORM STREQUAL "samr21")
     add_subdirectory(microchip)
 endif()
+
+add_subdirectory(mdnsresponder/ServiceRegistration)

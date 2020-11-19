@@ -54,6 +54,8 @@
 #include "diags/factory_diags.hpp"
 #include "radio/radio.hpp"
 
+#include "srp/srp_client.hpp"
+
 #if OPENTHREAD_RADIO || OPENTHREAD_CONFIG_LINK_RAW_ENABLE
 #include "common/message.hpp"
 #include "mac/link_raw.hpp"
@@ -343,6 +345,8 @@ private:
     // from their constructor.
     Radio mRadio;
 
+    SrpClient mSrpClient;
+
 #if OPENTHREAD_MTD || OPENTHREAD_FTD
     // Notifier, TimeTicker, Settings, and MessagePool are initialized
     // before other member variables since other classes/objects from
@@ -398,6 +402,11 @@ private:
 };
 
 // Specializations of the `Get<Type>()` method.
+
+template <> inline SrpClient &Instance::Get(void)
+{
+    return mSrpClient;
+}
 
 template <> inline Radio &Instance::Get(void)
 {

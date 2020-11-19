@@ -54,7 +54,7 @@
 #include "common/code_utils.hpp"
 
 #if OPENTHREAD_CONFIG_PLATFORM_UDP_ENABLE
-
+#error "shit"
 static const size_t kMaxUdpSize = 1280;
 
 static void *FdToHandle(int aFd)
