@@ -28,15 +28,16 @@
 
 #include "router_manager.hpp"
 
-#include <time.h>
 #include <stdlib.h>
 
 #include <openthread/border_router.h>
+#include <openthread/platform/entropy.h>
 #include <openthread/platform/settings.h>
 #include <openthread/platform/toolchain.h>
 
 #include "common/code_utils.hpp"
 #include "common/logging.hpp"
+#include "lib/platform/exit_code.h"
 
 namespace ot
 {
@@ -47,8 +48,8 @@ namespace Posix
 static struct in6_addr kLinkLocalAllNodes = {{{ 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                                          0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 }}};
 
-//static struct in6_addr kKinkLocalAllRouters = {{{ 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-//                                           0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02 }}};
+static struct in6_addr kKinkLocalAllRouters = {{{ 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                           0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02 }}};
 
 #define SuccessOrLog(aError, aMessage)          \
     do                                          \
@@ -70,6 +71,7 @@ static void LogIfError(otError aError, const char *aFuncName, const char *aMessa
 
 RouterManager::RouterManager(Instance &aInstance)
     : InstanceLocator(aInstance)
+    , mInfraNetif(HandleInfraNetifStateChanged, this)
     , mIcmp6(mInfraNetif)
     , mRouterAdvertisementTimer(HandleRouterAdvertisementTimer, this)
     , mRouterSolicitTimer(HandleRouterSolicitTimer, this)
@@ -122,25 +124,21 @@ void RouterManager::Deinit()
 
 void RouterManager::Update(otSysMainloopContext *aMainloop)
 {
+    mInfraNetif.Update(aMainloop);
     mIcmp6.Update(aMainloop);
 }
 
 void RouterManager::Process(const otSysMainloopContext *aMainloop)
 {
+    mInfraNetif.Process(aMainloop);
     mIcmp6.Process(aMainloop);
 }
 
-otError RouterManager::Start()
+void RouterManager::Start()
 {
-    otError error = OT_ERROR_NONE;
+    // EvaluateRoutingPolicy();
 
-    EvaluateRoutingPolicy();
-
-    // TODO(wgtdkp): Send Route Solicit messages to discovery on-link prefix.
-    SuccessOrExit(error = SendRouterSolicit());
-
-exit:
-    return error;
+    SendRouterSolicit();
 }
 
 void RouterManager::Stop()
@@ -162,7 +160,7 @@ void RouterManager::HandleStateChanged(otChangedFlags aFlags)
         otDeviceRole role = otThreadGetDeviceRole(&GetInstance());
         if (role == OT_DEVICE_ROLE_ROUTER || role == OT_DEVICE_ROLE_LEADER)
         {
-            SuccessOrLog(Start(), "failed to start the Border Router");
+            Start();
         }
         else
         {
@@ -189,12 +187,9 @@ otIp6Prefix RouterManager::GenerateRandomOmrPrefix()
 
     onMeshPrefix.mPrefix.mFields.m8[0] = 0xfd;
 
-    srand(time(NULL));
-    for (uint8_t i = 1; i < kRandomPrefixLength; ++i)
-    {
-        onMeshPrefix.mPrefix.mFields.m8[i] = rand() % (UINT8_MAX + 1);
-    }
-    onMeshPrefix.mLength = 64; // In bits.
+    SuccessOrDie(otPlatEntropyGet(&onMeshPrefix.mPrefix.mFields.m8[1], kRandomPrefixLength - 1));
+
+    onMeshPrefix.mLength = OT_IP6_PREFIX_BITSIZE; // In bits.
 
     return onMeshPrefix;
 }
@@ -365,15 +360,17 @@ void RouterManager::EvaluateRoutingPolicy()
     SendRouterAdvertisement(mAdvertisedOmrPrefix, mAdvertisedOnLinkPrefix);
 }
 
-otError RouterManager::SendRouterSolicit()
+void RouterManager::SendRouterSolicit()
 {
-    otError error = OT_ERROR_NONE;
-    // TODO(wgtdkp): Send.
+    uint32_t timeout;
 
-    // TODO(wgtdkp): Start a Router Solicit timer. Send
-    // Router Advertisement messages when timeouted.
+    mIcmp6.SendRouterSolicit(mInfraNetif, kKinkLocalAllRouters);
 
-    return error;
+    // We wait a bit longer than the solicition interval.
+    timeout = kRtrSolicitionInterval * 1000 + GenerateRandomNumber(0, 1000);
+    mRouterSolicitTimer.Start(timeout);
+
+    otLogInfoPlat("Router Solicit timer scheduled in %.1f s", timeout / 1000.0f);
 }
 
 void RouterManager::SendRouterAdvertisement(const otIp6Prefix &aOmrPrefix, const otIp6Prefix &aOnLinkPrefix)
@@ -391,8 +388,7 @@ void RouterManager::SendRouterAdvertisement(const otIp6Prefix &aOmrPrefix, const
 
     ++mRouterAdvertisementCount;
 
-    srand(time(nullptr));
-    nextSendTime = kMinRtrAdvInterval + rand() % (kMaxRtrAdvInterval - kMinRtrAdvInterval + 1);
+    nextSendTime = GenerateRandomNumber(kMinRtrAdvInterval, kMaxRtrAdvInterval);
 
     if (mRouterAdvertisementCount <= kMaxInitRtrAdvertisements &&
         nextSendTime > kMaxInitRtrAdvInterval)
@@ -423,6 +419,23 @@ exit:
 bool RouterManager::IsValidOnLinkPrefix(const otIp6Prefix &aPrefix)
 {
     return IsValidOmrPrefix(aPrefix);
+}
+
+void RouterManager::HandleInfraNetifStateChanged(void *aRouterManager)
+{
+    static_cast<RouterManager *>(aRouterManager)->HandleInfraNetifStateChanged();
+}
+
+void RouterManager::HandleInfraNetifStateChanged()
+{
+    if (!mInfraNetif.IsUp())
+    {
+        Stop();
+    }
+    else
+    {
+        EvaluateRoutingPolicy();
+    }
 }
 
 void RouterManager::HandleRouterAdvertisementTimer(Timer &aTimer, void *aRouterManager)
@@ -457,7 +470,21 @@ void RouterManager::HandleRouterSolicit(void *aRouterManager)
 
 void RouterManager::HandleRouterSolicit()
 {
-    // TODO(wgtdkp):
+
+    // We may have received Router Advertisement messages after sending
+    // Router Solicit. Thus we need to re-evalute our routing policy.
+    EvaluateRoutingPolicy();
+}
+
+uint32_t RouterManager::GenerateRandomNumber(uint32_t aBegin, uint32_t aEnd)
+{
+    uint64_t rand;
+
+    OT_ASSERT(aBegin <= aEnd);
+
+    SuccessOrDie(otPlatEntropyGet(reinterpret_cast<uint8_t *>(&rand), sizeof(rand)));
+
+    return static_cast<uint32_t>(aBegin + rand % (aEnd - aBegin + 1));
 }
 
 } // namespace Posix

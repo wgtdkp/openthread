@@ -1777,7 +1777,7 @@ void RadioSpinel<InterfaceType, ProcessContextType>::CalcRcpTimeOffset(void)
     uint8_t        buffer[sizeof(remoteTimestamp)];
     spinel_ssize_t packed;
 
-    otLogDebgPlat("Trying to get RCP time offset");
+    // otLogDebgPlat("Trying to get RCP time offset");
 
     /*
      * Use a modified Network Time Protocol(NTP) to calculate the time offset

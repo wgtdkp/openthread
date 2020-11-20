@@ -36,6 +36,7 @@
 #include <sys/socket.h>
 
 #include <openthread/error.h>
+#include <openthread/openthread-system.h>
 
 namespace ot
 {
@@ -44,33 +45,57 @@ namespace Posix
 {
 
 /**
- * This class represents a infrastructure network interface (e.g. wlan0).
+ * This class represents an infrastructure network interface (e.g. wlan0).
  *
  */
 class InfraNetif
 {
 public:
-    InfraNetif();
+    typedef void (*StateChangedHandler)(void *aContext);
+
+    InfraNetif(StateChangedHandler aHandler, void *aContext);
 
     otError Init(const char *aName);
     void Deinit();
+
+    void Update(otSysMainloopContext *aMainloop);
+    void Process(const otSysMainloopContext *aMainloop);
+
+    /**
+     * This method checks if the netif is UP.
+     *
+     */
+    bool IsUp() const;
 
     const char *GetName() const { return mName; }
     unsigned int GetIndex() const { return mIndex; }
     bool HasUlaOrGuaAddress() const;
 
+    const struct sockaddr_in6 &GetNextAddr() const;
+
 private:
     static constexpr uint8_t kMaxAddrNum = 32;
 
-    otError AddAddress(const struct sockaddr_in6 &aAddr);
+    void RefreshAddresses();
+
     static bool IsUlaAddress(const struct sockaddr_in6 &aAddr);
     static bool IsGuaAddress(const struct sockaddr_in6 &aAddr);
+
+    void RecvNetlinkMessage();
+
+    void InitNetlink();
+    void ProcessNetlinkEvent(int aNetifIndex);
 
     char mName[IFNAMSIZ];
     unsigned int mIndex;
 
     struct sockaddr_in6 mAddresses[kMaxAddrNum];
     uint8_t mAddressNum;
+
+    StateChangedHandler mStateChangedHandler;
+    void *mStateChangedHandlerContext;
+
+    int mNetlinkFd;
 };
 
 } // namespace Posix

@@ -122,6 +122,8 @@ void Icmp6::Deinit()
 
 void Icmp6::Update(otSysMainloopContext *aMainloop)
 {
+    VerifyOrExit(mSocketFd >= 0);
+
     FD_SET(mSocketFd, &aMainloop->mReadFdSet);
     FD_SET(mSocketFd, &aMainloop->mErrorFdSet);
 
@@ -129,10 +131,15 @@ void Icmp6::Update(otSysMainloopContext *aMainloop)
     {
         aMainloop->mMaxFd = mSocketFd;
     }
+
+exit:
+    return;
 }
 
 void Icmp6::Process(const otSysMainloopContext *aMainloop)
 {
+    VerifyOrExit(mSocketFd >= 0);
+
     if (FD_ISSET(mSocketFd, &aMainloop->mReadFdSet))
     {
         Recv(mInfraNetif);
@@ -142,6 +149,9 @@ void Icmp6::Process(const otSysMainloopContext *aMainloop)
     {
         otLogWarnPlat("ICMP socket errored");
     }
+
+exit:
+    return;
 }
 
 otError Icmp6::SendRouterAdvertisement(const otIp6Prefix *aOmrPrefix,
@@ -190,9 +200,10 @@ otError Icmp6::SendRouterAdvertisement(const otIp6Prefix *aOmrPrefix,
     return Send(message, messageLength, aInfraNetif, aDest);
 }
 
-otError Icmp6::SendRouterSolicit(const InfraNetif &aInfraNetif,
+void Icmp6::SendRouterSolicit(const InfraNetif &aInfraNetif,
                                  const struct in6_addr &aDest)
 {
+    otError error = OT_ERROR_NONE;
     uint8_t message[kMaxIcmp6MessageLength];
     uint16_t messageLength = 0;
     otIcmp6Header header;
@@ -201,8 +212,14 @@ otError Icmp6::SendRouterSolicit(const InfraNetif &aInfraNetif,
     header.mType = ND_ROUTER_SOLICIT;
 
     memcpy(message, &header, sizeof(header));
+    messageLength = sizeof(header);
 
-    return Send(message, messageLength, aInfraNetif, aDest);
+    error = Send(message, messageLength, aInfraNetif, aDest);
+
+    if (error != OT_ERROR_NONE)
+    {
+        otLogWarnPlat("failed to send Router Solicit message: %s", otThreadErrorToString(error));
+    }
 }
 
 otError Icmp6::Send(uint8_t *aMessage,
@@ -349,7 +366,7 @@ void Icmp6::Recv(const InfraNetif &aInfraNetif)
     switch(buffer[0]) // type
     {
     case ND_ROUTER_SOLICIT:
-        HandleRouterSolicit(buffer, readLength);
+        HandleRouterSolicit(buffer, readLength, srcAddr, dstAddr);
         break;
     case ND_ROUTER_ADVERT:
         // TODO(wgtdkp):
@@ -366,10 +383,16 @@ exit:
     return;
 }
 
-void Icmp6::HandleRouterSolicit(const uint8_t *aMessage, uint16_t aMessageLength)
+void Icmp6::HandleRouterSolicit(const uint8_t *aMessage,
+                                uint16_t aMessageLength,
+                                const struct sockaddr_in6 &srcAddr,
+                                const struct sockaddr_in6 &dstAddr)
 {
     OT_UNUSED_VARIABLE(aMessage);
     OT_UNUSED_VARIABLE(aMessageLength);
+
+    // TODO(wgtdkp): dump the address.
+    otLogDebgPlat("received Router Solicit message from ");
 
     if (mRouterSolicitHandler)
     {

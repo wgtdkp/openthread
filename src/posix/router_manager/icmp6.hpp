@@ -256,8 +256,8 @@ public:
                                     const InfraNetif &aInfraNetif,
                                     const struct in6_addr &aDest);
 
-    otError SendRouterSolicit(const InfraNetif &aInfraNetif,
-                              const struct in6_addr &aDest);
+    void SendRouterSolicit(const InfraNetif &aInfraNetif,
+                           const struct in6_addr &aDest);
 
     void SetRouterSolicitHandler(RouterSolicitHandler aRouterSolicitHandler, void *aContext)
     {
@@ -268,7 +268,10 @@ public:
 private:
     static constexpr uint16_t kMaxIcmp6MessageLength = 1280;
 
-    void HandleRouterSolicit(const uint8_t *aMessage, uint16_t aMessageLength);
+    void HandleRouterSolicit(const uint8_t *aMessage,
+                             uint16_t aMessageLength,
+                             const struct sockaddr_in6 &srcAddr,
+                             const struct sockaddr_in6 &dstAddr);
     void HandleRouterAdvertisement(const uint8_t *aMessage, uint16_t aMessageLength);
 
     otError Send(uint8_t *aMessage,

@@ -89,8 +89,9 @@ private:
 
     static constexpr uint32_t kMinRtrAdvInterval = 30;     // In Seconds.
     static constexpr uint32_t kMaxRtrAdvInterval = 1800;   // In Seconds.
-    static constexpr uint32_t kMaxInitRtrAdvInterval = 16; // InSeconds.
+    static constexpr uint32_t kMaxInitRtrAdvInterval = 16; // In Seconds.
     static constexpr uint32_t kMaxInitRtrAdvertisements = 3;
+    static constexpr uint32_t kRtrSolicitionInterval = 4; // In Seconds.
 
     /**
      * Start the Border Router functionality.
@@ -98,7 +99,7 @@ private:
      * Called when current device becomes a Router or Leader.
      *
      */
-    otError Start();
+    void Start();
 
     /**
      * Stop acting as a Border Router.
@@ -163,7 +164,7 @@ private:
      * @see HandleRouterAdvertisement
      *
      */
-    otError SendRouterSolicit();
+    void SendRouterSolicit();
 
     /**
      * Send Router Advertisement messages to advertise
@@ -184,6 +185,9 @@ private:
      */
     static bool IsValidOnLinkPrefix(const otIp6Prefix &aPrefix);
 
+    static void HandleInfraNetifStateChanged(void *aRouterManager);
+    void HandleInfraNetifStateChanged();
+
     static void HandleRouterAdvertisementTimer(Timer &aTimer, void *aRouterManager);
     void HandleRouterAdvertisementTimer(Timer &aTimer);
 
@@ -192,6 +196,9 @@ private:
 
     static void HandleRouterSolicit(void *aRouterManager);
     void HandleRouterSolicit();
+
+    static uint32_t GenerateRandomNumber(uint32_t aBegin, uint32_t aEnd);
+
 
     /**
      * The OMR prefix loaded from local persistent storage.
