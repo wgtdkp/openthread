@@ -47,6 +47,7 @@
 #include "common/code_utils.hpp"
 #include "common/debug.hpp"
 #include "common/logging.hpp"
+#include "platform/address_utils.hpp"
 
 namespace ot
 {
@@ -346,10 +347,13 @@ void InfraNetif::ProcessNetlinkEvent(int aNetifIndex)
 
     RefreshAddresses();
 
+// TODO(wgtdkp):
+/*
     if (mStateChangedHandler != nullptr)
     {
         mStateChangedHandler(mStateChangedHandlerContext);
     }
+*/
 
 exit:
     return;
@@ -371,8 +375,8 @@ void InfraNetif::UpdateGatewayAddress(const otIp6Prefix &aOnLinkPrefix, bool aIs
     gatewayAddressInfo.mScope = 14; // Global scope
     gatewayAddressInfo.mIsAnycast = false;
 
-    // TODO(wgtdkp): dump the gateway address info.
-    otLogInfoPlat("%s gateway adderss on interface %s", (aIsAdded ? "add" : "remove"), GetName());
+    otLogInfoPlat("%s gateway adderss %s on interface %s",
+        (aIsAdded ? "add" : "remove"), Ip6PrefixString(gatewayAddressInfo).AsCString(), GetName());
     UpdateUnicastAddress(gatewayAddressInfo, aIsAdded);
 }
 
@@ -427,16 +431,13 @@ void InfraNetif::UpdateUnicastAddress(const otIp6AddressInfo &aAddressInfo, bool
 
     if (send(mNetlinkFd, &req, req.nh.nlmsg_len, 0) != -1)
     {
-        // TODO(wgtdkp): log the address.
-        otLogInfoPlat("successfully %s new address on interface %s", (aIsAdded ? "add" : "remove"), GetName());
-        //otLogInfoPlat("Sent request#%u to %s %s/%u", mNetlinkSequence, (aIsAdded ? "add" : "remove"),
-        //              Ip6AddressString(aAddressInfo.mAddress).AsCString(), aAddressInfo.mPrefixLength);
+        otLogInfoPlat("successfully %s new address %s on interface %s",
+            (aIsAdded ? "add" : "remove"), Ip6PrefixString(aAddressInfo).AsCString(), GetName());
     }
     else
     {
-        otLogWarnPlat("failed to %s new address on interface %s", (aIsAdded ? "add" : "remove"), GetName());
-        //otLogInfoPlat("Failed to send request#%u to %s %s/%u", mNetlinkSequence, (aIsAdded ? "add" : "remove"),
-        //              Ip6AddressString(aAddressInfo.mAddress).AsCString(), aAddressInfo.mPrefixLength);
+        otLogWarnPlat("failed to %s new address %s on interface %s",
+            (aIsAdded ? "add" : "remove"), Ip6PrefixString(aAddressInfo).AsCString(), GetName());
     }
 }
 

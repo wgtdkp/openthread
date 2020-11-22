@@ -42,6 +42,7 @@
 #include "common/code_utils.hpp"
 #include "common/logging.hpp"
 #include "lib/platform/exit_code.h"
+#include "platform/address_utils.hpp"
 
 namespace ot
 {
@@ -76,14 +77,16 @@ static void LogIfError(otError aError, const char *aFuncName, const char *aMessa
 RouterManager::RouterManager(Instance &aInstance)
     : InstanceLocator(aInstance)
     , mInfraNetif(HandleInfraNetifStateChanged, this)
-    , mIcmp6(mInfraNetif)
+    , mIcmp6(HandleRouterSolicit, this, HandleRouterAdvertisement, this)
     , mRouterAdvertisementTimer(HandleRouterAdvertisementTimer, this)
     , mRouterSolicitTimer(HandleRouterSolicitTimer, this)
+    , mDiscoveredOnLinkPrefixInvalidTimer(HandleDiscoveredOnLinkPrefixInvalidTimer, this)
 {
     memset(&mLocalOmrPrefix, 0, sizeof(mLocalOmrPrefix));
     memset(&mAdvertisedOmrPrefix, 0, sizeof(mAdvertisedOmrPrefix));
     memset(&mLocalOnLinkPrefix, 0, sizeof(mLocalOnLinkPrefix));
     memset(&mAdvertisedOnLinkPrefix, 0, sizeof(mAdvertisedOnLinkPrefix));
+    memset(&mDiscoveredOnLinkPrefix, 0, sizeof(mDiscoveredOnLinkPrefix));
 }
 
 void RouterManager::Init(const char *aInfraNetifName)
@@ -142,13 +145,14 @@ void RouterManager::Process(const otSysMainloopContext *aMainloop)
 
 void RouterManager::Start()
 {
-    // EvaluateRoutingPolicy();
-
     SendRouterSolicit();
 }
 
 void RouterManager::Stop()
 {
+    // TODO(wgtdkp): per RFC 4861 6.2.5, we should send Router Advertisements
+    // with a Router Lifetime field of zero.
+
     UnpublishOmrPrefix(mAdvertisedOmrPrefix);
     mRouterAdvertisementTimer.Stop();
     mRouterSolicitTimer.Stop();
@@ -296,9 +300,6 @@ void RouterManager::PublishOmrPrefix(const otIp6Prefix &aPrefix)
 
     OT_ASSERT(IsValidOmrPrefix(aPrefix));
 
-    // TODO(wgtdkp): dump the prefix.
-    otLogInfoPlat("publishing OMR prefix");
-
     memset(&borderRouterConfig, 0, sizeof(borderRouterConfig));
     borderRouterConfig.mPrefix = aPrefix;
     borderRouterConfig.mStable = true;
@@ -328,37 +329,19 @@ void RouterManager::UnpublishOmrPrefix(const otIp6Prefix &aPrefix)
 
 otIp6Prefix RouterManager::EvaluateOnLinkPrefix()
 {
-    const struct sockaddr_in6 *infraNetifAddresses;
-    uint8_t infraNetifAddressNum;
     otIp6Prefix newOnLinkPrefix;
 
     memset(&newOnLinkPrefix, 0, sizeof(newOnLinkPrefix));
 
-    infraNetifAddresses = mInfraNetif.GetAllAddresses(infraNetifAddressNum);
-
-    for (uint8_t i = 0; i < infraNetifAddressNum; ++i)
+    // We don't evalute on-link prefix if we are doing
+    // Router Discovery or we has already discovered some
+    // on-link prefix.
+    VerifyOrExit(!mRouterSolicitTimer.IsRunning());
+    if (IsValidOnLinkPrefix(mDiscoveredOnLinkPrefix))
     {
-        const struct sockaddr_in6 &addr = infraNetifAddresses[i];
-
-        if (IN6_IS_ADDR_UNSPECIFIED(&addr.sin6_addr) ||
-            IN6_IS_ADDR_LOOPBACK(&addr.sin6_addr) ||
-            IN6_IS_ADDR_LINKLOCAL(&addr.sin6_addr) ||
-            IN6_IS_ADDR_MULTICAST(&addr.sin6_addr))
-        {
-            continue;
-        }
-
-        // We got an ULA or GUA.
-
-        if (!IsValidOnLinkPrefix(mAdvertisedOnLinkPrefix) ||
-            otIp6PrefixMatch(reinterpret_cast<const otIp6Address *>(&addr.sin6_addr),
-                             &mAdvertisedOnLinkPrefix.mPrefix)
-                < mAdvertisedOnLinkPrefix.mLength)
-        {
-            // There is at least a site-local (or global) IPv6 address which is not
-            // created by us on this interface. Stop advertising our prefix.
-            ExitNow();
-        }
+        otLogInfoPlat("there is already on-link prefix (%s) on interface %s",
+            Ip6PrefixString(mDiscoveredOnLinkPrefix).AsCString(), mInfraNetif.GetName());
+        ExitNow();
     }
 
     if (IsValidOnLinkPrefix(mAdvertisedOnLinkPrefix))
@@ -388,19 +371,17 @@ void RouterManager::EvaluateRoutingPolicy()
     {
         if (!IsValidOnLinkPrefix(mAdvertisedOnLinkPrefix))
         {
-            // TOOD(wgtdkp): dump the prefix.
-            otLogInfoPlat("start advertising prefix on interface %s", mInfraNetif.GetName());
+            otLogInfoPlat("start advertising prefix %s on interface %s",
+                Ip6PrefixString(newOnLinkPrefix).AsCString(), mInfraNetif.GetName());
             mInfraNetif.AddGatewayAddress(newOnLinkPrefix);
         }
     }
     else
     {
-        otLogInfoPlat("there is already IPv6 network on interface %s", mInfraNetif.GetName());
-    
         if (IsValidOnLinkPrefix(mAdvertisedOnLinkPrefix))
         {
-            // TOOD(wgtdkp): dump the prefix.
-            otLogInfoPlat("stop advertising prefix on interface %s", mInfraNetif.GetName());
+            otLogInfoPlat("stop advertising prefix %s on interface %s",
+                Ip6PrefixString(mAdvertisedOnLinkPrefix).AsCString(), mInfraNetif.GetName());
             mInfraNetif.RemoveGatewayAddress(mAdvertisedOnLinkPrefix);
         }
     }
@@ -531,20 +512,124 @@ void RouterManager::HandleRouterSolicitTimer(Timer &aTimer, void *aRouterManager
 void RouterManager::HandleRouterSolicitTimer(Timer &aTimer)
 {
     OT_UNUSED_VARIABLE(aTimer);
-    // TODO(wgtdkp):
-}
 
-void RouterManager::HandleRouterSolicit(void *aRouterManager)
-{
-    static_cast<RouterManager *>(aRouterManager)->HandleRouterSolicit();
-}
-
-void RouterManager::HandleRouterSolicit()
-{
+    otLogInfoPlat("Router Solicit timeouted");
 
     // We may have received Router Advertisement messages after sending
     // Router Solicit. Thus we need to re-evalute our routing policy.
     EvaluateRoutingPolicy();
+}
+
+void RouterManager::HandleDiscoveredOnLinkPrefixInvalidTimer(Timer &aTimer, void *aRouterManager)
+{
+    static_cast<RouterManager *>(aRouterManager)->HandleDiscoveredOnLinkPrefixInvalidTimer(aTimer);
+}
+
+void RouterManager::HandleDiscoveredOnLinkPrefixInvalidTimer(Timer &aTimer)
+{
+    OT_UNUSED_VARIABLE(aTimer);
+
+    // The discovered on-link prefix becomes invalid, send Router Solicit to
+    // discover new one.
+    memset(&mDiscoveredOnLinkPrefix, 0, sizeof(mDiscoveredOnLinkPrefix));
+    SendRouterSolicit();
+}
+
+void RouterManager::HandleRouterSolicit(unsigned int aIfIndex, void *aRouterManager)
+{
+    static_cast<RouterManager *>(aRouterManager)->HandleRouterSolicit(aIfIndex);
+}
+
+void RouterManager::HandleRouterSolicit(unsigned int aIfIndex)
+{
+    static char kIfName[IFNAMSIZ];
+    char *ifName = if_indextoname(aIfIndex, kIfName);
+    // We always re-evaluate our routing policy before sending
+    // Router Advertisement messages.
+
+    if (aIfIndex != mInfraNetif.GetIndex())
+    {
+        otLogInfoPlat("ignore Router Solicit message from interface %s", (ifName ? ifName : "UNKNOWN"));
+        ExitNow();
+    }
+
+    EvaluateRoutingPolicy();
+
+exit:
+    return;
+}
+
+void RouterManager::HandleRouterAdvertisement(const Icmp6::RouterAdvMessage &aRouterAdv, unsigned int aIfIndex, void *aRouterManager)
+{
+    static_cast<RouterManager *>(aRouterManager)->HandleRouterAdvertisement(aRouterAdv, aIfIndex);
+}
+
+void RouterManager::HandleRouterAdvertisement(const Icmp6::RouterAdvMessage &aRouterAdv, unsigned int aIfIndex)
+{
+    static char kIfName[IFNAMSIZ];
+    char *ifName = if_indextoname(aIfIndex, kIfName);
+    const Icmp6::PrefixInfoOption *pio = nullptr;
+    bool hasChanges = false;
+
+    // TODO(wgtdkp): check if there is PIO.
+    // TODO(wgtdkp): check Router Lifetime.
+
+    if (aIfIndex != mInfraNetif.GetIndex())
+    {
+        otLogInfoPlat("ignore Router Advertisement message from interface %s", (ifName ? ifName : "UNKNOWN"));
+        ExitNow();
+    }
+
+    while ((pio = aRouterAdv.GetNextPrefixInfo(pio)) != nullptr)
+    {
+        if (pio->GetPrefixLength() != OT_IP6_PREFIX_BITSIZE)
+        {
+            otLogInfoPlat("ignore PIO with prefix length %hu", pio->GetPrefixLength());
+            continue;
+        }
+
+        if (pio->GetPrefix()[0] != 0xfd)
+        {
+            otLogInfoPlat("ignore PIO %s, expect prefix fd00::/8", Ip6PrefixString(pio->GetPrefix(), pio->GetPrefixLength()).AsCString());
+            continue;
+        }
+
+        Ip6PrefixString prefixString {pio->GetPrefix(), pio->GetPrefixLength()};
+
+        otLogInfoPlat("accept PIO %s, valid lifetime: %u seconds", prefixString.AsCString(), pio->GetValidLifetime());
+
+        if (!IsValidOnLinkPrefix(mDiscoveredOnLinkPrefix) ||
+            (mDiscoveredOnLinkPrefixInvalidTimer.IsRunning() &&
+             (pio->GetValidLifetime() * 1000ULL + otPlatAlarmMilliGetNow()) > mDiscoveredOnLinkPrefixInvalidTimer.GetFireTime()))
+        {
+            memcpy(&mDiscoveredOnLinkPrefix.mPrefix, pio->GetPrefix(), pio->GetPrefixLength() / 8);
+            mDiscoveredOnLinkPrefix.mLength = pio->GetPrefixLength();
+
+            otLogInfoPlat("set discovered on-link prefix to %s, valid lifetime: %u seconds",
+                          prefixString.AsCString(), pio->GetValidLifetime());
+
+           if (pio->GetValidLifetime() == Icmp6::kInfiniteLifetime)
+           {
+               mDiscoveredOnLinkPrefixInvalidTimer.Stop();
+           }
+           else
+           {
+               // FIXME(wgtdkp): integer overflow.
+               mDiscoveredOnLinkPrefixInvalidTimer.Start(pio->GetValidLifetime() * 1000);
+           }
+
+            mRouterSolicitTimer.Stop();
+            hasChanges = true;
+        }
+    }
+
+    if (hasChanges)
+    {
+        EvaluateRoutingPolicy();
+    }
+
+exit:
+    return;
 }
 
 uint32_t RouterManager::GenerateRandomNumber(uint32_t aBegin, uint32_t aEnd)

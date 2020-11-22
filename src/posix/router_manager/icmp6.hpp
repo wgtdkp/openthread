@@ -52,84 +52,51 @@
 #define ND_OPT_ROUTE_INFORMATION 24
 #endif
 
+using ot::Encoding::BigEndian::HostSwap16;
+using ot::Encoding::BigEndian::HostSwap32;
+
 namespace ot
 {
 
 namespace Posix
 {
 
+namespace Icmp6 {
+
+static constexpr uint32_t kInfiniteLifetime = 0xffffffff;
+
 OT_TOOL_PACKED_BEGIN
-class RouterAdvMessage
+class Option
 {
 public:
-    RouterAdvMessage()
-        : mReachableTime(0)
-        , mRetransTimer(0)
+    explicit Option(uint8_t aType, uint8_t aLength=0)
+        : mType(aType)
+        , mLength(aLength)
     {
-        memset(&mHeader, 0, sizeof(mHeader));
-        mHeader.mType = ND_ROUTER_ADVERT;
-        mHeader.mCode = 0;
     }
 
-    void SetCurHopLimit(uint8_t aHopLimit)
-    {
-        mHeader.mData.m8[0] = aHopLimit;
-    }
+    uint8_t GetType() const { return mType; }
 
-    /*
-    void SetManagedAddrConfig(bool aManagedAddrConfig)
-    {
-        if (aManagedAddrConfig)
-        {
-            mHeader.mData.m8[1] |= 0x80;
-        }
-        else
-        {
-            mHeader.mData.m8[1] &= ~0x80;
-        }
-    }
+    void SetLength(uint16_t aLength) { mLength = aLength / 8; }
 
-    void SetOtherConfig(bool aOtherConfig)
-    {
-        if (aOtherConfig)
-        {
-            mHeader.mData.m8[1] |= 0x40;
-        }
-        else
-        {
-            mHeader.mData.m8[1] &= ~0x40;
-        }
-    }
-    */
+    uint16_t GetLength() const { return mLength * 8; }
 
-    void SetRouterLifetime(uint16_t aLifetime)
+    const Option *GetNextOption() const
     {
-        mHeader.mData.m16[1] = Encoding::BigEndian::HostSwap16(aLifetime);
-    }
-
-    void SetReachableTime(uint32_t aReachableTime)
-    {
-        mReachableTime = Encoding::BigEndian::HostSwap32(aReachableTime);
-    }
-
-    void SetRetransTimer(uint32_t aRetransTimer)
-    {
-        mRetransTimer = Encoding::BigEndian::HostSwap32(aRetransTimer);
+        return reinterpret_cast<const Option *>(reinterpret_cast<const uint8_t *>(this) + GetLength());
     }
 
 private:
-    otIcmp6Header mHeader;
-    uint32_t      mReachableTime;
-    uint32_t      mRetransTimer;
+    uint8_t mType;
+    uint8_t mLength;
 } OT_TOOL_PACKED_END;
 
 OT_TOOL_PACKED_BEGIN
-class PrefixInfoOption
+class PrefixInfoOption : public Option
 {
 public:
     PrefixInfoOption()
-        : mType(ND_OPT_PREFIX_INFORMATION)
-        , mLength(4)
+        : Option(ND_OPT_PREFIX_INFORMATION, 4)
         , mPrefixLength(0)
         , mReserved1(0)
         , mValidLifetime(0)
@@ -165,12 +132,17 @@ public:
 
     void SetValidLifetime(uint32_t aValidLifetime)
     {
-        mValidLifetime = Encoding::BigEndian::HostSwap32(aValidLifetime);
+        mValidLifetime = HostSwap32(aValidLifetime);
+    }
+
+    uint32_t GetValidLifetime() const
+    {
+        return HostSwap32(mValidLifetime);
     }
 
     void SetPreferredLifetime(uint32_t aPreferredLifetime)
     {
-        mPreferredLifetime = Encoding::BigEndian::HostSwap32(aPreferredLifetime);
+        mPreferredLifetime = HostSwap32(aPreferredLifetime);
     }
 
     void SetPrefix(const otIp6Prefix &aPrefix)
@@ -179,9 +151,10 @@ public:
         memcpy(mPrefix, &aPrefix.mPrefix, sizeof(aPrefix.mPrefix));
     }
 
+    uint8_t GetPrefixLength() const { return mPrefixLength; }
+    const uint8_t *GetPrefix() const { return mPrefix; }
+
 private:
-    uint8_t mType;
-    uint8_t mLength;
     uint8_t mPrefixLength;
     uint8_t mReserved1;
     uint32_t mValidLifetime;
@@ -191,12 +164,11 @@ private:
 } OT_TOOL_PACKED_END;
 
 OT_TOOL_PACKED_BEGIN
-class RouteInfoOption
+class RouteInfoOption : public Option
 {
 public:
     RouteInfoOption()
-        : mType(ND_OPT_ROUTE_INFORMATION)
-        , mLength(0)
+        : Option(ND_OPT_ROUTE_INFORMATION, 0)
         , mPrefixLength(0)
         , mReserved(0)
         , mRouteLifetime(0)
@@ -212,7 +184,7 @@ public:
 
     void SetRouteLifetime(uint32_t aLifetime)
     {
-        mRouteLifetime = Encoding::BigEndian::HostSwap32(aLifetime);
+        mRouteLifetime = HostSwap32(aLifetime);
     }
 
     void SetPrefix(const otIp6Prefix &aPrefix)
@@ -220,11 +192,6 @@ public:
         mLength = 1 + (aPrefix.mLength + 63) / 64;
         mPrefixLength = aPrefix.mLength;
         memcpy(mPrefix, &aPrefix.mPrefix, sizeof(aPrefix.mPrefix));
-    }
-
-    uint8_t GetLengthInBytes() const
-    {
-        return mLength * 8;
     }
 
 private:
@@ -237,6 +204,77 @@ private:
 
 } OT_TOOL_PACKED_END;
 
+OT_TOOL_PACKED_BEGIN
+class MessageBase
+{
+public:
+    void SetLength(uint16_t aLength) { mLength = HostSwap16(aLength); }
+
+    uint16_t GetLength() const { return HostSwap16(mLength); }
+
+    uint16_t GetTotalLength() const { return sizeof(*this) + GetLength(); }
+
+private:
+    uint16_t mLength;
+} OT_TOOL_PACKED_END;
+
+OT_TOOL_PACKED_BEGIN
+class MessageBuffer : public MessageBase
+{
+public:
+    static constexpr uint16_t kMaxLength = 1500;
+
+    uint8_t *GetBuffer() { return mBuffer; }
+
+private:
+    uint8_t mBuffer[kMaxLength];
+} OT_TOOL_PACKED_END;
+
+OT_TOOL_PACKED_BEGIN
+class RouterAdvMessage : public MessageBase
+{
+public:
+    RouterAdvMessage()
+        : mReachableTime(0)
+        , mRetransTimer(0)
+    {
+        memset(&mHeader, 0, sizeof(mHeader));
+        mHeader.mType = ND_ROUTER_ADVERT;
+        mHeader.mCode = 0;
+    }
+
+    void SetCurHopLimit(uint8_t aHopLimit)
+    {
+        mHeader.mData.m8[0] = aHopLimit;
+    }
+
+    void SetRouterLifetime(uint16_t aLifetime)
+    {
+        mHeader.mData.m16[1] = HostSwap16(aLifetime);
+    }
+
+    void SetReachableTime(uint32_t aReachableTime)
+    {
+        mReachableTime = HostSwap32(aReachableTime);
+    }
+
+    void SetRetransTimer(uint32_t aRetransTimer)
+    {
+        mRetransTimer = HostSwap32(aRetransTimer);
+    }
+
+    const PrefixInfoOption *GetNextPrefixInfo(const PrefixInfoOption *aCurPrefixInfo) const;
+
+private:
+    const Option *GetNextOption(const Option *aCurOption) const;
+
+    otIcmp6Header mHeader;
+    uint32_t      mReachableTime;
+    uint32_t      mRetransTimer;
+    uint8_t       mOptions[];
+} OT_TOOL_PACKED_END;
+
+
 /**
  * This class implements ICMPv6 message transceiver.
  *
@@ -244,9 +282,13 @@ private:
 class Icmp6
 {
 public:
-    typedef void (*RouterSolicitHandler)(void *aContext);
+    typedef void (*RouterSolicitHandler)(unsigned int aIfIndex, void *aContext);
+    typedef void (*RouterAdvertisementHandler)(const RouterAdvMessage &aRouterAdv, unsigned int aIfIndex, void *aContext);
 
-    Icmp6(InfraNetif &aInfraNetif);
+    Icmp6(RouterSolicitHandler aRouterSolicitHandler,
+          void *aRouterSolicitHandlerContext,
+          RouterAdvertisementHandler aRouterAdvertisementHandler,
+          void *aRouterAdvertisementHandlerContext);
 
     otError Init();
 
@@ -263,33 +305,33 @@ public:
     void SendRouterSolicit(const InfraNetif &aInfraNetif,
                            const struct in6_addr &aDest);
 
-    void SetRouterSolicitHandler(RouterSolicitHandler aRouterSolicitHandler, void *aContext)
-    {
-        mRouterSolicitHandler = aRouterSolicitHandler;
-        mRouterSolicitHandlerContext = aContext;
-    }
-
 private:
     static constexpr uint16_t kMaxIcmp6MessageLength = 1280;
 
-    void HandleRouterSolicit(const uint8_t *aMessage,
-                             uint16_t aMessageLength,
-                             const struct sockaddr_in6 &srcAddr,
-                             const struct sockaddr_in6 &dstAddr);
-    void HandleRouterAdvertisement(const uint8_t *aMessage, uint16_t aMessageLength);
+    void HandleRouterSolicit(unsigned int aIfIndex,
+                             const MessageBuffer &aBuffer,
+                             const struct in6_addr &aSrcAddr,
+                             const struct in6_addr &aDstAddr);
+    void HandleRouterAdvertisement(unsigned int aIfIndex,
+                                   const MessageBuffer &aBuffer,
+                                   const struct in6_addr &aSrcAddr,
+                                   const struct in6_addr &aDstAddr);
 
     otError Send(uint8_t *aMessage,
                  uint16_t aMessageLength,
                  const InfraNetif &aInfraNetif,
                  const struct in6_addr &aDest);
 
-    void Recv(const InfraNetif &aInfraNetif);
+    void Recv();
 
-    InfraNetif &mInfraNetif;
     int mSocketFd;
     RouterSolicitHandler mRouterSolicitHandler;
     void * mRouterSolicitHandlerContext;
+    RouterAdvertisementHandler mRouterAdvertisementHandler;
+    void * mRouterAdvertisementHandlerContext;
 };
+
+} // namespace Icmp6
 
 } // namespace Posix
 

@@ -50,6 +50,8 @@ target_include_directories(openthread-border-router
     PUBLIC
         ${OT_PUBLIC_INCLUDES}
         ${PROJECT_SOURCE_DIR}/src/posix/platform/include
+    PRIVATE
+        ${PROJECT_SOURCE_DIR}/src/posix
 )
 
 target_compile_options(openthread-border-router PRIVATE

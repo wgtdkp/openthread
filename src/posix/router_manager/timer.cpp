@@ -68,9 +68,13 @@ void Timer::Stop()
 
 void Timer::Fire()
 {
-    if (mIsRunning && mHandler != nullptr)
+    if (mIsRunning)
     {
-        mHandler(*this, mContext);
+        Stop();
+        if (mHandler != nullptr)
+        {
+            mHandler(*this, mContext);
+        }
     }
 }
 
@@ -141,12 +145,8 @@ void TimerScheduler::Process(MilliSeconds aNow)
 {
     while (mSortedTimerList != nullptr && mSortedTimerList->mFireTime <= aNow)
     {
-        Timer * timer = mSortedTimerList;
-
-        // We must remove the timer before firing it, because the user
-        // may add the timer again in the timer handler.
-        Remove(mSortedTimerList);
-        timer->Fire();
+        // The timer is removed inside `Fire()`.
+        mSortedTimerList->Fire();
     }
 }
 

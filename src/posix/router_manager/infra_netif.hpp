@@ -91,15 +91,10 @@ public:
 private:
     static constexpr uint8_t kMaxAddrNum = 32;
 
-    void RefreshAddresses();
-
-    //static bool IsUlaAddress(const struct sockaddr_in6 &aAddr);
-    //static bool IsGuaAddress(const struct sockaddr_in6 &aAddr);
-
-    void RecvNetlinkMessage();
-
     void InitNetlink();
+    void RefreshAddresses();
     void ProcessNetlinkEvent(int aNetifIndex);
+    void RecvNetlinkMessage();
     void UpdateGatewayAddress(const otIp6Prefix &aOnLinkPrefix, bool aIsAdded);
     void UpdateUnicastAddress(const otIp6AddressInfo &aAddressInfo, bool aIsAdded);
 

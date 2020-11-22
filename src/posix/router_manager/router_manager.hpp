@@ -201,8 +201,13 @@ private:
     static void HandleRouterSolicitTimer(Timer &aTimer, void *aRouterManager);
     void HandleRouterSolicitTimer(Timer &aTimer);
 
-    static void HandleRouterSolicit(void *aRouterManager);
-    void HandleRouterSolicit();
+    static void HandleDiscoveredOnLinkPrefixInvalidTimer(Timer &aTimer, void *aRouterManager);
+    void HandleDiscoveredOnLinkPrefixInvalidTimer(Timer &aTimer);
+
+    static void HandleRouterSolicit(unsigned int aIfIndex, void *aRouterManager);
+    void HandleRouterSolicit(unsigned int aIfIndex);
+    static void HandleRouterAdvertisement(const Icmp6::RouterAdvMessage &aRouterAdv, unsigned int aIfIndex, void *aRouterManager);
+    void HandleRouterAdvertisement(const Icmp6::RouterAdvMessage &aRouterAdv, unsigned int aIfIndex);
 
     static uint32_t GenerateRandomNumber(uint32_t aBegin, uint32_t aEnd);
 
@@ -230,13 +235,21 @@ private:
      */
     otIp6Prefix mAdvertisedOnLinkPrefix;
 
-    InfraNetif  mInfraNetif;
-    Icmp6       mIcmp6;
+    /**
+     * The on-link prefix we discvered on the infra link by
+     * sending Router Solicitations.
+     * 
+     */
+    otIp6Prefix mDiscoveredOnLinkPrefix;
+
+    InfraNetif   mInfraNetif;
+    Icmp6::Icmp6 mIcmp6;
 
     Timer mRouterAdvertisementTimer;
     uint32_t mRouterAdvertisementCount;
 
     Timer mRouterSolicitTimer;
+    Timer mDiscoveredOnLinkPrefixInvalidTimer;
 };
 
 } // namespace Posix
