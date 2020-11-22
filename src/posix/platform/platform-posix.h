@@ -430,11 +430,13 @@ extern char gBackboneNetifName[IFNAMSIZ];
 extern unsigned int gBackboneNetifIndex;
 #endif
 
+#if OPENTHREAD_CONFIG_DUCKHORN_BORDER_ROUTER_ENABLE
 // TODO(wgtdkp): documents.
 void platformRouterManagerInit(otInstance *aInstance, const char *aInfraNetifName);
 void platformRouterManagerDeinit();
 void platformRouterManagerUpdate(otSysMainloopContext *aMainloop);
 void platformRouterManagerProcess(const otSysMainloopContext *aMainloop);
+#endif
 
 #ifdef __cplusplus
 }

@@ -28,6 +28,8 @@
 
 #include "infra_netif.hpp"
 
+#if OPENTHREAD_CONFIG_DUCKHORN_BORDER_ROUTER_ENABLE
+
 #include <errno.h>
 #include <memory.h>
 
@@ -43,6 +45,7 @@
 #include <unistd.h>
 
 #include "common/code_utils.hpp"
+#include "common/debug.hpp"
 #include "common/logging.hpp"
 
 namespace ot
@@ -57,6 +60,7 @@ InfraNetif::InfraNetif(StateChangedHandler aHandler, void *aContext)
     , mStateChangedHandler(aHandler)
     , mStateChangedHandlerContext(aContext)
     , mNetlinkFd(-1)
+    , mNetlinkSequence(0)
 {
     memset(mName, 0, sizeof(mName));
     memset(mAddresses, 0, sizeof(mAddresses));
@@ -66,11 +70,15 @@ otError InfraNetif::Init(const char *aName)
 {
     otError error = OT_ERROR_NONE;
 
+    OT_ASSERT(aName != nullptr);
+
     VerifyOrExit(strlen(aName) < sizeof(mName), error = OT_ERROR_INVALID_ARGS);
     strcpy(mName, aName);
     mIndex = if_nametoindex(aName);
 
     InitNetlink();
+
+    RefreshAddresses();
 
 exit:
     return error;
@@ -221,6 +229,7 @@ exit:
     return;
 }
 
+/*
 bool InfraNetif::HasUlaOrGuaAddress() const
 {
     bool ret = false;
@@ -244,6 +253,13 @@ bool InfraNetif::IsUlaAddress(const struct sockaddr_in6 &aAddr)
 bool InfraNetif::IsGuaAddress(const struct sockaddr_in6 &aAddr)
 {
     return (aAddr.sin6_addr.s6_addr[0] & 0xe0) == 0x20;
+}
+*/
+
+const struct sockaddr_in6 *InfraNetif::GetAllAddresses(uint8_t &aAddressNum) const
+{
+    aAddressNum = mAddressNum;
+    return mAddresses;
 }
 
 void InfraNetif::RecvNetlinkMessage()
@@ -339,6 +355,93 @@ exit:
     return;
 }
 
+void InfraNetif::UpdateGatewayAddress(const otIp6Prefix &aOnLinkPrefix, bool aIsAdded)
+{
+    otIp6Address gatewayAddress;
+    otIp6AddressInfo gatewayAddressInfo;
+
+    OT_ASSERT(aOnLinkPrefix.mLength == OT_IP6_PREFIX_BITSIZE);
+
+    memset(&gatewayAddressInfo, 0, sizeof(gatewayAddressInfo));
+    
+    gatewayAddress = aOnLinkPrefix.mPrefix;
+    gatewayAddress.mFields.m8[OT_IP6_ADDRESS_SIZE - 1] = 1;    
+    gatewayAddressInfo.mAddress = &gatewayAddress;
+    gatewayAddressInfo.mPrefixLength = aOnLinkPrefix.mLength;
+    gatewayAddressInfo.mScope = 14; // Global scope
+    gatewayAddressInfo.mIsAnycast = false;
+
+    // TODO(wgtdkp): dump the gateway address info.
+    otLogInfoPlat("%s gateway adderss on interface %s", (aIsAdded ? "add" : "remove"), GetName());
+    UpdateUnicastAddress(gatewayAddressInfo, aIsAdded);
+}
+
+void InfraNetif::UpdateUnicastAddress(const otIp6AddressInfo &aAddressInfo, bool aIsAdded)
+{
+    struct rtattr *rta;
+
+    struct
+    {
+        struct nlmsghdr  nh;
+        struct ifaddrmsg ifa;
+        char             buf[512];
+    } req;
+
+    memset(&req, 0, sizeof(req));
+
+    req.nh.nlmsg_len   = NLMSG_LENGTH(sizeof(struct ifaddrmsg));
+    req.nh.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_EXCL;
+    req.nh.nlmsg_type  = aIsAdded ? RTM_NEWADDR : RTM_DELADDR;
+    req.nh.nlmsg_pid   = 0;
+    req.nh.nlmsg_seq   = ++mNetlinkSequence;
+
+    req.ifa.ifa_family    = AF_INET6;
+    req.ifa.ifa_prefixlen = aAddressInfo.mPrefixLength;
+    req.ifa.ifa_flags     = IFA_F_NODAD;
+    req.ifa.ifa_scope     = aAddressInfo.mScope;
+    req.ifa.ifa_index     = GetIndex();
+
+    rta           = reinterpret_cast<struct rtattr *>((reinterpret_cast<char *>(&req)) + NLMSG_ALIGN(req.nh.nlmsg_len));
+    rta->rta_type = IFA_LOCAL;
+    rta->rta_len  = RTA_LENGTH(sizeof(*aAddressInfo.mAddress));
+
+    memcpy(RTA_DATA(rta), aAddressInfo.mAddress, sizeof(*aAddressInfo.mAddress));
+
+    req.nh.nlmsg_len = NLMSG_ALIGN(req.nh.nlmsg_len) + rta->rta_len;
+
+    if (aAddressInfo.mIsAnycast)
+    {
+        struct ifa_cacheinfo cacheinfo;
+
+        rta           = reinterpret_cast<struct rtattr *>((reinterpret_cast<char *>(rta)) + rta->rta_len);
+        rta->rta_type = IFA_CACHEINFO;
+        rta->rta_len  = RTA_LENGTH(sizeof(cacheinfo));
+
+        memset(&cacheinfo, 0, sizeof(cacheinfo));
+        cacheinfo.ifa_valid = UINT32_MAX;
+
+        memcpy(RTA_DATA(rta), &cacheinfo, sizeof(cacheinfo));
+
+        req.nh.nlmsg_len += rta->rta_len;
+    }
+
+    if (send(mNetlinkFd, &req, req.nh.nlmsg_len, 0) != -1)
+    {
+        // TODO(wgtdkp): log the address.
+        otLogInfoPlat("successfully %s new address on interface %s", (aIsAdded ? "add" : "remove"), GetName());
+        //otLogInfoPlat("Sent request#%u to %s %s/%u", mNetlinkSequence, (aIsAdded ? "add" : "remove"),
+        //              Ip6AddressString(aAddressInfo.mAddress).AsCString(), aAddressInfo.mPrefixLength);
+    }
+    else
+    {
+        otLogWarnPlat("failed to %s new address on interface %s", (aIsAdded ? "add" : "remove"), GetName());
+        //otLogInfoPlat("Failed to send request#%u to %s %s/%u", mNetlinkSequence, (aIsAdded ? "add" : "remove"),
+        //              Ip6AddressString(aAddressInfo.mAddress).AsCString(), aAddressInfo.mPrefixLength);
+    }
+}
+
 } // namespace Posix
 
 } // namespace ot
+
+#endif // OPENTHREAD_CONFIG_DUCKHORN_BORDER_ROUTER_ENABLE

@@ -29,6 +29,10 @@
 #ifndef POSIX_ICMP6_HPP_
 #define POSIX_ICMP6_HPP_
 
+#include "openthread-posix-config.h"
+
+#if OPENTHREAD_CONFIG_DUCKHORN_BORDER_ROUTER_ENABLE
+
 #include <memory.h>
 #include <stdint.h>
 
@@ -290,5 +294,7 @@ private:
 } // namespace Posix
 
 } // namespace ot
+
+#endif // OPENTHREAD_CONFIG_DUCKHORN_BORDER_ROUTER_ENABLE
 
 #endif // POSIX_ICMP6_HPP_

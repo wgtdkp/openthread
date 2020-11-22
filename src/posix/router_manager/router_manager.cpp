@@ -28,7 +28,11 @@
 
 #include "router_manager.hpp"
 
+#if OPENTHREAD_CONFIG_DUCKHORN_BORDER_ROUTER_ENABLE
+
 #include <stdlib.h>
+
+#include <netinet/in.h>
 
 #include <openthread/border_router.h>
 #include <openthread/platform/entropy.h>
@@ -78,6 +82,8 @@ RouterManager::RouterManager(Instance &aInstance)
 {
     memset(&mLocalOmrPrefix, 0, sizeof(mLocalOmrPrefix));
     memset(&mAdvertisedOmrPrefix, 0, sizeof(mAdvertisedOmrPrefix));
+    memset(&mLocalOnLinkPrefix, 0, sizeof(mLocalOnLinkPrefix));
+    memset(&mAdvertisedOnLinkPrefix, 0, sizeof(mAdvertisedOnLinkPrefix));
 }
 
 void RouterManager::Init(const char *aInfraNetifName)
@@ -143,7 +149,7 @@ void RouterManager::Start()
 
 void RouterManager::Stop()
 {
-    UnpublishOmrPrefix();
+    UnpublishOmrPrefix(mAdvertisedOmrPrefix);
     mRouterAdvertisementTimer.Stop();
     mRouterSolicitTimer.Stop();
 }
@@ -237,19 +243,24 @@ static bool operator!=(const otIp6Prefix &aLhs, const otIp6Prefix &aRhs)
     return !(aLhs == aRhs);
 }
 
-void RouterManager::EvaluateOmrPrefix()
+otIp6Prefix RouterManager::EvaluateOmrPrefix()
 {
     otIp6Prefix lowestOmrPrefix;
+    otIp6Prefix newOmrPrefix;
     otBorderRouterConfig borderRouterConfig;
     otNetworkDataIterator iterator = OT_NETWORK_DATA_ITERATOR_INIT;
     otDeviceRole role = otThreadGetDeviceRole(&GetInstance());
 
     memset(&lowestOmrPrefix, 0, sizeof(lowestOmrPrefix));
+    memset(&newOmrPrefix, 0, sizeof(newOmrPrefix));
 
     VerifyOrExit(role == OT_DEVICE_ROLE_ROUTER || role == OT_DEVICE_ROLE_LEADER);
 
     while (otNetDataGetNextOnMeshPrefix(&GetInstance(), &iterator, &borderRouterConfig) == OT_ERROR_NONE)
     {
+        // TODO(wgtdkp): more validation on this OMR prefix
+        // to see if it works for us.
+
         if (!borderRouterConfig.mDefaultRoute || !borderRouterConfig.mSlaac)
         {
             continue;
@@ -267,47 +278,29 @@ void RouterManager::EvaluateOmrPrefix()
 
     if (IsValidOmrPrefix(lowestOmrPrefix))
     {
-        // TODO(wgtdkp): more validation on this OMR prefix
-        // to see if it works for us (e.g. check if SLAAC enabled or
-        // we have an address with that prefix).
-        otLogInfoPlat("there is already an OMR prefix");
-
-        if (mAdvertisedOmrPrefix != lowestOmrPrefix)
-        {
-            mAdvertisedOmrPrefix = lowestOmrPrefix;
-        }
+        newOmrPrefix = lowestOmrPrefix;
     }
     else
     {
-        if (!IsValidOmrPrefix(mLocalOmrPrefix))
-        {
-           mLocalOmrPrefix = GenerateRandomOmrPrefix();
-           // TODO(wgtdkp): save the prefix to settings.
-        }
-
-        if (mAdvertisedOmrPrefix != mLocalOmrPrefix)
-        {
-            mAdvertisedOmrPrefix = mLocalOmrPrefix;
-            PublishOmrPrefix();
-        }
+        newOmrPrefix = mLocalOmrPrefix;
     }
 
 exit:
-    return;
+    return newOmrPrefix;
 }
 
-void RouterManager::PublishOmrPrefix()
+void RouterManager::PublishOmrPrefix(const otIp6Prefix &aPrefix)
 {
     otError error = OT_ERROR_NONE;
     otBorderRouterConfig borderRouterConfig;
 
-    OT_ASSERT(IsValidOmrPrefix(mAdvertisedOmrPrefix));
+    OT_ASSERT(IsValidOmrPrefix(aPrefix));
 
     // TODO(wgtdkp): dump the prefix.
-    otLogInfoPlat("publishing on-mesh prefix");
+    otLogInfoPlat("publishing OMR prefix");
 
     memset(&borderRouterConfig, 0, sizeof(borderRouterConfig));
-    borderRouterConfig.mPrefix = mLocalOmrPrefix;
+    borderRouterConfig.mPrefix = aPrefix;
     borderRouterConfig.mStable = true;
     borderRouterConfig.mSlaac = true;
     borderRouterConfig.mPreferred = true;
@@ -320,44 +313,122 @@ void RouterManager::PublishOmrPrefix()
 exit:
     if (error != OT_ERROR_NONE)
     {
-        otLogInfoPlat("failed to publish on-mesh prefix: %s", otThreadErrorToString(error));
+        otLogInfoPlat("failed to publish OMR prefix: %s", otThreadErrorToString(error));
     }
 }
 
-void RouterManager::UnpublishOmrPrefix()
+void RouterManager::UnpublishOmrPrefix(const otIp6Prefix &aPrefix)
 {
-    if (mAdvertisedOmrPrefix == mLocalOmrPrefix)
+    if (IsValidOmrPrefix(aPrefix))
     {
-        otBorderRouterRemoveOnMeshPrefix(&GetInstance(), &mLocalOmrPrefix);
+        otBorderRouterRemoveOnMeshPrefix(&GetInstance(), &aPrefix);
         otBorderRouterRegister(&GetInstance());
     }
 }
 
-void RouterManager::EvaluateOnLinkPrefix()
+otIp6Prefix RouterManager::EvaluateOnLinkPrefix()
 {
-    if (mInfraNetif.HasUlaOrGuaAddress())
+    const struct sockaddr_in6 *infraNetifAddresses;
+    uint8_t infraNetifAddressNum;
+    otIp6Prefix newOnLinkPrefix;
+
+    memset(&newOnLinkPrefix, 0, sizeof(newOnLinkPrefix));
+
+    infraNetifAddresses = mInfraNetif.GetAllAddresses(infraNetifAddressNum);
+
+    for (uint8_t i = 0; i < infraNetifAddressNum; ++i)
     {
-        otLogInfoPlat("there is already IPv6 network on interface %s", mInfraNetif.GetName());
-        memset(&mAdvertisedOnLinkPrefix, 0, sizeof(mAdvertisedOnLinkPrefix));
+        const struct sockaddr_in6 &addr = infraNetifAddresses[i];
+
+        if (IN6_IS_ADDR_UNSPECIFIED(&addr.sin6_addr) ||
+            IN6_IS_ADDR_LOOPBACK(&addr.sin6_addr) ||
+            IN6_IS_ADDR_LINKLOCAL(&addr.sin6_addr) ||
+            IN6_IS_ADDR_MULTICAST(&addr.sin6_addr))
+        {
+            continue;
+        }
+
+        // We got an ULA or GUA.
+
+        if (!IsValidOnLinkPrefix(mAdvertisedOnLinkPrefix) ||
+            otIp6PrefixMatch(reinterpret_cast<const otIp6Address *>(&addr.sin6_addr),
+                             &mAdvertisedOnLinkPrefix.mPrefix)
+                < mAdvertisedOnLinkPrefix.mLength)
+        {
+            // There is at least a site-local (or global) IPv6 address which is not
+            // created by us on this interface. Stop advertising our prefix.
+            ExitNow();
+        }
+    }
+
+    if (IsValidOnLinkPrefix(mAdvertisedOnLinkPrefix))
+    {
+        newOnLinkPrefix = mAdvertisedOnLinkPrefix;
     }
     else
     {
-        if (mAdvertisedOnLinkPrefix != mLocalOnLinkPrefix)
-        {
-            mAdvertisedOnLinkPrefix = mLocalOnLinkPrefix;
-        }
+        newOnLinkPrefix = mLocalOnLinkPrefix;
     }
+
+exit:
+    return newOnLinkPrefix;
 }
 
 void RouterManager::EvaluateRoutingPolicy()
 {
+    otIp6Prefix newOnLinkPrefix;
+    otIp6Prefix newOmrPrefix;
+
     otLogInfoPlat("evaluating routing policy");
 
-    EvaluateOmrPrefix();
-    EvaluateOnLinkPrefix();
+    newOnLinkPrefix = EvaluateOnLinkPrefix();
+    newOmrPrefix =  EvaluateOmrPrefix();
 
+    if (IsValidOnLinkPrefix(newOnLinkPrefix))
+    {
+        if (!IsValidOnLinkPrefix(mAdvertisedOnLinkPrefix))
+        {
+            // TOOD(wgtdkp): dump the prefix.
+            otLogInfoPlat("start advertising prefix on interface %s", mInfraNetif.GetName());
+            mInfraNetif.AddGatewayAddress(newOnLinkPrefix);
+        }
+    }
+    else
+    {
+        otLogInfoPlat("there is already IPv6 network on interface %s", mInfraNetif.GetName());
+    
+        if (IsValidOnLinkPrefix(mAdvertisedOnLinkPrefix))
+        {
+            // TOOD(wgtdkp): dump the prefix.
+            otLogInfoPlat("stop advertising prefix on interface %s", mInfraNetif.GetName());
+            mInfraNetif.RemoveGatewayAddress(mAdvertisedOnLinkPrefix);
+        }
+    }
 
-    SendRouterAdvertisement(mAdvertisedOmrPrefix, mAdvertisedOnLinkPrefix);
+    if (newOmrPrefix == mLocalOmrPrefix)
+    {
+        if (!IsValidOmrPrefix(mAdvertisedOmrPrefix))
+        {
+            otLogInfoPlat("publish new OMR prefix in Thread network");
+            PublishOmrPrefix(newOmrPrefix);
+        }
+    }
+    else
+    {
+        if (IsValidOmrPrefix(mAdvertisedOmrPrefix))
+        {
+            otLogInfoPlat("there is already OMR prefix in the Thread network, stop publishing");
+            UnpublishOmrPrefix(mAdvertisedOmrPrefix);
+        }
+    }
+
+    if (IsValidOnLinkPrefix(newOnLinkPrefix) || newOmrPrefix != mAdvertisedOmrPrefix)
+    {
+        SendRouterAdvertisement(newOmrPrefix, newOnLinkPrefix);
+    }
+
+    mAdvertisedOnLinkPrefix = newOnLinkPrefix;
+    mAdvertisedOmrPrefix = newOmrPrefix;
 }
 
 void RouterManager::SendRouterSolicit()
@@ -490,3 +561,5 @@ uint32_t RouterManager::GenerateRandomNumber(uint32_t aBegin, uint32_t aEnd)
 } // namespace Posix
 
 } // namespace ot
+
+#endif // OPENTHREAD_CONFIG_DUCKHORN_BORDER_ROUTER_ENABLE

@@ -29,6 +29,10 @@
 #ifndef POSIX_INFRA_NETIF_HPP_
 #define POSIX_INFRA_NETIF_HPP_
 
+#include "openthread-posix-config.h"
+
+#if OPENTHREAD_CONFIG_DUCKHORN_BORDER_ROUTER_ENABLE
+
 #include <stdint.h>
 
 #include <net/if.h>
@@ -36,6 +40,7 @@
 #include <sys/socket.h>
 
 #include <openthread/error.h>
+#include <openthread/ip6.h>
 #include <openthread/openthread-system.h>
 
 namespace ot
@@ -71,20 +76,32 @@ public:
     unsigned int GetIndex() const { return mIndex; }
     bool HasUlaOrGuaAddress() const;
 
-    const struct sockaddr_in6 &GetNextAddr() const;
+    const struct sockaddr_in6 *GetAllAddresses(uint8_t &aAddressNum) const;
+
+    void AddGatewayAddress(const otIp6Prefix &aOnLinkPrefix)
+    {
+        UpdateGatewayAddress(aOnLinkPrefix, /* aIsAdded */ true);
+    }
+
+    void RemoveGatewayAddress(const otIp6Prefix &aOnLinkPrefix)
+    {
+        UpdateGatewayAddress(aOnLinkPrefix, /* aIsAdded */ false);
+    }
 
 private:
     static constexpr uint8_t kMaxAddrNum = 32;
 
     void RefreshAddresses();
 
-    static bool IsUlaAddress(const struct sockaddr_in6 &aAddr);
-    static bool IsGuaAddress(const struct sockaddr_in6 &aAddr);
+    //static bool IsUlaAddress(const struct sockaddr_in6 &aAddr);
+    //static bool IsGuaAddress(const struct sockaddr_in6 &aAddr);
 
     void RecvNetlinkMessage();
 
     void InitNetlink();
     void ProcessNetlinkEvent(int aNetifIndex);
+    void UpdateGatewayAddress(const otIp6Prefix &aOnLinkPrefix, bool aIsAdded);
+    void UpdateUnicastAddress(const otIp6AddressInfo &aAddressInfo, bool aIsAdded);
 
     char mName[IFNAMSIZ];
     unsigned int mIndex;
@@ -96,10 +113,13 @@ private:
     void *mStateChangedHandlerContext;
 
     int mNetlinkFd;
+    uint32_t mNetlinkSequence;
 };
 
 } // namespace Posix
 
 } // namespace ot
+
+#endif // OPENTHREAD_CONFIG_DUCKHORN_BORDER_ROUTER_ENABLE
 
 #endif // POSIX_INFRA_NETIF_HPP_

@@ -30,6 +30,8 @@
 
 #include "icmp6.hpp"
 
+#if OPENTHREAD_CONFIG_DUCKHORN_BORDER_ROUTER_ENABLE
+
 #include <errno.h>
 #include <netinet/icmp6.h>
 #include <unistd.h>
@@ -117,6 +119,7 @@ void Icmp6::Deinit()
     if (mSocketFd >= 0)
     {
         close(mSocketFd);
+        mSocketFd = -1;
     }
 }
 
@@ -403,3 +406,5 @@ void Icmp6::HandleRouterSolicit(const uint8_t *aMessage,
 } // namespace Posix
 
 } // namespace ot
+
+#endif // OPENTHREAD_CONFIG_DUCKHORN_BORDER_ROUTER_ENABLE

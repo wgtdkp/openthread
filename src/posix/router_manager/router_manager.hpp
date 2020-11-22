@@ -31,6 +31,8 @@
 
 #include "openthread-posix-config.h"
 
+#if OPENTHREAD_CONFIG_DUCKHORN_BORDER_ROUTER_ENABLE
+
 #include <openthread/error.h>
 #include <openthread/instance.h>
 #include <openthread/ip6.h>
@@ -133,14 +135,19 @@ private:
     /**
      * Evaluates the OMR prefix for the Thread Network.
      *
+     * @return The new OMR prefix.
+     *
      */
-    void EvaluateOmrPrefix();
+    otIp6Prefix EvaluateOmrPrefix();
 
     /**
      * Evaluates the on-link prefix for the infra link.
      *
+     * @return The new on-link prefix should be advertised
+     *         on the infra link.
+     *
      */
-    void EvaluateOnLinkPrefix();
+    otIp6Prefix EvaluateOnLinkPrefix();
 
 
     /**
@@ -149,13 +156,13 @@ private:
      * Called by `EvaluateOmrPrefix`.
      *
      */
-    void PublishOmrPrefix();
+    void PublishOmrPrefix(const otIp6Prefix &aPrefix);
 
     /**
      * Unpublish OMR prefix if we have done that.
      *
      */
-    void UnpublishOmrPrefix();
+    void UnpublishOmrPrefix(const otIp6Prefix &aPrefix);
 
     /**
      * Send Router Solicit messages to discovery on-link prefix
@@ -199,7 +206,6 @@ private:
 
     static uint32_t GenerateRandomNumber(uint32_t aBegin, uint32_t aEnd);
 
-
     /**
      * The OMR prefix loaded from local persistent storage.
      *
@@ -236,5 +242,7 @@ private:
 } // namespace Posix
 
 } // namespace ot
+
+#endif // OPENTHREAD_CONFIG_DUCKHORN_BORDER_ROUTER_ENABLE
 
 #endif // POSIX_ROUTER_MANAGER_HPP_

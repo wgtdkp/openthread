@@ -28,6 +28,8 @@
 
 #include "platform-posix.h"
 
+#if OPENTHREAD_CONFIG_DUCKHORN_BORDER_ROUTER_ENABLE
+
 #include "router_manager.hpp"
 
 #include "common/code_utils.hpp"
@@ -86,3 +88,5 @@ void platformRouterManagerProcess(const otSysMainloopContext *aMainloop)
 
     TimerScheduler::Get().Process(otPlatAlarmMilliGetNow());
 }
+
+#endif // OPENTHREAD_CONFIG_DUCKHORN_BORDER_ROUTER_ENABLE

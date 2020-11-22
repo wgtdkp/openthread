@@ -31,6 +31,8 @@
 
 #include "openthread-posix-config.h"
 
+#if OPENTHREAD_CONFIG_DUCKHORN_BORDER_ROUTER_ENABLE
+
 #include <stdint.h>
 
 namespace ot
@@ -174,5 +176,7 @@ private:
 } // namespace Posix
 
 } // namespace ot
+
+#endif // OPENTHREAD_CONFIG_DUCKHORN_BORDER_ROUTER_ENABLE
 
 #endif // POSIX_TIMER_HPP_

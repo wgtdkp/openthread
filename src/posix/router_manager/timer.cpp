@@ -28,6 +28,8 @@
 
 #include "timer.hpp"
 
+#if OPENTHREAD_CONFIG_DUCKHORN_BORDER_ROUTER_ENABLE
+
 #include <openthread/platform/alarm-milli.h>
 
 #include "common/numeric_limits.hpp"
@@ -41,6 +43,7 @@ Timer::Timer(Handler aHandler, void *aContext)
     , mContext(aContext)
     , mFireTime(0)
     , mIsRunning(false)
+    , mNext(nullptr)
 {
 }
 
@@ -155,3 +158,5 @@ MilliSeconds TimerScheduler::GetEarliestFireTime() const
 } // namespace Posix
 
 } // namespace ot
+
+#endif // OPENTHREAD_CONFIG_DUCKHORN_BORDER_ROUTER_ENABLE
