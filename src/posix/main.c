@@ -101,7 +101,7 @@ void __gcov_flush();
  */
 enum
 {
-#if 1 || OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
+#if OPENTHREAD_CONFIG_DUCKHORN_BORDER_ROUTER_ENABLE || OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
     OT_POSIX_OPT_BACKBONE_INTERFACE_NAME = 'B',
 #endif
     OT_POSIX_OPT_DEBUG_LEVEL    = 'd',
@@ -118,7 +118,7 @@ enum
 };
 
 static const struct option kOptions[] = {
-#if 1 || OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
+#if OPENTHREAD_CONFIG_DUCKHORN_BORDER_ROUTER_ENABLE || OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
     {"backbone-interface-name", required_argument, NULL, OT_POSIX_OPT_BACKBONE_INTERFACE_NAME},
 #endif
     {"debug-level", required_argument, NULL, OT_POSIX_OPT_DEBUG_LEVEL},
@@ -137,7 +137,7 @@ static void PrintUsage(const char *aProgramName, FILE *aStream, int aExitCode)
             "Syntax:\n"
             "    %s [Options] RadioURL\n"
             "Options:\n"
-#if 1 || OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
+#if OPENTHREAD_CONFIG_DUCKHORN_BORDER_ROUTER_ENABLE || OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
             "    -B  --backbone-interface-name Backbone network interface name.\n"
 #endif
             "    -d  --debug-level             Debug level of logging.\n"
@@ -174,7 +174,7 @@ static void ParseArg(int aArgCount, char *aArgVector[], PosixConfig *aConfig)
     {
         int index  = 0;
         int option = getopt_long(aArgCount, aArgVector,
-#if 1 || OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
+#if OPENTHREAD_CONFIG_DUCKHORN_BORDER_ROUTER_ENABLE || OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
                                  "B:"
 #endif
                                  "d:hI:ns:v",
@@ -196,7 +196,7 @@ static void ParseArg(int aArgCount, char *aArgVector[], PosixConfig *aConfig)
         case OT_POSIX_OPT_INTERFACE_NAME:
             aConfig->mPlatformConfig.mInterfaceName = optarg;
             break;
-#if 1 || OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
+#if OPENTHREAD_CONFIG_DUCKHORN_BORDER_ROUTER_ENABLE || OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
         case OT_POSIX_OPT_BACKBONE_INTERFACE_NAME:
             aConfig->mPlatformConfig.mBackboneInterfaceName = optarg;
             break;
