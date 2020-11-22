@@ -220,6 +220,8 @@ public:
 
     uint8_t *GetBuffer() { return mBuffer; }
 
+    const uint8_t *GetBuffer() const { return mBuffer; }
+
 private:
     uint16_t mLength;
     uint8_t mBuffer[0];
@@ -230,6 +232,22 @@ class MessageBuffer : public MessageBase
 {
 public:
     static constexpr uint16_t kMaxLength = 1500;
+
+    void Append(const void *aData, uint16_t aLength)
+    {
+        memcpy(GetBuffer() + GetLength(), aData, aLength);
+        SetLength(GetLength() + aLength);
+    }
+
+    void Append(const MessageBase &aMessage)
+    {
+        Append(aMessage.GetBuffer(), aMessage.GetLength());
+    }
+
+    void Append(const Option &aOption)
+    {
+        Append(&aOption, aOption.GetLength());
+    }
 
 private:
     uint8_t mBuffer[kMaxLength];

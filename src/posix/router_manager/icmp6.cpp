@@ -51,9 +51,9 @@ namespace Icmp6 {
 
 const PrefixInfoOption *RouterAdvMessage::GetNextPrefixInfo(const PrefixInfoOption *aCurPrefixInfo) const
 {
-    const Option *nextOption = nullptr;
+    const Option *nextOption = aCurPrefixInfo;
 
-    while ((nextOption = GetNextOption(aCurPrefixInfo)) != nullptr)
+    while ((nextOption = GetNextOption(nextOption)) != nullptr)
     {
         if (nextOption->GetType() == ND_OPT_PREFIX_INFORMATION)
         {
