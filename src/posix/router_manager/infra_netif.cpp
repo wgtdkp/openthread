@@ -355,26 +355,6 @@ void InfraNetif::UpdateGatewayAddress(const otIp6Prefix &aOnLinkPrefix, bool aIs
 
 void InfraNetif::UpdateUnicastAddress(const otIp6AddressInfo &aAddressInfo, bool aIsAdded)
 {
-    char cmd[256] = {0};
-
-    sprintf(cmd, "/sbin/ifconfig %s add %s", GetName(), Ip6PrefixString(aAddressInfo).AsCString());
-
-    otLogInfoPlat("executing command: %s", cmd);
-
-    int ret = system(cmd);
-    if (ret != 0)
-    {
-        otLogWarnPlat("failed ot execute command: %s, %d", cmd, ret);
-    }
-    else
-    {
-        otLogInfoPlat("sucessfully executed command: %s", cmd);
-    }
-}
-
-/*
-void InfraNetif::UpdateUnicastAddress(const otIp6AddressInfo &aAddressInfo, bool aIsAdded)
-{
     struct rtattr *rta;
 
     struct
@@ -433,7 +413,6 @@ void InfraNetif::UpdateUnicastAddress(const otIp6AddressInfo &aAddressInfo, bool
             (aIsAdded ? "add" : "remove"), Ip6PrefixString(aAddressInfo).AsCString(), GetName());
     }
 }
-*/
 
 } // namespace Posix
 
