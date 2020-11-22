@@ -86,6 +86,18 @@ public:
      */
     void Process(const otSysMainloopContext *aMainloop);
 
+    /**
+     * Decides if given prefix is a valid OMR prefix.
+     *
+     */
+    static bool IsValidOmrPrefix(const otIp6Prefix &aPrefix);
+
+    /**
+     * Decides if given prefix is a valid on-link prefix.
+     *
+     */
+    static bool IsValidOnLinkPrefix(const otIp6Prefix &aPrefix);
+
 private:
     static constexpr uint16_t kKeyOmrPrefix = 0xFF01;
 
@@ -179,18 +191,6 @@ private:
      *
      */
     void SendRouterAdvertisement(const otIp6Prefix &aOmrPrefix, const otIp6Prefix &aOnLinkPrefix);
-
-    /**
-     * Decides if given prefix is a valid OMR prefix.
-     *
-     */
-    static bool IsValidOmrPrefix(const otIp6Prefix &aPrefix);
-
-    /**
-     * Decides if given prefix is a valid on-link prefix.
-     *
-     */
-    static bool IsValidOnLinkPrefix(const otIp6Prefix &aPrefix);
 
     static void HandleInfraNetifStateChanged(void *aRouterManager);
     void HandleInfraNetifStateChanged();

@@ -153,9 +153,19 @@ void RouterManager::Stop()
     // TODO(wgtdkp): per RFC 4861 6.2.5, we should send Router Advertisements
     // with a Router Lifetime field of zero.
 
-    UnpublishOmrPrefix(mAdvertisedOmrPrefix);
+    if (IsValidOmrPrefix(mAdvertisedOmrPrefix))
+    {
+        UnpublishOmrPrefix(mAdvertisedOmrPrefix);
+    }
+
+    if (IsValidOnLinkPrefix(mAdvertisedOnLinkPrefix))
+    {
+        mInfraNetif.RemoveGatewayAddress(mAdvertisedOnLinkPrefix);
+    }
+
     mRouterAdvertisementTimer.Stop();
     mRouterSolicitTimer.Stop();
+    mDiscoveredOnLinkPrefixInvalidTimer.Stop();
 }
 
 void RouterManager::HandleStateChanged(otChangedFlags aFlags, void *aRouterManager)
