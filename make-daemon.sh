@@ -6,7 +6,7 @@ cd cmake-build-daemon
 cmake -DOT_PLATFORM=posix \
       -DOT_DAEMON=ON \
       -DOT_UDP_FORWARD=OFF \
-      -DOT_DUCKHORN_BORDER_ROUTER=ON \
+      -DOT_DUCKHORN_BORDER_ROUTER=OFF \
       -DOT_BORDER_AGENT=ON \
       -DOT_BORDER_ROUTER=ON \
       -DOT_ECDSA=ON \

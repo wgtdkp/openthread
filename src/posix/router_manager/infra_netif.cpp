@@ -230,33 +230,6 @@ exit:
     return;
 }
 
-/*
-bool InfraNetif::HasUlaOrGuaAddress() const
-{
-    bool ret = false;
-    for (uint8_t i = 0; i < mAddressNum; ++i)
-    {
-        if (IsUlaAddress(mAddresses[i]) || IsGuaAddress(mAddresses[i]))
-        {
-            ret = true;
-            break;
-        }
-    }
-
-    return ret;
-}
-
-bool InfraNetif::IsUlaAddress(const struct sockaddr_in6 &aAddr)
-{
-    return (aAddr.sin6_addr.s6_addr[0] & 0xfe) == 0xfc;
-}
-
-bool InfraNetif::IsGuaAddress(const struct sockaddr_in6 &aAddr)
-{
-    return (aAddr.sin6_addr.s6_addr[0] & 0xe0) == 0x20;
-}
-*/
-
 const struct sockaddr_in6 *InfraNetif::GetAllAddresses(uint8_t &aAddressNum) const
 {
     aAddressNum = mAddressNum;
@@ -382,6 +355,26 @@ void InfraNetif::UpdateGatewayAddress(const otIp6Prefix &aOnLinkPrefix, bool aIs
 
 void InfraNetif::UpdateUnicastAddress(const otIp6AddressInfo &aAddressInfo, bool aIsAdded)
 {
+    char cmd[256] = {0};
+
+    sprintf(cmd, "/sbin/ifconfig %s add %s", GetName(), Ip6PrefixString(aAddressInfo).AsCString());
+
+    otLogInfoPlat("executing command: %s", cmd);
+
+    int ret = system(cmd);
+    if (ret != 0)
+    {
+        otLogWarnPlat("failed ot execute command: %s, %d", cmd, ret);
+    }
+    else
+    {
+        otLogInfoPlat("sucessfully executed command: %s", cmd);
+    }
+}
+
+/*
+void InfraNetif::UpdateUnicastAddress(const otIp6AddressInfo &aAddressInfo, bool aIsAdded)
+{
     struct rtattr *rta;
 
     struct
@@ -440,6 +433,7 @@ void InfraNetif::UpdateUnicastAddress(const otIp6AddressInfo &aAddressInfo, bool
             (aIsAdded ? "add" : "remove"), Ip6PrefixString(aAddressInfo).AsCString(), GetName());
     }
 }
+*/
 
 } // namespace Posix
 
