@@ -189,14 +189,13 @@ public:
 
     void SetPrefix(const otIp6Prefix &aPrefix)
     {
-        mLength = 1 + (aPrefix.mLength + 63) / 64;
+        SetLength(((aPrefix.mLength + 63) / 64) * 8 + 8);
+
         mPrefixLength = aPrefix.mLength;
         memcpy(mPrefix, &aPrefix.mPrefix, sizeof(aPrefix.mPrefix));
     }
 
 private:
-    uint8_t mType;
-    uint8_t mLength; // In units of 8 octets.
     uint8_t mPrefixLength;
     uint8_t mReserved;
     uint32_t mRouteLifetime;
@@ -208,14 +207,22 @@ OT_TOOL_PACKED_BEGIN
 class MessageBase
 {
 public:
-    void SetLength(uint16_t aLength) { mLength = HostSwap16(aLength); }
+    explicit MessageBase(uint16_t aLength = 0)
+        : mLength(aLength)
+    {
+    }
 
-    uint16_t GetLength() const { return HostSwap16(mLength); }
+    void SetLength(uint16_t aLength) { mLength = aLength; }
+
+    uint16_t GetLength() const { return mLength; }
 
     uint16_t GetTotalLength() const { return sizeof(*this) + GetLength(); }
 
+    uint8_t *GetBuffer() { return mBuffer; }
+
 private:
     uint16_t mLength;
+    uint8_t mBuffer[0];
 } OT_TOOL_PACKED_END;
 
 OT_TOOL_PACKED_BEGIN
@@ -223,8 +230,6 @@ class MessageBuffer : public MessageBase
 {
 public:
     static constexpr uint16_t kMaxLength = 1500;
-
-    uint8_t *GetBuffer() { return mBuffer; }
 
 private:
     uint8_t mBuffer[kMaxLength];
@@ -235,7 +240,8 @@ class RouterAdvMessage : public MessageBase
 {
 public:
     RouterAdvMessage()
-        : mReachableTime(0)
+        : MessageBase(sizeof(*this) - sizeof(MessageBase))
+        , mReachableTime(0)
         , mRetransTimer(0)
     {
         memset(&mHeader, 0, sizeof(mHeader));
@@ -271,7 +277,7 @@ private:
     otIcmp6Header mHeader;
     uint32_t      mReachableTime;
     uint32_t      mRetransTimer;
-    uint8_t       mOptions[];
+    uint8_t       mOptions[0];
 } OT_TOOL_PACKED_END;
 
 

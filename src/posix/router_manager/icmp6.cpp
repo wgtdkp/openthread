@@ -211,16 +211,15 @@ otError Icmp6::SendRouterAdvertisement(const otIp6Prefix *aOmrPrefix,
                                        const InfraNetif &aInfraNetif,
                                        const struct in6_addr &aDest)
 {
-    uint8_t message[kMaxIcmp6MessageLength];
-    uint16_t messageLength = 0;
+    MessageBuffer buffer;
     RouterAdvMessage advMessage;
 
     advMessage.SetRouterLifetime(0);
     advMessage.SetReachableTime(0);
     advMessage.SetRetransTimer(0);
 
-    memcpy(message + messageLength, &advMessage, sizeof(advMessage));
-    messageLength += sizeof(advMessage);
+    memcpy(buffer.GetBuffer() + buffer.GetLength(), advMessage.GetBuffer(), advMessage.GetLength());
+    buffer.SetLength(buffer.GetLength() + advMessage.GetLength());
 
     // TODO(wgtdkp): append link local address;
 
@@ -228,28 +227,34 @@ otError Icmp6::SendRouterAdvertisement(const otIp6Prefix *aOmrPrefix,
     {
         PrefixInfoOption pio;
 
+        otLogInfoPlat("send Router Advertisement with PIO %s", Ip6PrefixString(*aOnLinkPrefix).AsCString());
+
         pio.SetOnLink(true);
         pio.SetAutoAddrConfig(true);
         pio.SetValidLifetime(1800); // 30 Minutes.
         pio.SetPreferredLifetime(1800); // 30 Minutes.
         pio.SetPrefix(*aOnLinkPrefix);
 
-        memcpy(message + messageLength, &pio, sizeof(pio));
-        messageLength += sizeof(pio);
+        memcpy(buffer.GetBuffer() + buffer.GetLength(), &pio, pio.GetLength());
+        buffer.SetLength(buffer.GetLength() + pio.GetLength());
+
+        OT_ASSERT(pio.GetLength() == sizeof(pio));
     }
 
     if (aOmrPrefix)
     {
         RouteInfoOption rio;
 
+        otLogInfoPlat("send Router Advertisement with RIO %s", Ip6PrefixString(*aOmrPrefix).AsCString());
+
         rio.SetRouteLifetime(1800); // 30 Minutes.
         rio.SetPrefix(*aOmrPrefix);
 
-        memcpy(message + messageLength, &rio, rio.GetLength());
-        messageLength += rio.GetLength();
+        memcpy(buffer.GetBuffer() + buffer.GetLength(), &rio, rio.GetLength());
+        buffer.SetLength(buffer.GetLength() + rio.GetLength());
     }
 
-    return Send(message, messageLength, aInfraNetif, aDest);
+    return Send(buffer.GetBuffer(), buffer.GetLength(), aInfraNetif, aDest);
 }
 
 void Icmp6::SendRouterSolicit(const InfraNetif &aInfraNetif,

@@ -108,9 +108,6 @@ void RouterManager::Init(const char *aInfraNetifName)
         otLogInfoPlat("no valid OMR prefix in sotrage, generate new random OMR prefix");
 
         mLocalOmrPrefix = GenerateRandomOmrPrefix();
-        mLocalOnLinkPrefix = mLocalOmrPrefix;
-        mLocalOnLinkPrefix.mPrefix.mFields.m8[6] = (mInfraNetif.GetIndex() & 0xff00) >> 8;
-        mLocalOnLinkPrefix.mPrefix.mFields.m8[7] = (mInfraNetif.GetIndex() & 0x00ff);
 
         if (otPlatSettingsSet(&GetInstance(), kKeyOmrPrefix,
                     reinterpret_cast<uint8_t *>(&mLocalOmrPrefix),
@@ -119,6 +116,9 @@ void RouterManager::Init(const char *aInfraNetifName)
             otLogWarnPlat("failed to save the random OMR prefix");
         }
     }
+
+    mLocalOnLinkPrefix = mLocalOmrPrefix;
+    mLocalOnLinkPrefix.mPrefix.mFields.m16[3] = HostSwap16(mInfraNetif.GetIndex());
 
 exit:
     SuccessOrLog(error, "failed to initialize Router Manager");

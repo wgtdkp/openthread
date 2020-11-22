@@ -8,9 +8,9 @@ readonly MASTERKEY=00112233445566778899aabbccddeeff
 readonly PASSWORD=123456
 readonly OT_CTL=./cmake-build-daemon/src/posix/ot-ctl
 
-echo "factoryresetting..."
-sudo "${OT_CTL}" factoryreset
-sleep 3
+#echo "factoryresetting..."
+#sudo "${OT_CTL}" factoryreset
+#sleep 3
 
 echo "forming network..."
 
@@ -21,6 +21,7 @@ echo "Extended PAN ID: ${XPANID}"
 echo "masterkey:       ${MASTERKEY}"
 echo "password:        ${PASSWORD}"
 
+sudo "${OT_CTL}" "thread stop"
 sudo "${OT_CTL}" networkname "${NETWORK_NAME}"
 sudo "${OT_CTL}" channel "${CHANNEL}"
 sudo "${OT_CTL}" panid "${PANID}"

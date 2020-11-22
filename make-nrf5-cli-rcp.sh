@@ -12,7 +12,6 @@ make -f examples/Makefile-nrf52840 \
     COMMISSIONER=1 \
     BORDER_ROUTER=1 \
     BORDER_AGENT=1 \
-    BACKBONE_ROUTER=1 \
     THREAD_VERSION=1.1 \
     SERVICE=1 \
     JOINER=1
