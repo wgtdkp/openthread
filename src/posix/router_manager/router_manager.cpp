@@ -268,7 +268,11 @@ otIp6Prefix RouterManager::EvaluateOmrPrefix()
     memset(&lowestOmrPrefix, 0, sizeof(lowestOmrPrefix));
     memset(&newOmrPrefix, 0, sizeof(newOmrPrefix));
 
-    VerifyOrExit(role == OT_DEVICE_ROLE_ROUTER || role == OT_DEVICE_ROLE_LEADER);
+    if (role != OT_DEVICE_ROLE_ROUTER && role != OT_DEVICE_ROLE_LEADER)
+    {
+        otLogInfoPlat("EvaluateOmrPrefix: we are not a router or leader");
+        ExitNow();
+    }
 
     while (otNetDataGetNextOnMeshPrefix(&GetInstance(), &iterator, &borderRouterConfig) == OT_ERROR_NONE)
     {
@@ -292,6 +296,8 @@ otIp6Prefix RouterManager::EvaluateOmrPrefix()
 
     if (IsValidOmrPrefix(lowestOmrPrefix))
     {
+        otLogInfoPlat("EvaluateOmrPrefix: adopt existing OMR prefix %s in Thread network",
+            Ip6PrefixString(lowestOmrPrefix).AsCString());
         newOmrPrefix = lowestOmrPrefix;
     }
     else
@@ -340,8 +346,15 @@ void RouterManager::UnpublishOmrPrefix(const otIp6Prefix &aPrefix)
 otIp6Prefix RouterManager::EvaluateOnLinkPrefix()
 {
     otIp6Prefix newOnLinkPrefix;
+    otDeviceRole role = otThreadGetDeviceRole(&GetInstance());
 
     memset(&newOnLinkPrefix, 0, sizeof(newOnLinkPrefix));
+
+    if (role != OT_DEVICE_ROLE_ROUTER && role != OT_DEVICE_ROLE_LEADER)
+    {
+        otLogInfoPlat("EvaluateOnLinkPrefix: we are not a router or leader");
+        ExitNow();
+    }
 
     // We don't evalute on-link prefix if we are doing
     // Router Discovery or we has already discovered some
@@ -349,7 +362,7 @@ otIp6Prefix RouterManager::EvaluateOnLinkPrefix()
     VerifyOrExit(!mRouterSolicitTimer.IsRunning());
     if (IsValidOnLinkPrefix(mDiscoveredOnLinkPrefix))
     {
-        otLogInfoPlat("there is already on-link prefix (%s) on interface %s",
+        otLogInfoPlat("EvaluateOnLinkPrefix: there is already on-link prefix %s on interface %s",
             Ip6PrefixString(mDiscoveredOnLinkPrefix).AsCString(), mInfraNetif.GetName());
         ExitNow();
     }
