@@ -89,8 +89,8 @@ public:
 private:
     static constexpr uint16_t kKeyOmrPrefix = 0xFF01;
 
-    static constexpr uint32_t kMinRtrAdvInterval = 30;     // In Seconds.
-    static constexpr uint32_t kMaxRtrAdvInterval = 1800;   // In Seconds.
+    static constexpr uint32_t kMinRtrAdvInterval = 8; //30;     // In Seconds.
+    static constexpr uint32_t kMaxRtrAdvInterval = 18; //1800;   // In Seconds.
     static constexpr uint32_t kMaxInitRtrAdvInterval = 16; // In Seconds.
     static constexpr uint32_t kMaxInitRtrAdvertisements = 3;
     static constexpr uint32_t kRtrSolicitionInterval = 4; // In Seconds.
