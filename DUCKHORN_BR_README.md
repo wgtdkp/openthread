@@ -5,6 +5,12 @@ Please prepare yourself below hardwares:
 - Two Raspberry Pi 3/4
 - Four nRF52840 dongle
 
+## Get the code
+
+```shell
+git clone https://github.com/wgtdkp/openthread --branch ot-duckhorn-br
+```
+
 ## Build
 
 There are two scripts for building the Border Router (`ot-daemon` + `ot-rcp`) and End Device (`ot-cli-ftd`)
@@ -24,6 +30,12 @@ nrfutil dfu serial -pkg output/nrf52840/bin/ot-cli-ftd.zip  -p /dev/ttyACM1
 ## Testing
 
 We can now test bi-drectional connectivity by pinging End Devices from different Thread network to each other (connected via WiFi).
+
+0. Enable IPv6 forwarding and accept RA on Border Router 1:
+   
+   ```shell
+   sudo ./sysctl.sh
+   ```
 
 1. Start the Border Router 1:
 
