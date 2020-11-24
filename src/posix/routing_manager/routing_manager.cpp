@@ -65,7 +65,7 @@ static struct in6_addr kKinkLocalAllRouters = {
 
 RoutingManager::RoutingManager(otInstance *aInstance)
     : mInstance(aInstance)
-    , mIcmp6(HandleRouterSolicit, this, HandleRouterAdvertisement, this)
+    , mRouterAdvertiser(HandleRouterSolicit, this, HandleRouterAdvertisement, this)
     , mRouterAdvertisementTimer(HandleRouterAdvertisementTimer, this)
     , mRouterSolicitTimer(HandleRouterSolicitTimer, this)
     , mDiscoveredOnLinkPrefixInvalidTimer(HandleDiscoveredOnLinkPrefixInvalidTimer, this)
@@ -81,7 +81,7 @@ void RoutingManager::Init(const char *aInfraNetifName)
 {
     uint16_t omrPrefixLength;
 
-    mIcmp6.Init();
+    mRouterAdvertiser.Init();
     mInfraNetif.Init(aInfraNetifName);
 
     SuccessOrDie(otSetStateChangedCallback(mInstance, HandleStateChanged, this));
@@ -110,19 +110,19 @@ void RoutingManager::Deinit()
 {
     otRemoveStateChangeCallback(mInstance, HandleStateChanged, this);
     mInfraNetif.Deinit();
-    mIcmp6.Deinit();
+    mRouterAdvertiser.Deinit();
 }
 
 void RoutingManager::Update(otSysMainloopContext *aMainloop)
 {
     mInfraNetif.Update(aMainloop);
-    mIcmp6.Update(aMainloop);
+    mRouterAdvertiser.Update(aMainloop);
 }
 
 void RoutingManager::Process(const otSysMainloopContext *aMainloop)
 {
     mInfraNetif.Process(aMainloop);
-    mIcmp6.Process(aMainloop);
+    mRouterAdvertiser.Process(aMainloop);
 }
 
 void RoutingManager::Start()
@@ -421,7 +421,7 @@ void RoutingManager::SendRouterSolicit()
 {
     uint32_t timeout;
 
-    mIcmp6.SendRouterSolicit(mInfraNetif, kKinkLocalAllRouters);
+    mRouterAdvertiser.SendRouterSolicit(mInfraNetif, kKinkLocalAllRouters);
 
     // We wait a bit longer than the solicition interval.
     timeout = kRtrSolicitionInterval * 1000 + GenerateRandomNumber(0, 1000);
@@ -438,7 +438,7 @@ void RoutingManager::SendRouterAdvertisement(const otIp6Prefix &aOmrPrefix, cons
 
     VerifyOrExit(omrPrefix != nullptr || onLinkPrefix != nullptr);
 
-    mIcmp6.SendRouterAdvertisement(omrPrefix, onLinkPrefix, mInfraNetif, kLinkLocalAllNodes);
+    mRouterAdvertiser.SendRouterAdvertisement(omrPrefix, onLinkPrefix, mInfraNetif, kLinkLocalAllNodes);
 
     ++mRouterAdvertisementCount;
 

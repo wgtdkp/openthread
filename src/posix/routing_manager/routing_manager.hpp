@@ -286,7 +286,7 @@ private:
     otIp6Prefix mDiscoveredOnLinkPrefix;
 
     InfraNetif                            mInfraNetif;
-    RouterAdvertisement::RouterAdvertiser mIcmp6;
+    RouterAdvertisement::RouterAdvertiser mRouterAdvertiser;
 
     Timer    mRouterAdvertisementTimer;
     uint32_t mRouterAdvertisementCount;

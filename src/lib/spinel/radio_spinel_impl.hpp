@@ -221,10 +221,18 @@ void RadioSpinel<InterfaceType, ProcessContextType>::Init(bool aResetRadio, bool
     SuccessOrExit(error = Get(SPINEL_PROP_NCP_VERSION, SPINEL_DATATYPE_UTF8_S, mVersion, sizeof(mVersion)));
     SuccessOrExit(error = Get(SPINEL_PROP_HWADDR, SPINEL_DATATYPE_EUI64_S, mIeeeEui64.m8));
 
-    if (!IsRcp() && aRestoreDatasetFromNcp)
+    if (!IsRcp())
     {
-        DieNow((RestoreDatasetFromNcp() == OT_ERROR_NONE) ? OT_EXIT_SUCCESS : OT_EXIT_FAILURE);
+        uint8_t exitCode = OT_EXIT_RADIO_SPINEL_INCOMPATIBLE;
+
+        if (aRestoreDatasetFromNcp)
+        {
+            exitCode = (RestoreDatasetFromNcp() == OT_ERROR_NONE) ? OT_EXIT_SUCCESS : OT_EXIT_FAILURE;
+        }
+
+        DieNow(exitCode);
     }
+
     SuccessOrDie(CheckRadioCapabilities());
 
     mRxRadioFrame.mPsdu  = mRxPsdu;
@@ -287,6 +295,11 @@ bool RadioSpinel<InterfaceType, ProcessContextType>::IsRcp(void)
             isRcp = true;
         }
 
+        if (capability == SPINEL_CAP_OPENTHREAD_LOG_METADATA)
+        {
+            mSupportsLogStream = true;
+        }
+
         capsData += unpacked;
         capsLength -= static_cast<spinel_size_t>(unpacked);
     }
@@ -309,11 +322,8 @@ otError RadioSpinel<InterfaceType, ProcessContextType>::CheckRadioCapabilities(v
 #endif
         OT_RADIO_CAPS_ACK_TIMEOUT | OT_RADIO_CAPS_TRANSMIT_RETRIES | OT_RADIO_CAPS_CSMA_BACKOFF;
 
-    otError        error = OT_ERROR_NONE;
-    unsigned int   radioCaps;
-    uint8_t        capsBuffer[kCapsBufferSize];
-    const uint8_t *capsData   = capsBuffer;
-    spinel_size_t  capsLength = sizeof(capsBuffer);
+    otError      error = OT_ERROR_NONE;
+    unsigned int radioCaps;
 
     SuccessOrExit(error = Get(SPINEL_PROP_RADIO_CAPS, SPINEL_DATATYPE_UINT_PACKED_S, &radioCaps));
     mRadioCaps = static_cast<otRadioCaps>(radioCaps);
@@ -330,24 +340,6 @@ otError RadioSpinel<InterfaceType, ProcessContextType>::CheckRadioCapabilities(v
                       (missingCaps & OT_RADIO_CAPS_TRANSMIT_TIMING) ? "tx-timing " : "");
 
         DieNow(OT_EXIT_RADIO_SPINEL_INCOMPATIBLE);
-    }
-
-    SuccessOrExit(error = Get(SPINEL_PROP_CAPS, SPINEL_DATATYPE_DATA_S, capsBuffer, &capsLength));
-    while (capsLength > 0)
-    {
-        unsigned int   capability;
-        spinel_ssize_t unpacked =
-            spinel_datatype_unpack(capsData, capsLength, SPINEL_DATATYPE_UINT_PACKED_S, &capability);
-
-        VerifyOrDie(unpacked > 0, OT_EXIT_RADIO_SPINEL_INCOMPATIBLE);
-
-        if (capability == SPINEL_CAP_OPENTHREAD_LOG_METADATA)
-        {
-            mSupportsLogStream = true;
-        }
-
-        capsData += unpacked;
-        capsLength -= static_cast<spinel_size_t>(unpacked);
     }
 
 exit:
@@ -770,8 +762,12 @@ void RadioSpinel<InterfaceType, ProcessContextType>::HandleValueIs(spinel_prop_k
 
         if (status >= SPINEL_STATUS_RESET__BEGIN && status <= SPINEL_STATUS_RESET__END)
         {
-            // If RCP crashes/resets while radio was enabled, posix app exits.
-            VerifyOrDie(!IsEnabled(), OT_EXIT_RADIO_SPINEL_RESET);
+            if (IsEnabled())
+            {
+                // If RCP crashes/resets while radio was enabled, posix app exits.
+                otLogCritPlat("Unexpected RCP reset: %s", spinel_status_to_cstr(status));
+                DieNow(OT_EXIT_RADIO_SPINEL_RESET);
+            }
 
             otLogInfoPlat("RCP reset: %s", spinel_status_to_cstr(status));
             mIsReady = true;
@@ -1777,8 +1773,6 @@ void RadioSpinel<InterfaceType, ProcessContextType>::CalcRcpTimeOffset(void)
     uint8_t        buffer[sizeof(remoteTimestamp)];
     spinel_ssize_t packed;
 
-    otLogInfoPlat("Trying to get RCP time offset");
-
     /*
      * Use a modified Network Time Protocol(NTP) to calculate the time offset
      * Assume the time offset is D so that local can calculate remote time with,
@@ -1805,6 +1799,9 @@ void RadioSpinel<InterfaceType, ProcessContextType>::CalcRcpTimeOffset(void)
      */
 
     VerifyOrExit(!mIsTimeSynced || (otPlatTimeGet() >= GetNextRadioTimeRecalcStart()));
+
+    otLogDebgPlat("Trying to get RCP time offset");
+
     packed = spinel_datatype_pack(buffer, sizeof(buffer), SPINEL_DATATYPE_UINT64_S, remoteTimestamp);
     VerifyOrExit(packed > 0 && static_cast<size_t>(packed) <= sizeof(buffer), error = OT_ERROR_NO_BUFS);
 

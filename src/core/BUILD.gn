@@ -176,6 +176,10 @@ if (openthread_enable_core_config_args) {
       defines += [ "OPENTHREAD_CONFIG_MAC_FILTER_ENABLE=1" ]
     }
 
+    if (openthread_config_message_use_heap) {
+      defines += [ "OPENTHREAD_CONFIG_MESSAGE_USE_HEAP_ENABLE=1" ]
+    }
+
     if (openthread_config_mle_long_routes_enable) {
       defines += [ "OPENTHREAD_CONFIG_MLE_LONG_ROUTES_ENABLE=1" ]
     }
@@ -299,6 +303,7 @@ openthread_core_files = [
   "api/crypto_api.cpp",
   "api/dataset_api.cpp",
   "api/dataset_ftd_api.cpp",
+  "api/dataset_updater_api.cpp",
   "api/diags_api.cpp",
   "api/dns_api.cpp",
   "api/entropy_api.cpp",
@@ -568,6 +573,8 @@ openthread_core_files = [
   "utils/channel_monitor.hpp",
   "utils/child_supervision.cpp",
   "utils/child_supervision.hpp",
+  "utils/dataset_updater.cpp",
+  "utils/dataset_updater.hpp",
   "utils/flash.cpp",
   "utils/flash.hpp",
   "utils/heap.cpp",
@@ -631,6 +638,7 @@ source_set("libopenthread_core_config") {
     "config/child_supervision.h",
     "config/coap.h",
     "config/commissioner.h",
+    "config/dataset_updater.h",
     "config/dhcp6_client.h",
     "config/dhcp6_server.h",
     "config/diag.h",

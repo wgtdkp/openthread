@@ -356,8 +356,8 @@ void SubMac::StartCsmaBackoff(void)
 
         if (ShouldHandleTransmitTargetTime())
         {
-            if (otPlatRadioGetNow(&GetInstance()) <
-                mTransmitFrame.mInfo.mTxInfo.mTxDelayBaseTime + mTransmitFrame.mInfo.mTxInfo.mTxDelay)
+            if (Time(static_cast<uint32_t>(otPlatRadioGetNow(&GetInstance()))) <
+                Time(mTransmitFrame.mInfo.mTxInfo.mTxDelayBaseTime) + mTransmitFrame.mInfo.mTxInfo.mTxDelay)
             {
                 mTimer.StartAt(Time(mTransmitFrame.mInfo.mTxInfo.mTxDelayBaseTime),
                                mTransmitFrame.mInfo.mTxInfo.mTxDelay);
@@ -940,7 +940,7 @@ void SubMac::SetCslPeriod(uint16_t aPeriod)
 
     if (mCslPeriod > 0)
     {
-        mCslSampleTime = mCslTimer.GetNow();
+        mCslSampleTime = TimerMicro::GetNow();
         Get<Radio>().UpdateCslSampleTime(mCslSampleTime.GetValue());
 
         mCslState = kCslSample;

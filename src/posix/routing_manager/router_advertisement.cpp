@@ -406,8 +406,6 @@ void RouterAdvertiser::Recv()
 
     otLogInfoPlat("received ICMPv6 message at interface index %u", ifIndex);
 
-    // TODO(wgtdkp): drop messages from cur interface.
-
     if (buffer.GetLength() < sizeof(otIcmp6Header))
     {
         otLogInfoPlat("drop too short ICMPv6 message (len=%hu)", buffer.GetLength());

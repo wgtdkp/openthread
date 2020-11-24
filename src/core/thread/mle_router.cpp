@@ -838,20 +838,8 @@ otError MleRouter::HandleLinkAccept(const Message &         aMessage,
     SuccessOrExit(error = Tlv::Find<VersionTlv>(aMessage, version));
     VerifyOrExit(version >= OT_THREAD_VERSION_1_1, error = OT_ERROR_PARSE);
 
-    // Link-Layer Frame Counter
-    SuccessOrExit(error = Tlv::Find<LinkFrameCounterTlv>(aMessage, linkFrameCounter));
-
-    // MLE Frame Counter
-    switch (Tlv::Find<MleFrameCounterTlv>(aMessage, mleFrameCounter))
-    {
-    case OT_ERROR_NONE:
-        break;
-    case OT_ERROR_NOT_FOUND:
-        mleFrameCounter = linkFrameCounter;
-        break;
-    default:
-        ExitNow(error = OT_ERROR_PARSE);
-    }
+    // Link and MLE Frame Counters
+    SuccessOrExit(error = ReadFrameCounters(aMessage, linkFrameCounter, mleFrameCounter));
 
     // Link Margin
     switch (Tlv::Find<LinkMarginTlv>(aMessage, linkMargin))
@@ -2220,20 +2208,8 @@ void MleRouter::HandleChildIdRequest(const Message &         aMessage,
     Get<MeshForwarder>().RemoveMessages(*child, Message::kSubTypeMleChildUpdateRequest);
     Get<MeshForwarder>().RemoveMessages(*child, Message::kSubTypeMleDataResponse);
 
-    // Link-Layer Frame Counter
-    SuccessOrExit(error = Tlv::Find<LinkFrameCounterTlv>(aMessage, linkFrameCounter));
-
-    // MLE Frame Counter
-    switch (Tlv::Find<MleFrameCounterTlv>(aMessage, mleFrameCounter))
-    {
-    case OT_ERROR_NONE:
-        break;
-    case OT_ERROR_NOT_FOUND:
-        mleFrameCounter = linkFrameCounter;
-        break;
-    default:
-        ExitNow(error = OT_ERROR_PARSE);
-    }
+    // Link-Layer and MLE Frame Counters
+    SuccessOrExit(error = ReadFrameCounters(aMessage, linkFrameCounter, mleFrameCounter));
 
     // Mode
     SuccessOrExit(error = Tlv::Find<ModeTlv>(aMessage, modeBitmask));
@@ -2505,6 +2481,14 @@ void MleRouter::HandleChildUpdateRequest(const Message &         aMessage,
                      child->GetDeviceMode().Get(), child->GetDeviceMode().ToString().AsCString());
 
         childDidChange = true;
+
+#if OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
+        if (child->IsRxOnWhenIdle())
+        {
+            // Clear CSL synchronization state
+            child->SetCslSynchronized(false);
+        }
+#endif
 
         // The `IndirectSender::HandleChildModeChange()` needs to happen
         // after "Child Update" message is fully parsed to ensure that
@@ -4254,10 +4238,8 @@ bool MleRouter::HasOneNeighborWithComparableConnectivity(const RouteTlv &aRoute,
                     routerCount++;
                     continue;
                 }
-                else
-                {
-                    ExitNow(rval = false);
-                }
+
+                ExitNow(rval = false);
             }
         }
 
