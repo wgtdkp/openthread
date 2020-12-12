@@ -72,8 +72,6 @@ otError otPlatInfraIfSendIcmp6(uint32_t            aInfraIfIndex,
  * @param[in]  aBuffer        The ICMPv6 message buffer.
  * @param[in]  aBufferLength  The length of the ICMPv6 message buffer.
  *
- * @note  ICMPv6 message received from current infrastructure interface via multicast loopback should not be passed in.
- *
  */
 extern void otPlatInfraIfRecvIcmp6(otInstance *        aInstance,
                                    uint32_t            aInfraIfIndex,

@@ -66,6 +66,17 @@ extern "C" {
 otError otBorderRoutingInit(otInstance *aInstance, uint32_t aInfraIfIndex);
 
 /**
+ * This method enables/disables the Border Routing Manager.
+ *
+ * @param[in]  aInstance  A pointer to an OpenThread instance.
+ * @param[in]  aEnabled   A boolean to enable/disable the routing manager.
+ *
+ * @note  The Border Routing Manager is enabled by default.
+ *
+ */
+void otBorderRoutingSetEnabled(otInstance *aInstance, bool aEnabled);
+
+/**
  * This method provides a full or stable copy of the local Thread Network Data.
  *
  * @param[in]     aInstance    A pointer to an OpenThread instance.

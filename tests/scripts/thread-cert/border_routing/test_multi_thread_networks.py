@@ -119,6 +119,22 @@ class MultiThreadNetworks(thread_cert.TestCase):
         self.assertTrue(len(self.nodes[BR2].get_prefixes()) == 1)
         self.assertTrue(len(self.nodes[ROUTER2].get_prefixes()) == 1)
 
+        br1_omr_prefix = self.nodes[BR1].get_prefixes()[0]
+        br2_omr_prefix = self.nodes[BR2].get_prefixes()[0]
+
+        self.assertNotEqual(br1_omr_prefix, br2_omr_prefix)
+
+        # Each BR should independently register an external route for the on-link prefix.
+        self.assertTrue(len(self.nodes[BR1].get_routes()) == 1)
+        self.assertTrue(len(self.nodes[ROUTER1].get_routes()) == 1)
+        self.assertTrue(len(self.nodes[BR2].get_routes()) == 1)
+        self.assertTrue(len(self.nodes[ROUTER2].get_routes()) == 1)
+
+        br1_external_route = self.nodes[BR1].get_routes()[0]
+        br2_external_route = self.nodes[BR2].get_routes()[0]
+
+        self.assertNotEqual(br1_external_route, br2_external_route)
+
         self.assertTrue(len(self.nodes[ROUTER1].get_ip6_address(config.ADDRESS_TYPE.OMR)) == 1)
         self.assertTrue(len(self.nodes[ROUTER2].get_ip6_address(config.ADDRESS_TYPE.OMR)) == 1)
 

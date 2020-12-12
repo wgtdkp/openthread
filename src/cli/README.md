@@ -22,6 +22,7 @@ Done
 ## OpenThread Command List
 
 - [bbr](#bbr)
+- [br](#br)
 - [bufferinfo](#bufferinfo)
 - [ccathreshold](#ccathreshold)
 - [channel](#channel)
@@ -308,6 +309,20 @@ Set jitter (in seconds) for Backbone Router registration for Thread 1.2 FTD.
 
 ```bash
 > bbr jitter 10
+Done
+```
+
+### br
+
+Enbale/disable the Border Routing functionality.
+
+```bash
+> br enable
+Done
+```
+
+```bash
+> br disable
 Done
 ```
 

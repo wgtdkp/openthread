@@ -52,10 +52,9 @@
 
 #include "common/code_utils.hpp"
 
-static char         sInfraIfName[IFNAMSIZ] = "UNKNOWN";
-static uint32_t     sInfraIfIndex          = 0;
-static int          sInfraIfIcmp6Socket    = -1;
-static otIp6Address sInfraIfLinkLocalAddr;
+static char     sInfraIfName[IFNAMSIZ] = "UNKNOWN";
+static uint32_t sInfraIfIndex          = 0;
+static int      sInfraIfIcmp6Socket    = -1;
 
 otError otPlatInfraIfSendIcmp6(uint32_t            aInfraIfIndex,
                                const otIp6Address *aDestAddress,
@@ -123,36 +122,6 @@ otError otPlatInfraIfSendIcmp6(uint32_t            aInfraIfIndex,
 
 exit:
     return error;
-}
-
-static void InitLinkLocalAddress(void)
-{
-    struct ifaddrs *ifAddrs = nullptr;
-
-    if (getifaddrs(&ifAddrs) < 0)
-    {
-        otLogCritPlat("failed to get netif addresses: %s", strerror(errno));
-        DieNow(OT_EXIT_ERROR_ERRNO);
-    }
-
-    for (struct ifaddrs *addr = ifAddrs; addr != nullptr; addr = addr->ifa_next)
-    {
-        struct sockaddr_in6 *ip6Addr;
-
-        if (strncmp(addr->ifa_name, sInfraIfName, sizeof(sInfraIfName)) != 0 || addr->ifa_addr->sa_family != AF_INET6)
-        {
-            continue;
-        }
-
-        ip6Addr = reinterpret_cast<sockaddr_in6 *>(addr->ifa_addr);
-        if (IN6_IS_ADDR_LINKLOCAL(&ip6Addr->sin6_addr))
-        {
-            memcpy(&sInfraIfLinkLocalAddr, &ip6Addr->sin6_addr, sizeof(sInfraIfLinkLocalAddr));
-            break;
-        }
-    }
-
-    freeifaddrs(ifAddrs);
 }
 
 void platformInfraIfInit(otInstance *aInstance, const char *aIfName)
@@ -245,7 +214,6 @@ void platformInfraIfInit(otInstance *aInstance, const char *aIfName)
     }
 
     sInfraIfIcmp6Socket = sock;
-    InitLinkLocalAddress();
 }
 
 void platformInfraIfDeinit(void)
@@ -335,8 +303,6 @@ void platformInfraIfProcess(otInstance *aInstance, const fd_set &aReadFdSet)
     // the hoplimit must be 255.
     VerifyOrExit(hopLimit == 255);
 
-    // Drop multicast messages sent by ourselves.
-    VerifyOrExit(!otIp6IsAddressEqual(&sInfraIfLinkLocalAddr, reinterpret_cast<otIp6Address *>(&srcAddr.sin6_addr)));
     otPlatInfraIfRecvIcmp6(aInstance, ifIndex, reinterpret_cast<otIp6Address *>(&srcAddr.sin6_addr), buffer,
                            bufferLength);
 
