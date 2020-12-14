@@ -780,6 +780,90 @@ private:
 } OT_TOOL_PACKED_END;
 
 /**
+ * This class implements the OPT Pseudo-RR.
+ *
+ * See https://tools.ietf.org/html/rfc6891.
+ *
+ */
+OT_TOOL_PACKED_BEGIN
+class ResourceRecordOption : public ResourceRecord
+{
+public:
+    enum : uint16_t
+    {
+        kCodeUpdateLease = 2u, ///< The UPDATE-LEASE Option Code.
+    };
+
+    /**
+     * This method initializes the OPT Pseudo Resource Record.
+     *
+     * @param[in]  aOptionCode    The Option Code.
+     * @param[in]  aOptionLength  The Option Length.
+     *
+     */
+    void Init(uint16_t aOptionCode, uint16_t aOptionLength);
+
+    /**
+     * This method returns the Option Code of the Resource Record.
+     *
+     * @returns  The Option Code.
+     *
+     */
+    uint16_t GetOptionCode(void) const { return HostSwap16(mOptionCode); }
+
+    /**
+     * This method returns the Option Length of the Resource Record.
+     *
+     * @returns  The Option Length.
+     *
+     */
+    uint16_t GetOptionLength(void) const { return HostSwap16(mOptionLength); }
+
+private:
+    uint16_t mOptionCode;
+    uint16_t mOptionLength;
+} OT_TOOL_PACKED_END;
+
+/**
+ * This class implements the Lease OPT Pseudo-RR.s
+ *
+ * See https://tools.ietf.org/html/draft-sekar-dns-ul-02.
+ *
+ */
+OT_TOOL_PACKED_BEGIN
+class ResourceRecordLease : public ResourceRecordOption
+{
+public:
+    /**
+     * This method initializes the Lease Resource Record.
+     *
+     */
+    void Init(uint32_t aLease, uint32_t aKeyLease);
+
+    /**
+     * This method returns the Lease time value of the Resource Record.
+     *
+     * @returns  The Lease time value. In seconds.
+     *
+     */
+    uint32_t GetLease(void) const { return HostSwap32(mLease); }
+
+    /**
+     * This method sets the Option Length fot the Resource Record.
+     *
+     * @param[in]  aKeyLease  The Key-Lease time value. In seconds.
+     *
+     */
+    void SetKeyLease(uint32_t aKeyLease) { mKeyLease = HostSwap32(aKeyLease); }
+
+private:
+    uint32_t mLease;
+    uint32_t mKeyLease;
+} OT_TOOL_PACKED_END;
+
+static_assert(sizeof(ResourceRecordLease) == 22, "invalid ResourceRecordLease size");
+
+/**
  * This class implements Question format.
  *
  */

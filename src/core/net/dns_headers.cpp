@@ -331,5 +331,23 @@ void ResourceRecordAaaa::Init(void)
     mAddress.Clear();
 }
 
+void ResourceRecordOption::Init(uint16_t aOptionCode, uint16_t aOptionLength)
+{
+    ResourceRecord::Init(kTypeOpt, 0, 0);
+
+    mOptionCode   = HostSwap16(aOptionCode);
+    mOptionLength = HostSwap16(aOptionLength);
+
+    SetLength(sizeof(*this) - sizeof(ResourceRecord) + mOptionLength);
+}
+
+void ResourceRecordLease::Init(uint32_t aLease, uint32_t aKeyLease)
+{
+    ResourceRecordOption::Init(kCodeUpdateLease, sizeof(*this) - sizeof(ResourceRecordOption));
+
+    mLease    = HostSwap32(aLease);
+    mKeyLease = HostSwap32(aKeyLease);
+}
+
 } // namespace Dns
 } // namespace ot
