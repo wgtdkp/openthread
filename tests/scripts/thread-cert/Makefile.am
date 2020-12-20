@@ -76,8 +76,11 @@ EXTRA_DIST                                                         = \
     Cert_5_6_07_NetworkDataRequestREED.py                            \
     Cert_5_6_09_NetworkDataForwarding.py                             \
     Cert_5_7_01_CoapDiagCommands.py                                  \
+    Cert_5_7_02_CoapDiagCommands.py                                  \
+    Cert_5_7_03_CoapDiagCommands.py                                  \
     Cert_5_8_02_KeyIncrement.py                                      \
     Cert_5_8_03_KeyIncrementRollOver.py                              \
+    Cert_5_8_04_SecurityPolicyTLV.py                                 \
     Cert_6_1_01_RouterAttach.py                                      \
     Cert_6_1_02_REEDAttach.py                                        \
     Cert_6_1_03_RouterAttachConnectivity.py                          \
@@ -103,13 +106,18 @@ EXTRA_DIST                                                         = \
     Cert_7_1_04_BorderRouterAsRouter.py                              \
     Cert_7_1_05_BorderRouterAsRouter.py                              \
     Cert_7_1_06_BorderRouterAsLeader.py                              \
+    Cert_7_1_07_BorderRouterAsLeader.py                              \
     Cert_7_1_08_BorderRouterAsFED.py                                 \
     Cert_8_1_01_Commissioning.py                                     \
     Cert_8_1_02_Commissioning.py                                     \
     Cert_8_2_01_JoinerRouter.py                                      \
     Cert_8_2_02_JoinerRouter.py                                      \
+    Cert_9_2_01_MGMTCommissionerGet.py                               \
     Cert_9_2_02_MGMTCommissionerSet.py                               \
+    Cert_9_2_03_ActiveDatasetGet.py                                  \
     Cert_9_2_04_ActiveDataset.py                                     \
+    Cert_9_2_05_ActiveDataset.py                                     \
+    Cert_9_2_06_DatasetDissemination.py                              \
     Cert_9_2_07_DelayTimer.py                                        \
     Cert_9_2_08_PersistentDatasets.py                                \
     Cert_9_2_09_PendingPartition.py                                  \
@@ -122,6 +130,7 @@ EXTRA_DIST                                                         = \
     Cert_9_2_16_ActivePendingPartition.py                            \
     Cert_9_2_17_Orphan.py                                            \
     Cert_9_2_18_RollBackActiveTimestamp.py                           \
+    Cert_9_2_19_PendingDatasetGet.py                                 \
     coap.py                                                          \
     command.py                                                       \
     common.py                                                        \
@@ -254,8 +263,11 @@ check_SCRIPTS                                                      = \
     Cert_5_6_07_NetworkDataRequestREED.py                            \
     Cert_5_6_09_NetworkDataForwarding.py                             \
     Cert_5_7_01_CoapDiagCommands.py                                  \
+    Cert_5_7_02_CoapDiagCommands.py                                  \
+    Cert_5_7_03_CoapDiagCommands.py                                  \
     Cert_5_8_02_KeyIncrement.py                                      \
     Cert_5_8_03_KeyIncrementRollOver.py                              \
+    Cert_5_8_04_SecurityPolicyTLV.py                                 \
     Cert_6_1_01_RouterAttach.py                                      \
     Cert_6_1_02_REEDAttach.py                                        \
     Cert_6_1_03_RouterAttachConnectivity.py                          \
@@ -282,13 +294,18 @@ check_SCRIPTS                                                      = \
     Cert_7_1_04_BorderRouterAsRouter.py                              \
     Cert_7_1_05_BorderRouterAsRouter.py                              \
     Cert_7_1_06_BorderRouterAsLeader.py                              \
+    Cert_7_1_07_BorderRouterAsLeader.py                              \
     Cert_7_1_08_BorderRouterAsFED.py                                 \
     Cert_8_1_01_Commissioning.py                                     \
     Cert_8_1_02_Commissioning.py                                     \
     Cert_8_2_01_JoinerRouter.py                                      \
     Cert_8_2_02_JoinerRouter.py                                      \
+    Cert_9_2_01_MGMTCommissionerGet.py                               \
     Cert_9_2_02_MGMTCommissionerSet.py                               \
+    Cert_9_2_03_ActiveDatasetGet.py                                  \
     Cert_9_2_04_ActiveDataset.py                                     \
+    Cert_9_2_05_ActiveDataset.py                                     \
+    Cert_9_2_06_DatasetDissemination.py                              \
     Cert_9_2_07_DelayTimer.py                                        \
     Cert_9_2_08_PersistentDatasets.py                                \
     Cert_9_2_09_PendingPartition.py                                  \
@@ -301,6 +318,7 @@ check_SCRIPTS                                                      = \
     Cert_9_2_16_ActivePendingPartition.py                            \
     Cert_9_2_17_Orphan.py                                            \
     Cert_9_2_18_RollBackActiveTimestamp.py                           \
+    Cert_9_2_19_PendingDatasetGet.py                                 \
     $(NULL)
 
 TESTS_ENVIRONMENT                                                  = \
