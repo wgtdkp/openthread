@@ -229,6 +229,12 @@ exit:
     return;
 }
 
+bool RoutingManager::IsValidOmrPrefixConfig(const NetworkData::OnMeshPrefixConfig &aOnMeshPrefixConfig)
+{
+    return (IsValidOmrPrefix(aOnMeshPrefixConfig.GetPrefix()) && aOnMeshPrefixConfig.mDefaultRoute &&
+            aOnMeshPrefixConfig.mSlaac && !aOnMeshPrefixConfig.mDp);
+}
+
 uint8_t RoutingManager::EvaluateOmrPrefix(Ip6::Prefix *aNewOmrPrefixes, uint8_t aMaxOmrPrefixNum)
 {
     uint8_t                         newOmrPrefixNum = 0;
@@ -243,8 +249,7 @@ uint8_t RoutingManager::EvaluateOmrPrefix(Ip6::Prefix *aNewOmrPrefixes, uint8_t 
     {
         uint8_t newPrefixIndex;
 
-        if (!IsValidOmrPrefix(onMeshPrefixConfig.GetPrefix()) || !onMeshPrefixConfig.mDefaultRoute ||
-            !onMeshPrefixConfig.mSlaac || onMeshPrefixConfig.mDp)
+        if (!IsValidOmrPrefixConfig(onMeshPrefixConfig))
         {
             continue;
         }

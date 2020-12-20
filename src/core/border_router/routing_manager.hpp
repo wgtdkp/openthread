@@ -47,6 +47,7 @@
 #include "common/notifier.hpp"
 #include "common/timer.hpp"
 #include "net/ip6.hpp"
+#include "thread/network_data.hpp"
 
 namespace ot {
 
@@ -100,6 +101,16 @@ public:
                           const Ip6::Address &aSrcAddress,
                           const uint8_t *     aBuffer,
                           uint16_t            aBufferLength);
+
+    /**
+     * This helper method tests if the given on-mesh prefix config is a valid OMR prefix config.
+     *
+     * @param  aOnMeshPrefixConfig  The given on-mesh prefix config.
+     *
+     * @returns  A boolean indicates whether the on-mesh prefix config is a valid OMR prefix config.
+     *
+     */
+    static bool IsValidOmrPrefixConfig(const NetworkData::OnMeshPrefixConfig &aOnMeshPrefixConfig);
 
 private:
     enum : uint16_t

@@ -267,7 +267,7 @@ public:
         mCAlloc = aCAlloc;
     }
 #elif !OPENTHREAD_CONFIG_MULTIPLE_INSTANCE_ENABLE
-    void  HeapFree(void *aPointer) { mHeap.Free(aPointer); }
+    void  HeapFree(const void *aPointer) { mHeap.Free(aPointer); }
     void *HeapCAlloc(size_t aCount, size_t aSize) { return mHeap.CAlloc(aCount, aSize); }
 
     /**
@@ -859,6 +859,13 @@ template <> inline Utils::Otns &Instance::Get(void)
 template <> inline BorderRouter::RoutingManager &Instance::Get(void)
 {
     return mRoutingManager;
+}
+#endif
+
+#if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
+template <> inline BorderRouter::SrpServer &Instance::Get(void)
+{
+    return mThreadNetif.mSrpServer;
 }
 #endif
 

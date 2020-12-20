@@ -236,6 +236,19 @@ public:
 class SockAddr : public otSockAddr, public Clearable<SockAddr>
 {
 public:
+    enum
+    {
+        // The socket address string length is:
+        // len('[') + len(mAddress) + len(']') + len(':') + len(mPort)
+        kIp6SocketAddressStringSize = 1 + Address::kIp6AddressStringSize + 1 + 1 + 5,
+    };
+
+    /**
+     * This type defines the fixed-length `String` object returned from `ToString()`.
+     *
+     */
+    typedef String<kIp6SocketAddressStringSize> InfoString;
+
     /**
      * This constructor initializes the socket address (all fields are set to zero).
      *
@@ -282,6 +295,24 @@ public:
      *
      */
     const Address &GetAddress(void) const { return *static_cast<const Address *>(&mAddress); }
+
+    /**
+     * This method converts a socket address object to a string.
+     *
+     * The format follows the Format for Literal IPv6 Addresses in URL's (RFC 2732):
+     * '[' <IPv6-Address> ']' ':' <port>
+     *
+     * @returns An `InfoString` representing the IPv6 address.
+     *
+     */
+    InfoString ToString(void) const
+    {
+        return InfoString("[%x:%x:%x:%x:%x:%x:%x:%x]:%5hu", HostSwap16(mAddress.mFields.m16[0]),
+                          HostSwap16(mAddress.mFields.m16[1]), HostSwap16(mAddress.mFields.m16[2]),
+                          HostSwap16(mAddress.mFields.m16[3]), HostSwap16(mAddress.mFields.m16[4]),
+                          HostSwap16(mAddress.mFields.m16[5]), HostSwap16(mAddress.mFields.m16[6]),
+                          HostSwap16(mAddress.mFields.m16[7]), mPort);
+    }
 };
 
 /**

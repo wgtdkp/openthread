@@ -66,6 +66,7 @@ set(COMMON_SOURCES
     api/random_noncrypto_api.cpp
     api/server_api.cpp
     api/sntp_api.cpp
+    api/srp_api.cpp
     api/tasklet_api.cpp
     api/thread_api.cpp
     api/thread_ftd_api.cpp
@@ -79,6 +80,7 @@ set(COMMON_SOURCES
     border_router/infra_if_platform.cpp
     border_router/router_advertisement.cpp
     border_router/routing_manager.cpp
+    border_router/srp_server.cpp
     coap/coap.cpp
     coap/coap_message.cpp
     coap/coap_secure.cpp

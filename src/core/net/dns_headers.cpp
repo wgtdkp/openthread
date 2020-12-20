@@ -184,12 +184,13 @@ otError Name::ReadName(const Message &aMessage,
                        uint16_t &     aOffset,
                        uint16_t       aHeaderOffset,
                        char *         aNameBuffer,
-                       uint16_t       aNameBufferSize)
+                       uint16_t &     aNameLength)
 {
     otError       error;
     LabelIterator iterator(aMessage, aOffset, aHeaderOffset);
     bool          firstLabel = true;
     uint8_t       labelLength;
+    uint16_t      nameBufferSize = aNameLength;
 
     while (true)
     {
@@ -202,16 +203,16 @@ otError Name::ReadName(const Message &aMessage,
             if (!firstLabel)
             {
                 *aNameBuffer++ = kLabelSeperatorChar;
-                aNameBufferSize--;
+                nameBufferSize--;
 
                 // No need to check if we have reached end of the name buffer
                 // here since `iterator.ReadLabel()` would verify it.
             }
 
-            labelLength = static_cast<uint8_t>(OT_MIN(kMaxLabelLength + 1, aNameBufferSize));
+            labelLength = static_cast<uint8_t>(OT_MIN(kMaxLabelLength + 1, nameBufferSize));
             SuccessOrExit(error = iterator.ReadLabel(aNameBuffer, labelLength, /* aAllowDotCharInLabel */ false));
             aNameBuffer += labelLength;
-            aNameBufferSize -= labelLength;
+            nameBufferSize -= labelLength;
             firstLabel = false;
             break;
 
@@ -219,8 +220,8 @@ otError Name::ReadName(const Message &aMessage,
             // We reach the end of name successfully. Always add a terminating dot
             // at the end.
             *aNameBuffer++ = kLabelSeperatorChar;
-            aNameBufferSize--;
-            VerifyOrExit(aNameBufferSize >= sizeof(uint8_t), error = OT_ERROR_NO_BUFS);
+            nameBufferSize--;
+            VerifyOrExit(nameBufferSize >= sizeof(uint8_t), error = OT_ERROR_NO_BUFS);
             *aNameBuffer = kNullChar;
             aOffset      = iterator.mNameEndOffset;
             error        = OT_ERROR_NONE;
@@ -233,6 +234,7 @@ otError Name::ReadName(const Message &aMessage,
     }
 
 exit:
+    aNameLength -= nameBufferSize;
     return error;
 }
 
@@ -316,19 +318,26 @@ exit:
     return error;
 }
 
-void ResourceRecord::Init(uint16_t aType, uint16_t aClass, uint32_t aTtl)
+bool SigRecord::IsValid(void) const
 {
-    SetType(aType);
-    SetClass(aClass);
-    SetTtl(aTtl);
-    SetLength(0);
+    return GetType() == Dns::ResourceRecord::kTypeSig && GetClass() == kClassAny && GetTtl() == 0 &&
+           GetLength() >= sizeof(*this) - sizeof(ResourceRecord);
 }
 
-void ResourceRecordAaaa::Init(void)
+void UpdateLeaseOptRecord::Init(void)
 {
-    ResourceRecord::Init(kTypeAaaa);
-    SetLength(sizeof(mAddress));
-    mAddress.Clear();
+    OptRecord::Init(0); // Update lease uses CLASS value zero.
+    SetTtl(0);
+    SetLength(static_cast<uint16_t>(sizeof(UpdateLeaseOptRecord) - sizeof(ResourceRecord)));
+    SetOptionCode(kOptionCodeUpdateLease);
+    SetOptionLength(static_cast<uint16_t>(sizeof(UpdateLeaseOptRecord) - sizeof(OptRecord)));
+}
+
+bool UpdateLeaseOptRecord::IsValid(void) const
+{
+    return GetType() == Dns::ResourceRecord::kTypeOpt && GetClass() == kClassZero && GetTtl() == 0 &&
+           GetOptionCode() == Dns::OptRecord::kOptionCodeUpdateLease && GetOptionLength() == 8 &&
+           GetLeaseInterval() <= GetKeyLeaseInterval();
 }
 
 } // namespace Dns
