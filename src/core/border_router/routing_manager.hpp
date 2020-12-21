@@ -117,10 +117,11 @@ private:
 
     enum : uint8_t
     {
-        kMaxOmrPrefixNum    = 8u,                    // The maximum number of the OMR prefixes to advertise.
+        kMaxOmrPrefixNum =
+            OPENTHREAD_CONFIG_IP6_SLAAC_NUM_ADDRESSES, // The maximum number of the OMR prefixes to advertise.
         kMaxOnLinkPrefixNum = 8u,                    // The maximum number of the on-link prefixes to discover.
-        kOmrPrefixLength    = OT_IP6_PREFIX_BITSIZE, // The length of an OMR prefix. In bits.
-        kOnLinkPrefixLength = OT_IP6_PREFIX_BITSIZE, // The length of an On-link prefix. In bits.
+        kOmrPrefixLength    = OT_IP6_PREFIX_BITSIZE,   // The length of an OMR prefix. In bits.
+        kOnLinkPrefixLength = OT_IP6_PREFIX_BITSIZE,   // The length of an On-link prefix. In bits.
     };
 
     enum : uint32_t
@@ -162,6 +163,14 @@ private:
     bool    IsEnabled(void) const { return mEnabled; }
     otError LoadOrGenerateRandomOmrPrefix(void);
     otError LoadOrGenerateRandomOnLinkPrefix(void);
+
+    /**
+     * This method tells whether the first prefix is numerically smaller than the second one.
+     *
+     * @note  The caller must guarantee that the two prefix has the same length.
+     *
+     */
+    static bool IsPrefixSmallerThan(const Ip6::Prefix &aFirstPrefix, const Ip6::Prefix &aSecondPrefix);
 
     static bool IsValidOmrPrefix(const Ip6::Prefix &aOmrPrefix);
     static bool IsValidOnLinkPrefix(const Ip6::Prefix &aOnLinkPrefix);
@@ -233,13 +242,13 @@ private:
     void StartRouterSolicitation(void);
 
     /**
-     * This method sends Router Solicitation messages to discovery on-link
+     * This method sends Router Solicitation messages to discover on-link
      * prefix on infra links.
      *
      * @sa HandleRouterAdvertisement
      *
      */
-    otError SendRouterSolicit(void);
+    otError SendRouterSolicitation(void);
 
     /**
      * This method sends Router Advertisement messages to advertise
@@ -316,8 +325,8 @@ private:
     bool     mEnabled;
 
     /**
-     * My local OMR prefix loaded from settings.
-     * Random-generated if there is non in settings.
+     * The OMR prefix loaded from local persistent storage or randomly generated
+     * if non is found in persistent storage.
      *
      */
     Ip6::Prefix mLocalOmrPrefix;
@@ -333,8 +342,8 @@ private:
     uint8_t     mAdvertisedOmrPrefixNum;
 
     /**
-     * My local on-link prefix loaded from settings.
-     * Random-generated if there is non in settings.
+     * The on-link prefix loaded from local persistent storage or randomly generated
+     * if non is found in persistent storage.
      *
      */
     Ip6::Prefix mLocalOnLinkPrefix;

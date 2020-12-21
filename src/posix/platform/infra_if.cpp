@@ -52,9 +52,9 @@
 
 #include "common/code_utils.hpp"
 
-static char     sInfraIfName[IFNAMSIZ] = "UNKNOWN";
-static uint32_t sInfraIfIndex          = 0;
-static int      sInfraIfIcmp6Socket    = -1;
+static char     sInfraIfName[IFNAMSIZ];
+static uint32_t sInfraIfIndex       = 0;
+static int      sInfraIfIcmp6Socket = -1;
 
 otError otPlatInfraIfSendIcmp6(uint32_t            aInfraIfIndex,
                                const otIp6Address *aDestAddress,
@@ -81,12 +81,10 @@ otError otPlatInfraIfSendIcmp6(uint32_t            aInfraIfIndex,
     memset(&dest, 0, sizeof(dest));
     dest.sin6_family = AF_INET6;
     memcpy(&dest.sin6_addr, aDestAddress, sizeof(*aDestAddress));
-#ifdef HAVE_SIN6_SCOPE_ID
-    if (IN6_IS_ADDR_LINKLOCAL(&addr.sin6_addr) || IN6_IS_ADDR_MC_LINKLOCAL(&addr.sin6_addr))
+    if (IN6_IS_ADDR_LINKLOCAL(&dest.sin6_addr) || IN6_IS_ADDR_MC_LINKLOCAL(&dest.sin6_addr))
     {
         dest.sin6_scope_id = sInfraIfIndex;
     }
-#endif
 
     iov.iov_base = const_cast<uint8_t *>(aBuffer);
     iov.iov_len  = aBufferLength;
@@ -126,15 +124,22 @@ exit:
 
 void platformInfraIfInit(otInstance *aInstance, const char *aIfName)
 {
+    OT_UNUSED_VARIABLE(aInstance);
+
     int                 sock;
     struct icmp6_filter filter;
     ssize_t             rval;
-    const int           kOne      = 1;
-    const int           kTwo      = 2;
-    const int           kHopLimit = 255;
-    uint32_t            ifIndex   = 0;
+    const int           kEnable             = 1;
+    const int           kIpv6ChecksumOffset = 2;
+    const int           kHopLimit           = 255;
+    uint32_t            ifIndex             = 0;
 
-    OT_UNUSED_VARIABLE(aInstance);
+    if (strlen(aIfName) >= sizeof(sInfraIfName))
+    {
+        otLogCritPlat("infra interface name '%s' is too long", aIfName);
+        DieNow(OT_EXIT_INVALID_ARGUMENTS);
+    }
+    strcpy(sInfraIfName, aIfName);
 
     // Initializes the infra interface.
     ifIndex = if_nametoindex(aIfName);
@@ -144,13 +149,6 @@ void platformInfraIfInit(otInstance *aInstance, const char *aIfName)
         DieNow(OT_EXIT_ERROR_ERRNO);
     }
     sInfraIfIndex = ifIndex;
-
-    if (strlen(aIfName) >= sizeof(sInfraIfName))
-    {
-        otLogCritPlat("infra interface name '%s' is too long", aIfName);
-        DieNow(OT_EXIT_INVALID_ARGUMENTS);
-    }
-    strcpy(sInfraIfName, aIfName);
 
     // Initializes the ICMPv6 socket.
     sock = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
@@ -173,7 +171,7 @@ void platformInfraIfInit(otInstance *aInstance, const char *aIfName)
     }
 
     // We want a source address and interface index.
-    rval = setsockopt(sock, IPPROTO_IPV6, IPV6_RECVPKTINFO, &kOne, sizeof(kOne));
+    rval = setsockopt(sock, IPPROTO_IPV6, IPV6_RECVPKTINFO, &kEnable, sizeof(kEnable));
     if (rval < 0)
     {
         otLogCritPlat("Can't set IPV6_RECVPKTINFO: %s", strerror(errno));
@@ -181,9 +179,9 @@ void platformInfraIfInit(otInstance *aInstance, const char *aIfName)
     }
 
 #ifdef __linux__
-    rval = setsockopt(sock, IPPROTO_RAW, IPV6_CHECKSUM, &kTwo, sizeof(kTwo));
+    rval = setsockopt(sock, IPPROTO_RAW, IPV6_CHECKSUM, &kIpv6ChecksumOffset, sizeof(kIpv6ChecksumOffset));
 #else
-    rval = setsockopt(sock, IPPROTO_IPV6, IPV6_CHECKSUM, &kTwo, sizeof(kTwo));
+    rval = setsockopt(sock, IPPROTO_IPV6, IPV6_CHECKSUM, &kIpv6ChecksumOffset, sizeof(kIpv6ChecksumOffset));
 #endif
     if (rval < 0)
     {
@@ -192,7 +190,7 @@ void platformInfraIfInit(otInstance *aInstance, const char *aIfName)
     }
 
     // We need to be able to reject RAs arriving from off-link.
-    rval = setsockopt(sock, IPPROTO_IPV6, IPV6_RECVHOPLIMIT, &kOne, sizeof(kOne));
+    rval = setsockopt(sock, IPPROTO_IPV6, IPV6_RECVHOPLIMIT, &kEnable, sizeof(kEnable));
     if (rval < 0)
     {
         otLogCritPlat("Can't set IPV6_RECVHOPLIMIT: %s", strerror(errno));
@@ -299,7 +297,7 @@ void platformInfraIfProcess(otInstance *aInstance, const fd_set &aReadFdSet)
 
     VerifyOrExit(ifIndex == sInfraIfIndex);
 
-    // We currently acepts only RA & RS messages for the Border Router and it requires that
+    // We currently accept only RA & RS messages for the Border Router and it requires that
     // the hoplimit must be 255.
     VerifyOrExit(hopLimit == 255);
 
@@ -313,7 +311,6 @@ exit:
     {
         otLogDebgPlat("drop ICMPv6 message");
     }
-    return;
 }
 
 uint32_t platformInfraIfGetIndex(void)

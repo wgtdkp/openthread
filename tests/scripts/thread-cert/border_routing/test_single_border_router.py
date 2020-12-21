@@ -98,16 +98,13 @@ class SingleBorderRouter(thread_cert.TestCase):
         #
 
         self.simulator.go(10)
-        logging.info("Host addresses: %r", self.nodes[HOST].get_addrs())
-
-        # The host should have at least an ULA address and a link-local address.
-        self.assertGreaterEqual(len(self.nodes[HOST].get_addrs()), 2)
-
         self.collect_ipaddrs()
 
         logging.info("BR1     addrs: %r", self.nodes[BR1].get_addrs())
         logging.info("ROUTER1 addrs: %r", self.nodes[ROUTER1].get_addrs())
         logging.info("HOST    addrs: %r", self.nodes[HOST].get_addrs())
+
+        self.assertGreaterEqual(len(self.nodes[HOST].get_addrs()), 2)
 
         self.assertTrue(len(self.nodes[BR1].get_prefixes()) == 1)
         self.assertTrue(len(self.nodes[ROUTER1].get_prefixes()) == 1)
@@ -142,14 +139,13 @@ class SingleBorderRouter(thread_cert.TestCase):
         self.nodes[BR1].register_netdata()
 
         self.simulator.go(10)
-        logging.info("Host addresses: %r", self.nodes[HOST].get_addrs())
-        self.assertGreaterEqual(len(self.nodes[HOST].get_addrs()), 2)
-
         self.collect_ipaddrs()
 
         logging.info("BR1     addrs: %r", self.nodes[BR1].get_addrs())
         logging.info("ROUTER1 addrs: %r", self.nodes[ROUTER1].get_addrs())
         logging.info("HOST    addrs: %r", self.nodes[HOST].get_addrs())
+
+        self.assertGreaterEqual(len(self.nodes[HOST].get_addrs()), 2)
 
         self.assertTrue(len(self.nodes[BR1].get_prefixes()) == 2)
         self.assertTrue(len(self.nodes[ROUTER1].get_prefixes()) == 2)

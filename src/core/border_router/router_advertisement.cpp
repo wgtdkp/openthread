@@ -36,8 +36,6 @@
 
 #if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
 
-#include <string.h>
-
 namespace ot {
 
 namespace BorderRouter {
@@ -63,13 +61,14 @@ const Option *Option::GetNextOption(const Option *aCurOption, const uint8_t *aBu
     VerifyOrExit(nextOption + sizeof(Option) <= bufferEnd, nextOption = nullptr);
     VerifyOrExit(nextOption + reinterpret_cast<const Option *>(nextOption)->GetLength() <= bufferEnd,
                  nextOption = nullptr);
+    VerifyOrExit(reinterpret_cast<const Option *>(nextOption)->GetLength() > 0, nextOption = nullptr);
 
 exit:
     return reinterpret_cast<const Option *>(nextOption);
 }
 
 PrefixInfoOption::PrefixInfoOption(void)
-    : Option(Type::kPrefixInfo, 4)
+    : Option(Type::kPrefixInfo, sizeof(*this) / kLengthUnit)
     , mPrefixLength(0)
     , mReserved1(0)
     , mValidLifetime(0)
@@ -133,7 +132,7 @@ void RouteInfoOption::SetPrefix(const Ip6::Prefix &aPrefix)
     // is: (8 bytes fixed option header) + (0, 8, or 16 bytes prefix).
     // Because the length of the option must be padded with 8 bytes,
     // the length of the prefix (in bits) must be padded with 64 bits.
-    SetLength(((aPrefix.mLength + 63) / 64) * 8 + 8);
+    SetLength(((aPrefix.mLength + kLengthUnit * CHAR_BIT - 1) / (kLengthUnit * CHAR_BIT) + 1) * kLengthUnit);
 
     mPrefixLength = aPrefix.mLength;
     mPrefix       = static_cast<const Ip6::Address &>(aPrefix.mPrefix);

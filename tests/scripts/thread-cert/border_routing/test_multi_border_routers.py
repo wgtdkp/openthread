@@ -119,9 +119,6 @@ class MultiBorderRouters(thread_cert.TestCase):
         #
 
         self.simulator.go(10)
-        logging.info("Host addresses: %r", self.nodes[HOST].get_addrs())
-        self.assertGreaterEqual(len(self.nodes[HOST].get_addrs()), 2)
-
         self.collect_ipaddrs()
 
         logging.info("BR1     addrs: %r", self.nodes[BR1].get_addrs())
@@ -181,6 +178,8 @@ class MultiBorderRouters(thread_cert.TestCase):
         logging.info("BR2     addrs: %r", self.nodes[BR2].get_addrs())
         logging.info("ROUTER2 addrs: %r", self.nodes[ROUTER2].get_addrs())
         logging.info("HOST    addrs: %r", self.nodes[HOST].get_addrs())
+
+        self.assertGreaterEqual(len(self.nodes[HOST].get_addrs()), 2)
 
         self.assertTrue(len(self.nodes[BR1].get_prefixes()) == 1)
         self.assertTrue(len(self.nodes[ROUTER1].get_prefixes()) == 1)

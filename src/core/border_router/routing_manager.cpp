@@ -290,7 +290,7 @@ uint8_t RoutingManager::EvaluateOmrPrefix(Ip6::Prefix *aNewOmrPrefixes, uint8_t 
         }
 
         aNewOmrPrefixes[newOmrPrefixNum] = onMeshPrefixConfig.GetPrefix();
-        if (smallestOmrPrefix == nullptr || onMeshPrefixConfig.GetPrefix() < *smallestOmrPrefix)
+        if (smallestOmrPrefix == nullptr || IsPrefixSmallerThan(onMeshPrefixConfig.GetPrefix(), *smallestOmrPrefix))
         {
             smallestOmrPrefix = &aNewOmrPrefixes[newOmrPrefixNum];
         }
@@ -324,7 +324,7 @@ uint8_t RoutingManager::EvaluateOmrPrefix(Ip6::Prefix *aNewOmrPrefixes, uint8_t 
                         smallestOmrPrefix->ToString().AsCString());
             UnpublishLocalOmrPrefix();
 
-            // Remove the local OMR prefix from the list.
+            // Remove the local OMR prefix from the list by overwriting it with the last one.
             *publishedLocalOmrPrefix = aNewOmrPrefixes[--newOmrPrefixNum];
         }
     }
@@ -333,7 +333,7 @@ exit:
     return newOmrPrefixNum;
 }
 
-otError RoutingManager::PublishLocalOmrPrefix()
+otError RoutingManager::PublishLocalOmrPrefix(void)
 {
     otError                         error = OT_ERROR_NONE;
     NetworkData::OnMeshPrefixConfig omrPrefixConfig;
@@ -363,7 +363,7 @@ otError RoutingManager::PublishLocalOmrPrefix()
     return error;
 }
 
-void RoutingManager::UnpublishLocalOmrPrefix()
+void RoutingManager::UnpublishLocalOmrPrefix(void)
 {
     VerifyOrExit(Get<Mle::MleRouter>().IsAttached());
 
@@ -518,7 +518,7 @@ void RoutingManager::EvaluateRoutingPolicy(void)
     mAdvertisedOmrPrefixNum = newOmrPrefixNum;
 }
 
-void RoutingManager::StartRouterSolicitation()
+void RoutingManager::StartRouterSolicitation(void)
 {
     uint32_t randomDelay;
 
@@ -530,7 +530,7 @@ void RoutingManager::StartRouterSolicitation()
     mRouterSolicitTimer.Start(randomDelay);
 }
 
-otError RoutingManager::SendRouterSolicit(void)
+otError RoutingManager::SendRouterSolicitation(void)
 {
     Ip6::Address                    destAddress;
     RouterAdv::RouterSolicitMessage routerSolicit;
@@ -663,18 +663,31 @@ void RoutingManager::SendRouterAdvertisement(const Ip6::Prefix *aNewOmrPrefixes,
     }
 }
 
+bool RoutingManager::IsPrefixSmallerThan(const Ip6::Prefix &aFirstPrefix, const Ip6::Prefix &aSecondPrefix)
+{
+    uint8_t matchedLength;
+
+    OT_ASSERT(aFirstPrefix.GetLength() == aSecondPrefix.GetLength());
+
+    matchedLength =
+        Ip6::Prefix::MatchLength(aFirstPrefix.GetBytes(), aSecondPrefix.GetBytes(), aFirstPrefix.GetBytesSize());
+
+    return matchedLength < aFirstPrefix.GetLength() &&
+           aFirstPrefix.GetBytes()[matchedLength / CHAR_BIT] < aSecondPrefix.GetBytes()[matchedLength / CHAR_BIT];
+}
+
 bool RoutingManager::IsValidOmrPrefix(const Ip6::Prefix &aOmrPrefix)
 {
     // Accept ULA prefix with length of 64 bits and GUA prefix.
     return (aOmrPrefix.mLength == kOmrPrefixLength && aOmrPrefix.mPrefix.mFields.m8[0] == 0xfd) ||
-           ((aOmrPrefix.GetBytes()[0] & 0xE0) == 0x20);
+           (aOmrPrefix.mLength >= 3 && (aOmrPrefix.GetBytes()[0] & 0xE0) == 0x20);
 }
 
 bool RoutingManager::IsValidOnLinkPrefix(const Ip6::Prefix &aOnLinkPrefix)
 {
     // Accept ULA prefix with length of 64 bits and GUA prefix.
-    return (aOnLinkPrefix.mLength == kOnLinkPrefixLength && aOnLinkPrefix.GetBytes()[0] == 0xfd) ||
-           ((aOnLinkPrefix.GetBytes()[0] & 0xE0) == 0x20);
+    return (aOnLinkPrefix.mLength == kOnLinkPrefixLength && aOnLinkPrefix.mPrefix.mFields.m8[0] == 0xfd) ||
+           (aOnLinkPrefix.mLength >= 3 && (aOnLinkPrefix.GetBytes()[0] & 0xE0) == 0x20);
 }
 
 void RoutingManager::HandleRouterAdvertisementTimer(Timer &aTimer)
@@ -703,7 +716,7 @@ void RoutingManager::HandleRouterSolicitTimer(void)
         uint32_t nextSolicitationDelay;
         otError  error;
 
-        error = SendRouterSolicit();
+        error = SendRouterSolicitation();
         ++mRouterSolicitCount;
 
         if (error == OT_ERROR_NONE)
@@ -815,6 +828,12 @@ void RoutingManager::HandleRouterAdvertisement(const Ip6::Address &aSrcAddress,
         }
 
         pio = static_cast<const PrefixInfoOption *>(option);
+
+        if (!pio->IsValid())
+        {
+            continue;
+        }
+
         needReevaluate |= UpdateDiscoveredOnLinkPrefixes(*pio);
     }
 

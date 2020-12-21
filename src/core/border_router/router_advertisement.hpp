@@ -76,6 +76,11 @@ public:
         kRouteInfo  = 24, ///< Route Information Option.
     };
 
+    enum : uint8_t
+    {
+        kLengthUnit = 8u, ///< The unit of length in octets.
+    };
+
     /**
      * This constructor initializes the option with given type and length.
      *
@@ -106,7 +111,7 @@ public:
      * @param[in]  aLength  The length of the option in unit of 1 byte.
      *
      */
-    void SetLength(uint16_t aLength) { mLength = (aLength + 7) / 8; }
+    void SetLength(uint16_t aLength) { mLength = (aLength + kLengthUnit - 1) / kLengthUnit; }
 
     /**
      * This method returns the length of the option (in bytes).
@@ -127,6 +132,14 @@ public:
      *
      */
     static const Option *GetNextOption(const Option *aCurOption, const uint8_t *aBuffer, uint16_t aBufferLength);
+
+    /**
+     * This method tells whether this option is valid.
+     *
+     * @return  A boolean indicates whether this option is valid.
+     *
+     */
+    bool IsValid(void) const { return mLength > 0; }
 
 private:
     Type    mType;   // Type of the option.
@@ -153,7 +166,7 @@ public:
     PrefixInfoOption(void);
 
     /**
-     * This method sets the on on-link (L) flag.
+     * This method sets the on-link (L) flag.
      *
      * @param[in]  aOnLink  A boolean indicates whether the prefix is on-link or off-link.
      *
@@ -209,6 +222,17 @@ public:
      */
     void GetPrefix(Ip6::Prefix &aPrefix) const;
 
+    /**
+     * This method tells whether this option is valid.
+     *
+     * @return  A boolean indicates whether this option is valid.
+     *
+     */
+    bool IsValid(void) const
+    {
+        return (GetLength() == sizeof(*this)) && (mPrefixLength <= OT_IP6_ADDRESS_SIZE * CHAR_BIT);
+    }
+
 private:
     enum : uint8_t
     {
@@ -219,7 +243,7 @@ private:
     uint8_t      mPrefixLength;      // The prefix length in bits.
     uint8_t      mReserved1;         // The reserved field.
     uint32_t     mValidLifetime;     // The valid lifetime of the prefix.
-    uint32_t     mPreferredLifetime; // The preferred lifetime of the prefix.s
+    uint32_t     mPreferredLifetime; // The preferred lifetime of the prefix.
     uint32_t     mReserved2;         // The reserved field.
     Ip6::Address mPrefix;            // The prefix.
 } OT_TOOL_PACKED_END;
@@ -259,6 +283,18 @@ public:
      */
     void SetPrefix(const Ip6::Prefix &aPrefix);
 
+    /**
+     * This method tells whether this option is valid.
+     *
+     * @return  A boolean indicates whether this option is valid.
+     *
+     */
+    bool IsValid(void) const
+    {
+        return (GetLength() == kLengthUnit || GetLength() == 2 * kLengthUnit || GetLength() == 3 * kLengthUnit) &&
+               (mPrefixLength <= OT_IP6_ADDRESS_SIZE * 8);
+    }
+
 private:
     uint8_t      mPrefixLength;  // The prefix length in bits.
     uint8_t      mReserved;      // The reserved field.
@@ -287,16 +323,24 @@ public:
     RouterAdvMessage(void);
 
     /**
-     * This method sets the Router Lifetime.
+     * This method sets the Router Lifetime in seconds.
      *
      * Zero Router Lifetime means we are not a default router.
      *
-     * @param[in]  aRouterLifetime  The router lifetime.
+     * @param[in]  aRouterLifetime  The router lifetime in seconds.
      *
      */
-    void SetRouterLifetime(uint16_t aRouterLifetime) { mHeader.mData.m16[1] = HostSwap16(aRouterLifetime); }
+    void SetRouterLifetime(uint16_t aRouterLifetime)
+    {
+        mHeader.mData.m16[kRouteLifetimeIdx] = HostSwap16(aRouterLifetime);
+    }
 
 private:
+    enum : uint8_t
+    {
+        kRouteLifetimeIdx = 1u, // The index of Route Lifetime in ICMPv6 Header Data. in unit of 2 octets.
+    };
+
     Ip6::Icmp::Header mHeader;        // The common ICMPv6 header.
     uint32_t          mReachableTime; // The reachable time. In milliseconds.
     uint32_t          mRetransTimer;  // The retransmission timer. In milliseconds.
