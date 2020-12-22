@@ -141,6 +141,9 @@ Interpreter::Interpreter(Instance *aInstance)
 #if OPENTHREAD_CONFIG_JOINER_ENABLE
     , mJoiner(*this)
 #endif
+#if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
+    , mSrpServer(*this)
+#endif
     , mInstance(aInstance)
 {
 #if OPENTHREAD_FTD || OPENTHREAD_CONFIG_TMF_NETWORK_DIAG_MTD_ENABLE
@@ -4054,6 +4057,13 @@ otError Interpreter::ProcessCommissioner(uint8_t aArgsLength, char *aArgs[])
 otError Interpreter::ProcessJoiner(uint8_t aArgsLength, char *aArgs[])
 {
     return mJoiner.Process(aArgsLength, aArgs);
+}
+#endif
+
+#if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
+otError Interpreter::ProcessSrpServer(uint8_t aArgsLength, char *aArgs[])
+{
+    return mSrpServer.Process(aArgsLength, aArgs);
 }
 #endif
 

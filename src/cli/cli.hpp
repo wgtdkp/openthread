@@ -50,6 +50,7 @@
 #include "cli/cli_dataset.hpp"
 #include "cli/cli_joiner.hpp"
 #include "cli/cli_network_data.hpp"
+#include "cli/cli_srp_server.hpp"
 #include "cli/cli_udp.hpp"
 #if OPENTHREAD_CONFIG_COAP_API_ENABLE
 #include "cli/cli_coap.hpp"
@@ -86,6 +87,7 @@ class Interpreter
     friend class Dataset;
     friend class Joiner;
     friend class NetworkData;
+    friend class SrpServer;
     friend class UdpExample;
 
 public:
@@ -374,6 +376,9 @@ private:
     otError ProcessMulticastPromiscuous(uint8_t aArgsLength, char *aArgs[]);
 #if OPENTHREAD_CONFIG_JOINER_ENABLE
     otError ProcessJoiner(uint8_t aArgsLength, char *aArgs[]);
+#endif
+#if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
+    otError ProcessSrpServer(uint8_t aArgsLength, char *aArgs[]);
 #endif
 #if OPENTHREAD_FTD
     otError ProcessJoinerPort(uint8_t aArgsLength, char *aArgs[]);
@@ -749,6 +754,9 @@ private:
 #if OPENTHREAD_CONFIG_SNTP_CLIENT_ENABLE
         {"sntp", &Interpreter::ProcessSntp},
 #endif
+#if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
+        {"srpserver", &Interpreter::ProcessSrpServer},
+#endif
         {"state", &Interpreter::ProcessState},
         {"thread", &Interpreter::ProcessThread},
         {"txpower", &Interpreter::ProcessTxPower},
@@ -798,6 +806,10 @@ private:
 
 #if OPENTHREAD_CONFIG_JOINER_ENABLE
     Joiner mJoiner;
+#endif
+
+#if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
+    SrpServer mSrpServer;
 #endif
 
     Instance *mInstance;

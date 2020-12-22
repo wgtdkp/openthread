@@ -316,20 +316,54 @@ exit:
     return error;
 }
 
-void ResourceRecord::Init(uint16_t aType, uint16_t aClass, uint32_t aTtl)
+bool AaaaRecord::IsValid(void) const
 {
-    SetType(aType);
-    SetClass(aClass);
-    SetTtl(aTtl);
-    SetLength(0);
+    return GetType() == Dns::ResourceRecord::kTypeAaaa && GetSize() == sizeof(*this);
 }
 
-void ResourceRecordAaaa::Init(void)
+#if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
+
+bool KeyRecord::IsValid(void) const
 {
-    ResourceRecord::Init(kTypeAaaa);
-    SetLength(sizeof(mAddress));
-    mAddress.Clear();
+    return GetType() == Dns::ResourceRecord::kTypeKey;
 }
+
+void Ecdsa256KeyRecord::Init(void)
+{
+    KeyRecord::Init();
+    SetAlgorithm(kAlgorithmEcdsaP256Sha256);
+}
+
+bool Ecdsa256KeyRecord::IsValid(void) const
+{
+    return KeyRecord::IsValid() && GetLength() == sizeof(*this) - sizeof(ResourceRecord) &&
+           GetAlgorithm() == kAlgorithmEcdsaP256Sha256;
+}
+
+bool SigRecord::IsValid(void) const
+{
+    return GetType() == Dns::ResourceRecord::kTypeSig && GetLength() >= sizeof(*this) - sizeof(ResourceRecord);
+}
+
+void UpdateLeaseOptRecord::Init(void)
+{
+    OptRecord::Init(0); // Update lease uses CLASS value zero.
+    SetTtl(0);
+    SetLength(static_cast<uint16_t>(sizeof(UpdateLeaseOptRecord) - sizeof(ResourceRecord)));
+    SetOptionCode(kOptionCodeUpdateLease);
+    SetOptionLength(static_cast<uint16_t>(sizeof(UpdateLeaseOptRecord) - sizeof(OptRecord)));
+}
+
+bool UpdateLeaseOptRecord::IsValid(void) const
+{
+    return GetType() == Dns::ResourceRecord::kTypeOpt && GetClass() == kClassZero && GetTtl() == 0 &&
+           GetOptionCode() == Dns::OptRecord::kOptionCodeUpdateLease &&
+           GetOptionLength() == sizeof(UpdateLeaseOptRecord) - sizeof(OptRecord) &&
+           GetLeaseInterval() <= GetKeyLeaseInterval() &&
+           // Earlier version of the Lease Option includes optional serial number at the end.
+           GetSize() >= sizeof(*this);
+}
+#endif // OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
 
 } // namespace Dns
 } // namespace ot

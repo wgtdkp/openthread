@@ -95,6 +95,7 @@ extern "C" {
 #define _OT_REGION_MLR_PREFIX "-MLR-----: "
 #define _OT_REGION_DUA_PREFIX "-DUA-----: "
 #define _OT_REGION_BR_PREFIX "-BR------: "
+#define _OT_REGION_SRP_PREFIX "-SRP-----: "
 #else
 #define _OT_REGION_API_PREFIX _OT_REGION_SUFFIX
 #define _OT_REGION_MLE_PREFIX _OT_REGION_SUFFIX
@@ -116,6 +117,7 @@ extern "C" {
 #define _OT_REGION_MLR_PREFIX _OT_REGION_SUFFIX
 #define _OT_REGION_DUA_PREFIX _OT_REGION_SUFFIX
 #define _OT_REGION_BR_PREFIX _OT_REGION_SUFFIX
+#define _OT_REGION_SRP_PREFIX _OT_REGION_SUFFIX
 #endif
 
 /**
@@ -562,6 +564,64 @@ void otLogDebg(otLogRegion aRegion, const char *aRegionPrefix, const char *aForm
 #define otLogNoteBbr(...)
 #define otLogInfoBbr(...)
 #define otLogDebgBbr(...)
+#endif
+
+/**
+ * @def otLogCritSrp
+ *
+ * This function generates a log with level critical for the Service Registration Protocol(SRP) region.
+ *
+ * @param[in]  ...  Arguments for the format specification.
+ *
+ */
+
+/**
+ * @def otLogWarnSrp
+ *
+ * This function generates a log with level warning for the Service Registration Protocol(SRP) region.
+ *
+ * @param[in]  ...  Arguments for the format specification.
+ *
+ */
+
+/**
+ * @def otLogNoteSrp
+ *
+ * This function generates a log with level note for the Service Registration Protocol(SRP) region.
+ *
+ * @param[in]  ...  Arguments for the format specification.
+ *
+ */
+
+/**
+ * @def otLogInfoSrp
+ *
+ * This function generates a log with level info for the Service Registration Protocol(SRP) region.
+ *
+ * @param[in]  ...  Arguments for the format specification.
+ *
+ */
+
+/**
+ * @def otLogDebgSrp
+ *
+ * This function generates a log with level debug for the Service Registration Protocol(SRP) region.
+ *
+ * @param[in]  ...  Arguments for the format specification.
+ *
+ */
+#if OPENTHREAD_CONFIG_LOG_SRP
+#define otLogCritSrp(...) otLogCrit(OT_LOG_REGION_SRP, _OT_REGION_SRP_PREFIX, __VA_ARGS__)
+#define otLogWarnSrp(...) otLogWarn(OT_LOG_REGION_SRP, _OT_REGION_SRP_PREFIX, __VA_ARGS__)
+#define otLogNoteSrp(...) otLogNote(OT_LOG_REGION_SRP, _OT_REGION_SRP_PREFIX, __VA_ARGS__)
+#define otLogInfoSrp(...) otLogInfo(OT_LOG_REGION_SRP, _OT_REGION_SRP_PREFIX, __VA_ARGS__)
+#define otLogDebgSrp(...) otLogDebg(OT_LOG_REGION_SRP, _OT_REGION_SRP_PREFIX, __VA_ARGS__)
+#else
+#define otLogCritSrp(...)
+#define otLogWarnSrp(...)
+#define otLogNoteSrp(...)
+#define otLogInfoSrp(...)
+#define otLogDebgSrp(...)
 #endif
 
 /**
