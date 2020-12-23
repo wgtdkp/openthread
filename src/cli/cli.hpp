@@ -470,6 +470,7 @@ private:
     otError ProcessPskc(uint8_t aArgsLength, char *aArgs[]);
 #endif
     otError ProcessRcp(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessRegion(uint8_t aArgsLength, char *aArgs[]);
 #if OPENTHREAD_FTD
     otError ProcessReleaseRouterId(uint8_t aArgsLength, char *aArgs[]);
 #endif
@@ -730,6 +731,7 @@ private:
         {"pskc", &Interpreter::ProcessPskc},
 #endif
         {"rcp", &Interpreter::ProcessRcp},
+        {"region", &Interpreter::ProcessRegion},
 #if OPENTHREAD_FTD
         {"releaserouterid", &Interpreter::ProcessReleaseRouterId},
 #endif
