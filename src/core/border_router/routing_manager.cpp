@@ -74,7 +74,7 @@ RoutingManager::RoutingManager(Instance &aInstance)
     memset(mAdvertisedOmrPrefixes, 0, sizeof(mAdvertisedOmrPrefixes));
 
     mLocalOnLinkPrefix.Clear();
-    mDiscoveredOnLinkPrefix.Clear();
+    memset(mDiscoveredOnLinkPrefixes, 0, sizeof(mDiscoveredOnLinkPrefixes));
 }
 
 otError RoutingManager::Init(uint32_t aInfraIfIndex)
@@ -435,14 +435,14 @@ bool RoutingManager::ContainsPrefix(const Ip6::Prefix &aPrefix, const Ip6::Prefi
 const Ip6::Prefix *RoutingManager::EvaluateOnLinkPrefix(void) const
 {
     const Ip6::Prefix *newOnLinkPrefix      = nullptr;
-    Ip6::Prefix *      smallestOnLinkPrefix = nullptr;
+    const Ip6::Prefix *smallestOnLinkPrefix = nullptr;
 
     // We don't evaluate on-link prefix if we are doing Router Solicitation.
     VerifyOrExit(!mRouterSolicitTimer.IsRunning());
 
     for (uint8_t i = 0; i < mDiscoveredOnLinkPrefixNum; ++i)
     {
-        if (smallestOnLinkPrefix == nullptr || mDiscoveredOnLinkPrefixes[i].mPrefix < *smallestOnLinkPrefix)
+        if (smallestOnLinkPrefix == nullptr || IsPrefixSmallerThan(mDiscoveredOnLinkPrefixes[i].mPrefix, *smallestOnLinkPrefix))
         {
             smallestOnLinkPrefix = &mDiscoveredOnLinkPrefixes[i].mPrefix;
         }
