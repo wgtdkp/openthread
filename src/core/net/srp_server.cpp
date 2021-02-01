@@ -253,7 +253,7 @@ bool Server::HasNameConflictsWith(Host &aHost)
     // Check not only services of this host but all hosts.
     while ((service = aHost.GetNextService(service)) != nullptr)
     {
-        Service *existingService = FindService(service->mFullName);
+        Service *existingService = FindService(service->GetInstanceName(), service->GetName());
         if (existingService != nullptr && *service->GetHost().GetKey() != *existingService->GetHost().GetKey())
         {
             ExitNow(hasConflicts = true);
@@ -358,7 +358,7 @@ void Server::HandleSrpUpdateResult(otError                  aError,
         existingHost->CopyResourcesFrom(aHost);
         while ((service = aHost.GetNextService(service)) != nullptr)
         {
-            Service *existingService = existingHost->FindService(service->mFullName);
+            Service *existingService = existingHost->FindService(service->GetInstanceName(), service->GetName());
 
             if (service->mIsDeleted)
             {
@@ -369,12 +369,12 @@ void Server::HandleSrpUpdateResult(otError                  aError,
             }
             else
             {
-                Service *newService = existingHost->AddService(service->mFullName);
+                Service *newService = existingHost->AddService(service->GetInstanceName(), service->GetName());
 
                 VerifyOrExit(newService != nullptr, aError = OT_ERROR_NO_BUFS);
                 SuccessOrExit(aError = newService->CopyResourcesFrom(*service));
-                otLogInfoSrp("[server] %s service %s", (existingService != nullptr) ? "update existing" : "add new",
-                             service->mFullName);
+                otLogInfoSrp("[server] %s service %s.%s", (existingService != nullptr) ? "update existing" : "add new",
+                             service->GetInstanceName(), service->GetName());
             }
         }
 
@@ -988,7 +988,7 @@ void Server::HandleUpdate(const Dns::UpdateHeader &aDnsHeader, Host *aHost, cons
             {
                 if (!existingService->mIsDeleted)
                 {
-                    Service *service = aHost->AddService(existingService->mFullName);
+                    Service *service = aHost->AddService(existingService->GetInstanceName(), existingService->GetName());
                     VerifyOrExit(service != nullptr, error = OT_ERROR_NO_BUFS);
                     service->mIsDeleted = true;
                 }
@@ -1174,7 +1174,7 @@ void Server::HandleLeaseTimer(void)
 
                 if (service->GetKeyExpireTime() <= now)
                 {
-                    otLogInfoSrp("[server] KEY LEASE of service %s expired", service->mFullName);
+                    otLogInfoSrp("[server] KEY LEASE of service %s.%s expired", service->GetInstanceName(), service->GetName());
                     host->RemoveAndFreeService(service);
                 }
                 else
@@ -1221,7 +1221,7 @@ void Server::HandleLeaseTimer(void)
                 }
                 else if (service->GetExpireTime() <= now)
                 {
-                    otLogInfoSrp("[server] LEASE of service %s expired", service->mFullName);
+                    otLogInfoSrp("[server] LEASE of service %s.%s expired", service->GetInstanceName(), service->GetName());
 
                     // The service gets expired, delete it.
                     service->DeleteResourcesButRetainName();
@@ -1288,14 +1288,16 @@ exit:
 
 void Server::Service::Free(void)
 {
-    GetInstance().HeapFree(mFullName);
+    GetInstance().HeapFree(mInstanceName);
+    GetInstance().HeapFree(mName);
     GetInstance().HeapFree(mTxtData);
     GetInstance().HeapFree(this);
 }
 
 Server::Service::Service(Instance &aInstance)
     : InstanceLocator(aInstance)
-    , mFullName(nullptr)
+    , mInstanceName(nullptr)
+    , mName(nullptr)
     , mPriority(0)
     , mWeight(0)
     , mPort(0)

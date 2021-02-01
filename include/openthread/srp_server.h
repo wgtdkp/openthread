@@ -217,14 +217,14 @@ const otSrpServerHost *otSrpServerGetNextHost(otInstance *aInstance, const otSrp
 bool otSrpServerHostIsDeleted(const otSrpServerHost *aHost);
 
 /**
- * This method returns the full name of the host.
+ * This method returns the host name less the domain.
  *
  * @param[in]  aHost  A pointer to the SRP service host.
  *
  * @returns  A pointer to the null-terminated host name string.
  *
  */
-const char *otSrpServerHostGetFullName(const otSrpServerHost *aHost);
+const char *otSrpServerHostGetName(const otSrpServerHost *aHost);
 
 /**
  * This method returns the addresses of given host.
@@ -264,14 +264,26 @@ const otSrpServerService *otSrpServerHostGetNextService(const otSrpServerHost * 
 bool otSrpServerServiceIsDeleted(const otSrpServerService *aService);
 
 /**
- * This method returns the full name of the service.
+ * This method returns the service instance name.
+ *
+ * @param[in]  aService  A pointer to the SRP service.
+ *
+ * @returns  A pointer to the null-terminated instance name string.
+ *
+ */
+const char *otSrpServerServiceGetInstanceName(const otSrpServerService *aService);
+
+/**
+ * This method returns the service name.
+ *
+ * The service name is in form of '<NAME>.<PROTOCOL>'.
  *
  * @param[in]  aService  A pointer to the SRP service.
  *
  * @returns  A pointer to the null-terminated service name string.
  *
  */
-const char *otSrpServerServiceGetFullName(const otSrpServerService *aService);
+const char *otSrpServerServiceGetName(const otSrpServerService *aService);
 
 /**
  * This method returns the port of the service instance.

@@ -784,7 +784,7 @@ public:
      * @retval OT_ERROR_NO_BUFS       Name could not fit in @p aNameBufferSize chars.
      *
      */
-    static otError ReadName(const Message &aMessage, uint16_t &aOffset, char *aNameBuffer, uint16_t aNameBufferSize);
+    static otError ReadName(const Message &aMessage, uint16_t &aOffset, char *aNameBuffer, uint16_t aNameBufferSize, const char **aServiceName, uint8_t *aServiceNameLength);
 
     /**
      * This static method compares a single name label from a message with a given label string.
@@ -889,6 +889,21 @@ public:
      *
      */
     static otError CompareName(const Message &aMessage, uint16_t &aOffset, const Name &aName);
+
+    /**
+     * This static method returns the service name in the full name.
+     *
+     * The service name is in format of '<NAME>.<PROTOCOL>'.
+     *
+     * @param[in]   aFullName           The full-qualified DNS name.
+     * @param[in]   aDomainLength       The length of the domain.
+     * @param[out]  aServiceNameLength  The length of the service name.
+     *
+     * @returns A pointer to the null-terminated service name string, nullptr
+     *          if the DNS name is not a valid full-qualified service name.
+     *
+     */
+    static const char *GetServiceName(const char *aFullName, uint8_t aDomainLength, uint8_t &aServiceNameLength);
 
 private:
     enum : char

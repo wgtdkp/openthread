@@ -240,11 +240,11 @@ exit:
     return error;
 }
 
-otError Name::ReadName(const Message &aMessage, uint16_t &aOffset, char *aNameBuffer, uint16_t aNameBufferSize)
+otError Name::ReadName(const Message &aMessage, uint16_t &aOffset, char *aNameBuffer, uint16_t aNameBufferSize, const char **aServiceName, uint8_t *aServiceNameLength)
 {
     otError       error;
     LabelIterator iterator(aMessage, aOffset);
-    bool          firstLabel = true;
+    uint8_t       labelCount = 0;
     uint8_t       labelLength;
 
     while (true)
@@ -255,7 +255,7 @@ otError Name::ReadName(const Message &aMessage, uint16_t &aOffset, char *aNameBu
         {
         case OT_ERROR_NONE:
 
-            if (!firstLabel)
+            if (labelCount > 0)
             {
                 *aNameBuffer++ = kLabelSeperatorChar;
                 aNameBufferSize--;
@@ -268,7 +268,21 @@ otError Name::ReadName(const Message &aMessage, uint16_t &aOffset, char *aNameBu
             SuccessOrExit(error = iterator.ReadLabel(aNameBuffer, labelLength, /* aAllowDotCharInLabel */ false));
             aNameBuffer += labelLength;
             aNameBufferSize -= labelLength;
-            firstLabel = false;
+            labelCount++;
+
+            if (aServiceName != nullptr && aServiceNameLength != nullptr)
+            {
+                if (labelCount == 1)
+                {
+                    *aServiceName = aNameBuffer;
+                    *aServiceNameLength = aNameBufferSize;
+                }
+                else if (labelCount == 3)
+                {
+                    *aServiceNameLength -= aNameBufferSize;
+                }
+            }
+
             break;
 
         case OT_ERROR_NOT_FOUND:
@@ -289,6 +303,8 @@ otError Name::ReadName(const Message &aMessage, uint16_t &aOffset, char *aNameBu
     }
 
 exit:
+    if (labelCount )
+
     return error;
 }
 
@@ -410,6 +426,20 @@ otError Name::CompareName(const Message &aMessage, uint16_t &aOffset, const Name
                ? CompareName(aMessage, aOffset, aName.mString)
                : (aName.IsFromMessage() ? CompareName(aMessage, aOffset, *aName.mMessage, aName.mOffset)
                                         : ParseName(aMessage, aOffset));
+}
+
+const char *Name::GetServiceName(const char *aFullName, uint8_t aDomainLength, uint8_t &aServiceNameLength)
+{
+    const char *serviceName = nullptr;
+    uint8_t nameLength = StringLength(aFullName, kMaxLength);
+
+    VerifyOrExit(nameLength > aDomainLength);
+
+    serviceName = aFullName + nameLength - aDomainLength;
+
+
+exit:
+    return serviceName;
 }
 
 otError Name::LabelIterator::GetNextLabel(void)

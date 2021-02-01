@@ -102,9 +102,9 @@ bool otSrpServerHostIsDeleted(const otSrpServerHost *aHost)
     return static_cast<const Srp::Server::Host *>(aHost)->IsDeleted();
 }
 
-const char *otSrpServerHostGetFullName(const otSrpServerHost *aHost)
+const char *otSrpServerHostGetName(const otSrpServerHost *aHost)
 {
-    return static_cast<const Srp::Server::Host *>(aHost)->GetFullName();
+    return static_cast<const Srp::Server::Host *>(aHost)->GetName();
 }
 
 const otIp6Address *otSrpServerHostGetAddresses(const otSrpServerHost *aHost, uint8_t *aAddressesNum)
@@ -130,6 +130,16 @@ bool otSrpServerServiceIsDeleted(const otSrpServerService *aService)
 const char *otSrpServerServiceGetFullName(const otSrpServerService *aService)
 {
     return static_cast<const Srp::Server::Service *>(aService)->GetFullName();
+}
+
+const char *otSrpServerServiceGetInstanceName(const otSrpServerService *aService)
+{
+    return static_cast<const Srp::Server::Service *>(aService)->GetInstanceName();
+}
+
+const char *otSrpServerServiceGetName(const otSrpServerService *aService)
+{
+    return static_cast<const Srp::Server::Service *>(aService)->GetName();
 }
 
 uint16_t otSrpServerServiceGetPort(const otSrpServerService *aService)

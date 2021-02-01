@@ -117,12 +117,22 @@ public:
         bool IsDeleted(void) const { return mIsDeleted; }
 
         /**
-         * This method returns the full name of the service.
+         * This method returns the service instance name.
+         *
+         * @returns  A pointer to the null-terminated instance name string.
+         *
+         */
+        const char *GetInstanceName(void) const { return mInstanceName; }
+
+        /**
+         * This method returns the service name.
+         *
+         * The service name is in form of '<NAME>.<PROTOCOL>'.
          *
          * @returns  A pointer to the null-terminated service name string.
          *
          */
-        const char *GetFullName(void) const { return mFullName; }
+        const char *GetName(void) const { return mName; }
 
         /**
          * This method returns the port of the service instance.
@@ -206,7 +216,8 @@ public:
         void    ClearResources(void);
         void    DeleteResourcesButRetainName(void);
 
-        char *           mFullName;
+        char *           mInstanceName;
+        char *           mName;
         uint16_t         mPriority;
         uint16_t         mWeight;
         uint16_t         mPort;
@@ -257,12 +268,12 @@ public:
         bool IsDeleted(void) const { return (mLease == 0); }
 
         /**
-         * This method returns the full name of the host.
+         * This method returns the host name less the domain.
          *
-         * @returns  A pointer to the null-terminated full host name.
+         * @returns  A pointer to the null-terminated host name string.
          *
          */
-        const char *GetFullName(void) const { return mFullName; }
+        const char *GetName(void) const { return mName; }
 
         /**
          * This method returns adrersses of the host.
@@ -333,9 +344,9 @@ public:
         }
 
         /**
-         * This method tells whether the host matches a given full name.
+         * This method tells whether the host matches a given name.
          *
-         * @param[in]  aFullName  The full name.
+         * @param[in]  aName  The host name.
          *
          * @returns  A boolean that indicates whether the host matches the given name.
          *
@@ -349,7 +360,7 @@ public:
         };
 
         explicit Host(Instance &aInstance);
-        otError  SetFullName(const char *aFullName);
+        otError  SetName(const char *aName);
         void     SetKey(Dns::Ecdsa256KeyRecord &aKey);
         void     SetLease(uint32_t aLease);
         void     SetKeyLease(uint32_t aKeyLease);
@@ -363,7 +374,7 @@ public:
         Service *FindService(const char *aFullName);
         otError  AddIp6Address(const Ip6::Address &aIp6Address);
 
-        char *       mFullName;
+        char *       mName;
         Ip6::Address mAddresses[kMaxAddressesNum];
         uint8_t      mAddressesNum;
         Host *       mNext;
