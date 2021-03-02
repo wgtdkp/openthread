@@ -216,9 +216,17 @@ void Server::AddHost(Host *aHost)
 
 void Server::RemoveAndFreeHost(Host *aHost)
 {
-    otLogInfoSrp("[server] fully remove host %s", aHost->GetFullName());
     IgnoreError(mHosts.Remove(*aHost));
-    aHost->Free();
+
+    if (mServiceUpdateHandler != nullptr)
+    {
+        aHost->SetDeleted(true);
+    }
+    else
+    {
+        otLogInfoSrp("[server] fully remove host %s", aHost->GetFullName());
+        aHost->Free();
+    }
 }
 
 const Server::Service *Server::FindService(const char *aFullName) const
