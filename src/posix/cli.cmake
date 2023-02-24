@@ -44,11 +44,9 @@ target_compile_options(ot-cli PRIVATE
 )
 
 target_link_libraries(ot-cli
-    openthread-cli-ftd
-    openthread-posix
     openthread-ftd
-    openthread-posix
     openthread-cli-ftd
+    openthread-posix
     openthread-hdlc
     openthread-spinel-rcp
     ${OT_MBEDTLS}

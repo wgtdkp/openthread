@@ -39,6 +39,7 @@ set(COMMON_COMPILE_OPTIONS
 )
 
 add_library(ot-test-platform
+    OBJECT
     test_platform.cpp
     test_util.cpp
 )
@@ -60,14 +61,12 @@ target_link_libraries(ot-test-platform
 )
 
 set(COMMON_LIBS
+    ot-config
+    openthread-ftd
     openthread-spinel-ncp
     openthread-hdlc
     ot-test-platform
-    openthread-ftd
-    ot-test-platform
     ${OT_MBEDTLS}
-    ot-config
-    openthread-ftd
 )
 
 add_executable(ot-test-aes

@@ -38,14 +38,12 @@ if(NOT DEFINED OT_PLATFORM_LIB_FTD)
 endif()
 
 target_link_libraries(ot-ncp-ftd PRIVATE
-    openthread-ncp-ftd
-    ${OT_PLATFORM_LIB_FTD}
     openthread-ftd
-    ${OT_PLATFORM_LIB_FTD}
-    openthread-ncp-ftd
-    ${OT_MBEDTLS}
     ot-config-ftd
     ot-config
+    openthread-ncp-ftd
+    ${OT_PLATFORM_LIB_FTD}
+    ${OT_MBEDTLS}
 )
 
 install(TARGETS ot-ncp-ftd DESTINATION bin)

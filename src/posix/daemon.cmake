@@ -37,16 +37,15 @@ target_compile_options(ot-daemon PRIVATE
 )
 
 target_link_libraries(ot-daemon PRIVATE
-    openthread-cli-ftd
-    openthread-posix
+    ot-posix-config
+    ot-config-ftd
+    ot-config
     openthread-ftd
+    openthread-cli-ftd
     openthread-posix
     openthread-hdlc
     openthread-spinel-rcp
     ${OT_MBEDTLS}
-    ot-posix-config
-    ot-config-ftd
-    ot-config
 )
 
 add_executable(ot-ctl

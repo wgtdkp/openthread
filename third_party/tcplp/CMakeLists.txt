@@ -51,7 +51,7 @@ string(REPLACE "-Wconversion" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 string(REPLACE "-Wunused-parameter" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 
 if(OT_FTD)
-    add_library(tcplp-ftd STATIC ${src_tcplp})
+    add_library(tcplp-ftd OBJECT ${src_tcplp})
     target_compile_options(tcplp-ftd
         PRIVATE
             "-Wno-sign-compare"
@@ -71,15 +71,10 @@ if(OT_FTD)
             ot-config
     )
 
-    target_link_libraries(tcplp-ftd
-        PRIVATE
-            openthread-ftd
-    )
-
 endif()
 
 if(OT_MTD)
-    add_library(tcplp-mtd STATIC ${src_tcplp})
+    add_library(tcplp-mtd OBJECT ${src_tcplp})
     target_compile_options(tcplp-mtd
         PRIVATE
             "-Wno-sign-compare"
@@ -98,10 +93,4 @@ if(OT_MTD)
         PRIVATE
             ot-config
     )
-
-    target_link_libraries(tcplp-mtd
-        PRIVATE
-            openthread-mtd
-    )
-
 endif()

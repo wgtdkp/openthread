@@ -38,14 +38,13 @@ if(NOT DEFINED OT_PLATFORM_LIB_FTD)
 endif()
 
 target_link_libraries(ot-cli-ftd PRIVATE
-    openthread-cli-ftd
-    ${OT_PLATFORM_LIB_FTD}
+
     openthread-ftd
-    ${OT_PLATFORM_LIB_FTD}
-    openthread-cli-ftd
-    ${OT_MBEDTLS}
-    ot-config-ftd
     ot-config
+    ot-config-ftd
+    openthread-cli-ftd
+    ${OT_PLATFORM_LIB_FTD}
+    ${OT_MBEDTLS}
 )
 
 install(TARGETS ot-cli-ftd
