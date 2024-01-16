@@ -69,7 +69,11 @@
  * This is the socket name used by daemon mode.
  *
  */
+#ifdef __ANDROID__
+#define OPENTHREAD_POSIX_DAEMON_SOCKET_NAME "/dev/socket/ot-daemon"
+#else
 #define OPENTHREAD_POSIX_DAEMON_SOCKET_NAME OPENTHREAD_POSIX_CONFIG_DAEMON_SOCKET_BASENAME ".sock"
+#endif
 
 #ifdef __cplusplus
 extern "C" {

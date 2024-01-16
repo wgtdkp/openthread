@@ -210,6 +210,9 @@ void Daemon::SetUp(void)
         DieNow(OT_EXIT_FAILURE);
     }
 
+// Android specifically don't need the lock for the Thread TUN interface so void creating
+// additional file under /data/misc/apexdata/com.android.tethering/ot-daemon when unnecessary
+#ifndef __ANDROID__
     {
         static_assert(sizeof(OPENTHREAD_POSIX_DAEMON_SOCKET_LOCK) == sizeof(OPENTHREAD_POSIX_DAEMON_SOCKET_NAME),
                       "sock and lock file name pattern should have the same length!");
@@ -229,6 +232,7 @@ void Daemon::SetUp(void)
     {
         DieNowWithMessage("flock", OT_EXIT_ERROR_ERRNO);
     }
+#endif // __ANDROID__
 
     memset(&sockname, 0, sizeof(struct sockaddr_un));
 
@@ -287,6 +291,7 @@ void Daemon::TearDown(void)
         mListenSocket = -1;
     }
 
+#ifndef __ANDROID__
     if (gPlatResetReason != OT_PLAT_RESET_REASON_SOFTWARE)
     {
         Filename sockfile;
@@ -302,6 +307,7 @@ void Daemon::TearDown(void)
         close(mDaemonLock);
         mDaemonLock = -1;
     }
+#endif // __ANDROID__
 }
 
 void Daemon::Update(otSysMainloopContext &aContext)
