@@ -268,7 +268,7 @@ public:
 #endif
 
 private:
-    static constexpr uint8_t kFailedRouterTransmissions      = 4;
+    static constexpr uint8_t kFailedRouterTransmissions      = Mle::kFailedRouterTransmissions;
     static constexpr uint8_t kFailedCslDataPollTransmissions = 15;
 
     static constexpr uint8_t kReassemblyTimeout      = OPENTHREAD_CONFIG_6LOWPAN_REASSEMBLY_TIMEOUT; // in seconds.
