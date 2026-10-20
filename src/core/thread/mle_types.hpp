@@ -111,6 +111,11 @@ constexpr uint16_t kParentReselectTimeout = OPENTHREAD_CONFIG_PARENT_SEARCH_RESE
 constexpr uint8_t kFailedChildTransmissions = OPENTHREAD_CONFIG_FAILED_CHILD_TRANSMISSIONS;
 
 /**
+ * Number of consecutive tx failures to router (with no-ack error) to consider router link broken.
+ */
+constexpr uint8_t kFailedRouterTransmissions = 4;
+
+/**
  * Threshold to accept a router upgrade request with reason `kBorderRouterRequest` (number of BRs acting as router in
  * Network Data).
  */
